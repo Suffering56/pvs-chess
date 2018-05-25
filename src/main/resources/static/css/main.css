@@ -1,0 +1,159 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --playground-size: 680px;
+    --chessboard-size: 640px;
+    --cell-size: 80px;
+}
+
+.body {
+    background-color: lightgrey;
+}
+
+.playground {
+    width: var(--playground-size);
+    height: var(--playground-size);
+    padding: 20px;
+    margin: auto;
+    position: relative;
+}
+
+.start-panel {
+    display: inline-block;
+    overflow: hidden;
+}
+
+.chessboard {
+    display: inline-block;
+    overflow: hidden;
+    width: var(--chessboard-size);
+    height: var(--chessboard-size);
+}
+
+.chessboard-row {
+    height: var(--cell-size);
+}
+
+.chessboard-cell {
+    width: var(--cell-size);
+    height: inherit;
+    display: inline-block;
+    overflow: hidden;
+}
+
+.chessboard-cell.white {
+    background-color: #f0d9b5;
+}
+
+.chessboard-cell.black {
+    background-color: #b58863;
+}
+
+.chessboard-cell.inner {
+    border: 1px solid transparent;
+}
+
+.chessboard-cell.inner.selected {
+    background-color: rgba(0, 128, 0, 0.3);
+}
+
+.chessboard-cell.inner.available {
+    box-shadow: inset 0 0 2px 2px green;
+    cursor: crosshair;
+}
+
+.chessboard-cell.inner.available:hover {
+    box-shadow: inset 0 0 2px 4px green;
+}
+
+.chessboard-cell.inner.available.capture {
+    box-shadow: inset 0 0 2px 2px red;
+}
+
+.chessboard-cell.inner.check {
+    background-color: rgba(255, 0, 0, 0.25);
+}
+
+.vertical-label_wrapper {
+    display: inline-block;
+    overflow: hidden;
+    width: 20px;
+    position: absolute;
+    left: 0;
+    top: 25px;
+}
+
+.vertical-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: 20px;
+    height: var(--cell-size);
+}
+
+.horizontal-label {
+    display: inline-block;
+    overflow: hidden;
+    width: var(--cell-size);
+    height: 20px;
+    text-align: center;
+}
+
+/*noinspection CssOptimizeSimilarProperties*/
+.piece {
+    background-image: url('img/sprite_80.png');
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+.rook-white {
+    background-position: -5px -5px;
+}
+
+.rook-black {
+    background-position: -5px -95px;
+}
+
+.knight-white {
+    background-position: -95px -5px;
+}
+
+.knight-black {
+    background-position: -95px -95px;
+}
+
+.bishop-white {
+    background-position: -185px -5px;
+}
+
+.bishop-black {
+    background-position: -185px -95px;
+}
+
+.king-white {
+    background-position: -275px -5px;
+}
+
+.king-black {
+    background-position: -275px -95px;
+}
+
+.queen-white {
+    background-position: -365px -5px;
+}
+
+.queen-black {
+    background-position: -365px -95px;
+}
+
+.pawn-white {
+    background-position: -455px -5px;
+}
+
+.pawn-black {
+    background-position: -455px -95px;
+}
