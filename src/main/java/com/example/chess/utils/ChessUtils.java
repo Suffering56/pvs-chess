@@ -9,7 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.chess.service.GameService.BOARD_SIZE;
+import static com.example.chess.ChessConstants.BOARD_SIZE;
 
 @Log4j2
 public class ChessUtils {

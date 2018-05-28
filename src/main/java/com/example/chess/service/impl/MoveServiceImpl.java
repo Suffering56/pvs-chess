@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.example.chess.ChessConstants.BOARD_SIZE;
+
 @Service //prototype
 public class MoveServiceImpl implements MoveService {
 
@@ -159,10 +161,10 @@ public class MoveServiceImpl implements MoveService {
 		addAvailableMovesForRay(result, -1, -1, 1);
 
 		//TODO: реализовать рокировку
-		if (isAvailableShortCastling()) {
+		if (game.isShortCastlingAvailableForSide(alliedSide)) {
 			addMove(result, getSelectedCell(selectedRow, selectedColumn - 2));
 		}
-		if (isAvailableLongCastling()) {
+		if (game.isLongCastlingAvailableForSide(alliedSide)) {
 			addMove(result, getSelectedCell(selectedRow, selectedColumn + 2));
 		}
 
@@ -214,22 +216,6 @@ public class MoveServiceImpl implements MoveService {
 		}
 	}
 
-	private boolean isAvailableShortCastling() {
-		if (alliedSide == Side.white) {
-			return game.getIsWhiteShortCastlingAvailable();
-		} else {
-			return game.getIsBlackShortCastlingAvailable();
-		}
-	}
-
-	private boolean isAvailableLongCastling() {
-		if (alliedSide == Side.white) {
-			return game.getIsWhiteLongCastlingAvailable();
-		} else {
-			return game.getIsBlackLongCastlingAvailable();
-		}
-	}
-
 	private Side getEnemySide(CellDTO selectedCell) {
 		Side enemySide = Side.black;
 		if (selectedCell.getPieceSide() == Side.black) {
@@ -239,7 +225,7 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private CellDTO getSelectedCell(int rowIndex, int columnIndex) {
-		if (rowIndex >= 0 && rowIndex < GameService.BOARD_SIZE && columnIndex >= 0 && columnIndex < GameService.BOARD_SIZE) {
+		if (rowIndex >= 0 && rowIndex < BOARD_SIZE && columnIndex >= 0 && columnIndex < BOARD_SIZE) {
 			return cellsMatrix.get(rowIndex).get(columnIndex);
 		} else {
 			return null;

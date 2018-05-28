@@ -30,6 +30,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static com.example.chess.ChessConstants.BOARD_SIZE;
+import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
+import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 import static java.util.function.Function.identity;
 
 @Log4j2
@@ -102,12 +105,24 @@ public class GameServiceImpl implements GameService {
 
 		//move piece
 		Piece moveablePiece = executeMove(cellsMatrix, move);
+		Side moveableSide = moveablePiece.getSide();
 
 		if (moveablePiece.getType() == PieceType.king) {
 			//do castling (only the rook moves)
 			checkAndExecuteCastling(cellsMatrix, move);
-		}
 
+			game.disableShortCasting(moveableSide);
+			game.disableLongCasting(moveableSide);
+
+		} else if (moveablePiece.getType() == PieceType.rook) {
+
+			if (game.isShortCastlingAvailableForSide(moveableSide) && move.getFrom().getColumnIndex() == ROOK_SHORT_COLUMN_INDEX) {
+				game.disableShortCasting(moveableSide);
+
+			} else if (game.isLongCastlingAvailableForSide(moveableSide) && move.getFrom().getColumnIndex() == ROOK_LONG_COLUMN_INDEX) {
+				game.disableLongCasting(moveableSide);
+			}
+		}
 
 		List<History> afterMoveHistory = createHistoryByCellsMatrix(cellsMatrix, gameId, newPosition);
 		game.setPosition(newPosition);
@@ -121,17 +136,16 @@ public class GameServiceImpl implements GameService {
 	private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
 		int diff = move.getFrom().getColumnIndex() - move.getTo().getColumnIndex();
 
-		if (Math.abs(diff) == 2) {
-			//is castling
+		if (Math.abs(diff) == 2) {	//is castling
 			Integer kingFromColumnIndex = move.getFrom().getColumnIndex();
 
 			//short
-			PointDTO rookFrom = new PointDTO(move.getFrom().getRowIndex(), 0);
+			PointDTO rookFrom = new PointDTO(move.getFrom().getRowIndex(), ROOK_SHORT_COLUMN_INDEX);
 			PointDTO rookTo = new PointDTO(move.getFrom().getRowIndex(), kingFromColumnIndex - 1);
 
 			//long
 			if (diff < 0) {
-				rookFrom.setColumnIndex(7);
+				rookFrom.setColumnIndex(ROOK_LONG_COLUMN_INDEX);
 				rookTo.setColumnIndex(kingFromColumnIndex + 1);
 			}
 
@@ -187,7 +201,6 @@ public class GameServiceImpl implements GameService {
 		}
 		return historyList;
 	}
-
 
 	private List<History> createHistoryByCellsMatrix(List<List<CellDTO>> cellsMatrix, Long gameId, int position) {
 		return cellsMatrix.stream()

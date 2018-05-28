@@ -11,8 +11,6 @@ import java.util.List;
 
 public interface GameService {
 
-	int BOARD_SIZE = 8;
-
 	ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException;
 
 	List<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
