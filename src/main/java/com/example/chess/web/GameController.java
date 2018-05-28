@@ -9,7 +9,7 @@ import com.example.chess.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/game")
@@ -23,9 +23,9 @@ public class GameController {
 	}
 
 	@GetMapping("/{gameId}/move")
-	public List<PointDTO> getAvailableMoves(@PathVariable("gameId") long gameId,
-											@RequestParam int rowIndex,
-											@RequestParam int columnIndex) throws HistoryNotFoundException, GameNotFoundException {
+	public Set<PointDTO> getAvailableMoves(@PathVariable("gameId") long gameId,
+										   @RequestParam int rowIndex,
+										   @RequestParam int columnIndex) throws HistoryNotFoundException, GameNotFoundException {
 
 		return gameService.getAvailableMoves(gameId, new PointDTO(rowIndex, columnIndex));
 	}

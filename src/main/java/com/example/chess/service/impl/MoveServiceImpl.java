@@ -4,13 +4,14 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.dto.output.CellDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
-import com.example.chess.service.GameService;
 import com.example.chess.service.MoveService;
 import com.example.chess.utils.ChessUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.example.chess.ChessConstants.BOARD_SIZE;
 
@@ -26,8 +27,10 @@ public class MoveServiceImpl implements MoveService {
 	private Side alliedSide;
 	private Side enemySide;
 
+	boolean isExternalCall = true;
+
 	@Override
-	public List<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO point) {
+	public Set<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO point) {
 		this.game = game;
 		this.cellsMatrix = cellsMatrix;
 		this.selectedCell = ChessUtils.getCell(cellsMatrix, point);
@@ -58,11 +61,11 @@ public class MoveServiceImpl implements MoveService {
 			}
 		}
 
-		return new ArrayList<>();
+		return new HashSet<>();
 	}
 
-	private List<PointDTO> getMovesForPawn() {
-		List<PointDTO> result = new ArrayList<>();
+	private Set<PointDTO> getMovesForPawn() {
+		Set<PointDTO> moves = new HashSet<>();
 
 		int vector = 1;
 		if (selectedCell.getPieceSide() == Side.black) {
@@ -75,127 +78,150 @@ public class MoveServiceImpl implements MoveService {
 		}
 
 		@SuppressWarnings("PointlessArithmeticExpression")
-		CellDTO cell = getSelectedCell(selectedRow + 1 * vector, selectedColumn);
-		boolean isAdded = addPawnMove(result, cell, false);
+		CellDTO cell = getCell(selectedRow + 1 * vector, selectedColumn);
+		boolean isAdded = addPawnMove(moves, cell, false);
 
 		if (isFirstMove && isAdded) {
-			cell = getSelectedCell(selectedRow + 2 * vector, selectedColumn);
-			addPawnMove(result, cell, false);
+			cell = getCell(selectedRow + 2 * vector, selectedColumn);
+			addPawnMove(moves, cell, false);
 		}
 
 		//attack
-		cell = getSelectedCell(selectedRow + vector, selectedColumn + 1);
-		addPawnMove(result, cell, true);
+		cell = getCell(selectedRow + vector, selectedColumn + 1);
+		addPawnMove(moves, cell, true);
 
-		cell = getSelectedCell(selectedRow + vector, selectedColumn - 1);
-		addPawnMove(result, cell, true);
+		cell = getCell(selectedRow + vector, selectedColumn - 1);
+		addPawnMove(moves, cell, true);
 
 		//TODO: реализовать взятие на проходе
 
-		return result;
+		return moves;
 	}
 
-	private List<PointDTO> getMovesForKnight() {
-		List<PointDTO> result = new ArrayList<>();
+	private Set<PointDTO> getMovesForKnight() {
+		Set<PointDTO> moves = new HashSet<>();
 
-		checkAndAddKnightMove(result, 1, 2);
-		checkAndAddKnightMove(result, 2, 1);
-		checkAndAddKnightMove(result, 1, -2);
-		checkAndAddKnightMove(result, 2, -1);
-		checkAndAddKnightMove(result, -1, 2);
-		checkAndAddKnightMove(result, -2, 1);
-		checkAndAddKnightMove(result, -1, -2);
-		checkAndAddKnightMove(result, -2, -1);
+		checkAndAddKnightMove(moves, 1, 2);
+		checkAndAddKnightMove(moves, 2, 1);
+		checkAndAddKnightMove(moves, 1, -2);
+		checkAndAddKnightMove(moves, 2, -1);
+		checkAndAddKnightMove(moves, -1, 2);
+		checkAndAddKnightMove(moves, -2, 1);
+		checkAndAddKnightMove(moves, -1, -2);
+		checkAndAddKnightMove(moves, -2, -1);
 
-		return result;
+		return moves;
 	}
 
-	private void checkAndAddKnightMove(List<PointDTO> resultMovesList, int rowOffset, int columnOffset) {
-		CellDTO cell = getSelectedCell(selectedRow + rowOffset, selectedColumn + columnOffset);
+	private void checkAndAddKnightMove(Set<PointDTO> moves, int rowOffset, int columnOffset) {
+		CellDTO cell = getCell(selectedRow + rowOffset, selectedColumn + columnOffset);
 		if (cell != null && cell.getPieceSide() != alliedSide) {
-			resultMovesList.add(cell);
+			moves.add(cell.generatePoint());
 		}
 	}
 
-	private List<PointDTO> getMovesForBishop() {
-		List<PointDTO> result = new ArrayList<>();
+	private Set<PointDTO> getMovesForBishop() {
+		Set<PointDTO> moves = new HashSet<>();
 
-		addAvailableMovesForRay(result, 1, 1);
-		addAvailableMovesForRay(result, -1, 1);
-		addAvailableMovesForRay(result, 1, -1);
-		addAvailableMovesForRay(result, -1, -1);
+		addAvailableMovesForRay(moves, 1, 1);
+		addAvailableMovesForRay(moves, -1, 1);
+		addAvailableMovesForRay(moves, 1, -1);
+		addAvailableMovesForRay(moves, -1, -1);
 
-		return result;
+		return moves;
 	}
 
-	private List<PointDTO> getMovesForRook() {
-		List<PointDTO> result = new ArrayList<>();
+	private Set<PointDTO> getMovesForRook() {
+		Set<PointDTO> moves = new HashSet<>();
 
-		addAvailableMovesForRay(result, 1, 0);
-		addAvailableMovesForRay(result, -1, 0);
-		addAvailableMovesForRay(result, 0, 1);
-		addAvailableMovesForRay(result, 0, -1);
+		addAvailableMovesForRay(moves, 1, 0);
+		addAvailableMovesForRay(moves, -1, 0);
+		addAvailableMovesForRay(moves, 0, 1);
+		addAvailableMovesForRay(moves, 0, -1);
 
-		return result;
+		return moves;
 	}
 
-	private List<PointDTO> getMovesForQueen() {
-		List<PointDTO> result = new ArrayList<>();
+	private Set<PointDTO> getMovesForQueen() {
+		Set<PointDTO> moves = new HashSet<>();
 
-		result.addAll(getMovesForRook());
-		result.addAll(getMovesForBishop());
+		moves.addAll(getMovesForRook());
+		moves.addAll(getMovesForBishop());
 
-		return result;
+		return moves;
 	}
 
-	private List<PointDTO> getMovesForKing() {
-		List<PointDTO> result = new ArrayList<>();
+	private Set<PointDTO> getMovesForKing() {
+		Set<PointDTO> moves = new HashSet<>();
 
-		addAvailableMovesForRay(result, 1, 0, 1);
-		addAvailableMovesForRay(result, -1, 0, 1);
-		addAvailableMovesForRay(result, 0, 1, 1);
-		addAvailableMovesForRay(result, 0, -1, 1);
-		addAvailableMovesForRay(result, 1, 1, 1);
-		addAvailableMovesForRay(result, -1, 1, 1);
-		addAvailableMovesForRay(result, 1, -1, 1);
-		addAvailableMovesForRay(result, -1, -1, 1);
+
+
+		addAvailableMovesForRay(moves, 1, 0, 1);
+		addAvailableMovesForRay(moves, -1, 0, 1);
+		addAvailableMovesForRay(moves, 0, 1, 1);
+		addAvailableMovesForRay(moves, 0, -1, 1);
+		addAvailableMovesForRay(moves, 1, 1, 1);
+		addAvailableMovesForRay(moves, -1, 1, 1);
+		addAvailableMovesForRay(moves, 1, -1, 1);
+		addAvailableMovesForRay(moves, -1, -1, 1);
 
 		//TODO: реализовать рокировку
 		if (game.isShortCastlingAvailableForSide(alliedSide)) {
-			addMove(result, getSelectedCell(selectedRow, selectedColumn - 2));
+			if (isEmptyCellsBySelectedRow(1, 2)) {
+				addMove(moves, getCell(selectedRow, selectedColumn - 2));
+			}
 		}
 		if (game.isLongCastlingAvailableForSide(alliedSide)) {
-			addMove(result, getSelectedCell(selectedRow, selectedColumn + 2));
+			if (isEmptyCellsBySelectedRow(4, 5, 6)) {
+				addMove(moves, getCell(selectedRow, selectedColumn + 2));
+			}
 		}
 
-		return result;
+		Set<PointDTO> allEnemyMoves = getAllAvailableMovesForSide(enemySide);
+		return moves.stream()
+				.filter(point -> !allEnemyMoves.contains(point))
+				.collect(Collectors.toSet());
 	}
 
+	private boolean isEmptyCellsBySelectedRow(int... columnIndexes) {
+		for (int columnIndex : columnIndexes) {
+			if (!isEmptyCell(selectedRow, columnIndex)) {
+				return false;
+			}
+		}
 
-	private void addAvailableMovesForRay(List<PointDTO> resultMovesList, int rowVector, int columnVector) {
-		addAvailableMovesForRay(resultMovesList, rowVector, columnVector, 7);
+		return true;
 	}
 
-	private void addAvailableMovesForRay(List<PointDTO> resultMovesList, int rowVector, int columnVector, int rayLength) {
+	private boolean isEmptyCell(int rowIndex, int columnIndex) {
+		CellDTO cell = ChessUtils.getCell(cellsMatrix, rowIndex, columnIndex);
+		return cell.getPiece() == null;
+	}
+
+	private void addAvailableMovesForRay(Set<PointDTO> moves, int rowVector, int columnVector) {
+		addAvailableMovesForRay(moves, rowVector, columnVector, 7);
+	}
+
+	private void addAvailableMovesForRay(Set<PointDTO> moves, int rowVector, int columnVector, int rayLength) {
 		for (int i = 1; i < rayLength + 1; i++) {
-			CellDTO cell = getSelectedCell(selectedRow + rowVector * i, selectedColumn + columnVector * i);
-			if (!addMove(resultMovesList, cell)) {
+			CellDTO cell = getCell(selectedRow + rowVector * i, selectedColumn + columnVector * i);
+			if (!addMove(moves, cell)) {
 				break;
 			}
 		}
 	}
 
-	private boolean addMove(List<PointDTO> moves, CellDTO cell) {
+	private boolean addMove(Set<PointDTO> moves, CellDTO cell) {
 		if (cell == null || cell.getPieceSide() == alliedSide) {
 			//IndexOutOfBounds
 			return false;
 		}
 
-		moves.add(cell);
+		moves.add(cell.generatePoint());
 		return cell.getPieceSide() != enemySide;
 	}
 
-	private boolean addPawnMove(List<PointDTO> moves, CellDTO cell, boolean isAttack) {
+	private boolean addPawnMove(Set<PointDTO> moves, CellDTO cell, boolean isAttack) {
 		if (cell == null || cell.getPieceSide() == alliedSide) {
 			//IndexOutOfBounds
 			return false;
@@ -203,14 +229,14 @@ public class MoveServiceImpl implements MoveService {
 
 		if (isAttack) {
 			if (cell.getPieceSide() == enemySide) {
-				moves.add(cell);
+				moves.add(cell.generatePoint());
 			}
 			return false;
 		} else {
 			if (cell.getPieceSide() == enemySide) {
 				return false;
 			} else {
-				moves.add(cell);
+				moves.add(cell.generatePoint());
 				return true;
 			}
 		}
@@ -224,12 +250,26 @@ public class MoveServiceImpl implements MoveService {
 		return enemySide;
 	}
 
-	private CellDTO getSelectedCell(int rowIndex, int columnIndex) {
+	private CellDTO getCell(int rowIndex, int columnIndex) {
 		if (rowIndex >= 0 && rowIndex < BOARD_SIZE && columnIndex >= 0 && columnIndex < BOARD_SIZE) {
 			return cellsMatrix.get(rowIndex).get(columnIndex);
 		} else {
 			return null;
 		}
+	}
+
+	private Set<PointDTO> getAllAvailableMovesForSide(Side expectedSide) {
+		if (isExternalCall) {
+			isExternalCall = false;
+			return cellsMatrix.stream()
+					.flatMap(List::stream)
+					.filter(cell -> cell.getPieceSide() == expectedSide)
+					.map(cell -> getAvailableMoves(game, cellsMatrix, cell.generatePoint()))
+					.flatMap(Set::stream)
+					.collect(Collectors.toSet());
+
+		}
+		return new HashSet<>();
 	}
 
 }

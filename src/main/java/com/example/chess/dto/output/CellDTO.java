@@ -11,14 +11,19 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CellDTO extends PointDTO {
+public class CellDTO {
 
 	private Piece piece;
+
+	protected Integer rowIndex;
+	protected Integer columnIndex;
+
 	private boolean available;
 	private boolean selected;
 
 	public CellDTO(Integer rowIndex, Integer columnIndex) {
-		super(rowIndex, columnIndex);
+		this.rowIndex = rowIndex;
+		this.columnIndex = columnIndex;
 	}
 
 	public Side getPieceSide() {
@@ -33,5 +38,9 @@ public class CellDTO extends PointDTO {
 			return null;
 		}
 		return getPiece().getType();
+	}
+
+	public PointDTO generatePoint() {
+		return new PointDTO(rowIndex, columnIndex);
 	}
 }

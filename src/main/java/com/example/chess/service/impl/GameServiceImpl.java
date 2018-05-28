@@ -65,7 +65,8 @@ public class GameServiceImpl implements GameService {
 		piecesByIdMap = StreamSupport.stream(pieces.spliterator(), false)
 				.collect(Collectors.toMap(Piece::getId, identity()));
 
-		piecesBySideAndTypeMap = StreamSupport.stream(pieces.spliterator(), false)
+		piecesBySideAndTypeMap = StreamSupport
+				.stream(pieces.spliterator(), false)
 				.collect(Collectors.groupingBy(Piece::getSide,
 						Collectors.toMap(Piece::getType, identity())));
 	}
@@ -80,7 +81,7 @@ public class GameServiceImpl implements GameService {
 	}
 
 	@Override
-	public List<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
+	public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
 		Game game = findAndCheckGame(gameId);
 		List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
 

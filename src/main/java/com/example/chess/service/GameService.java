@@ -7,13 +7,13 @@ import com.example.chess.entity.Game;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.exceptions.HistoryNotFoundException;
 
-import java.util.List;
+import java.util.Set;
 
 public interface GameService {
 
 	ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException;
 
-	List<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
+	Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
 
 	ArrangementDTO applyMove(long gameId, MoveDTO dto) throws HistoryNotFoundException, GameNotFoundException;
 

@@ -5,8 +5,9 @@ import com.example.chess.dto.output.CellDTO;
 import com.example.chess.entity.Game;
 
 import java.util.List;
+import java.util.Set;
 
 public interface MoveService {
 
-	List<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO point);
+	Set<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO point);
 }
