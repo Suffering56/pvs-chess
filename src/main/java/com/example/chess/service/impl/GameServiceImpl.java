@@ -25,9 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -43,8 +41,8 @@ public class GameServiceImpl implements GameService {
 	private final HistoryRepository historyRepository;
 	private final PieceRepository pieceRepository;
 
-	private Map<Long, Piece> piecesByIdMap;
-	private Map<Side, Map<PieceType, Piece>>  piecesBySideAndTypeMap;
+	private Map<Integer, Piece> piecesByIdMap;
+	private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
 	@Autowired
 	public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, Supplier<MoveService> moveService, PieceRepository pieceRepository) {
@@ -83,54 +81,75 @@ public class GameServiceImpl implements GameService {
 		Game game = findAndCheckGame(gameId);
 		List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
 
-		return moveService.get().getAvailableMoves(cellsMatrix, point);
+		return moveService.get().getAvailableMoves(game, cellsMatrix, point);
 	}
 
 	@Override
 	@Transactional
 	@Profile
-	public ArrangementDTO applyMove(long gameId, MoveDTO dto) throws HistoryNotFoundException, GameNotFoundException {
+	public ArrangementDTO applyMove(long gameId, MoveDTO move) throws HistoryNotFoundException, GameNotFoundException {
 		Game game = findAndCheckGame(gameId);
-
-		List<History> currentHistory;
-		if (game.getPosition() == 0) {
-			currentHistory = createStartHistory(gameId);
-		} else {
-			currentHistory = findHistoryByGameIdAndPosition(gameId, game.getPosition());
-		}
-
-		List<List<CellDTO>> cellMatrix = createCellsMatrixByHistory(currentHistory);
-
-		List<History> nextHistory = new ArrayList<>();
-
-		for (History current : currentHistory) {
-			boolean isSelected = current.getRowIndex().equals(dto.getFrom().getRowIndex()) && current.getColumnIndex().equals(dto.getFrom().getColumnIndex());
-			History item = null;
-
-			if (isSelected) {
-				item = History.createForNextPosition(current);
-				item.setRowIndex(dto.getTo().getRowIndex());
-				item.setColumnIndex(dto.getTo().getColumnIndex());
-			} else {
-				boolean isTo = current.getRowIndex().equals(dto.getTo().getRowIndex()) && current.getColumnIndex().equals(dto.getTo().getColumnIndex());
-				if (!isTo) {
-					item = History.createForNextPosition(current);
-				}
-			}
-
-			if (item != null) {
-				nextHistory.add(item);
-			}
-		}
-
 		int newPosition = game.getPosition() + 1;
-		doMoveInMatrix(cellMatrix, dto);
+
+		List<History> beforeMoveHistory;
+		if (game.getPosition() == 0) {
+			beforeMoveHistory = createStartHistory(gameId);
+		} else {
+			beforeMoveHistory = findHistoryByGameIdAndPosition(gameId, game.getPosition());
+		}
+
+		List<List<CellDTO>> cellsMatrix = ChessUtils.createCellsMatrixByHistory(beforeMoveHistory);
+
+		//move piece
+		Piece moveablePiece = executeMove(cellsMatrix, move);
+
+		if (moveablePiece.getType() == PieceType.king) {
+			//do castling (only the rook moves)
+			checkAndExecuteCastling(cellsMatrix, move);
+		}
+
+
+		List<History> afterMoveHistory = createHistoryByCellsMatrix(cellsMatrix, gameId, newPosition);
 		game.setPosition(newPosition);
 
-		historyRepository.save(nextHistory);
+		historyRepository.save(afterMoveHistory);
 		gameRepository.save(game);
 
-		return new ArrangementDTO(newPosition, cellMatrix);
+		return new ArrangementDTO(newPosition, cellsMatrix);
+	}
+
+	private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+		int diff = move.getFrom().getColumnIndex() - move.getTo().getColumnIndex();
+
+		if (Math.abs(diff) == 2) {
+			//is castling
+			Integer kingFromColumnIndex = move.getFrom().getColumnIndex();
+
+			//short
+			PointDTO rookFrom = new PointDTO(move.getFrom().getRowIndex(), 0);
+			PointDTO rookTo = new PointDTO(move.getFrom().getRowIndex(), kingFromColumnIndex - 1);
+
+			//long
+			if (diff < 0) {
+				rookFrom.setColumnIndex(7);
+				rookTo.setColumnIndex(kingFromColumnIndex + 1);
+			}
+
+			//move rook
+			executeMove(cellsMatrix, new MoveDTO(rookFrom, rookTo));
+		}
+	}
+
+	private Piece executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+		CellDTO cellFrom = ChessUtils.getCell(cellsMatrix, move.getFrom());
+		CellDTO cellTo = ChessUtils.getCell(cellsMatrix, move.getTo());
+
+		Piece piece = cellFrom.getPiece();
+
+		cellTo.setPiece(cellFrom.getPiece());
+		cellFrom.setPiece(null);
+
+		return piece;
 	}
 
 	@Override
@@ -148,17 +167,6 @@ public class GameServiceImpl implements GameService {
 		return result;
 	}
 
-	private void doMoveInMatrix(List<List<CellDTO>> cellMatrix, MoveDTO move) {
-		CellDTO cellFrom = ChessUtils.getCell(cellMatrix, move.getFrom());
-		CellDTO cellTo = ChessUtils.getCell(cellMatrix, move.getTo());
-
-		cellTo.setSide(cellFrom.getSide());
-		cellTo.setPiece(cellFrom.getPiece());
-
-		cellFrom.setSide(null);
-		cellFrom.setPiece(null);
-	}
-
 	private List<List<CellDTO>> createCellsMatrixByGame(Game game) throws HistoryNotFoundException {
 		return createCellsMatrixByGameIdAndPosition(game.getId(), game.getPosition());
 	}
@@ -169,7 +177,7 @@ public class GameServiceImpl implements GameService {
 		}
 
 		List<History> historyList = findHistoryByGameIdAndPosition(gameId, position);
-		return createCellsMatrixByHistory(historyList);
+		return ChessUtils.createCellsMatrixByHistory(historyList);
 	}
 
 	private List<History> findHistoryByGameIdAndPosition(long gameId, int position) throws HistoryNotFoundException {
@@ -178,6 +186,15 @@ public class GameServiceImpl implements GameService {
 			throw new HistoryNotFoundException();
 		}
 		return historyList;
+	}
+
+
+	private List<History> createHistoryByCellsMatrix(List<List<CellDTO>> cellsMatrix, Long gameId, int position) {
+		return cellsMatrix.stream()
+				.flatMap(List::stream)                        //convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
+				.filter(cell -> cell.getPiece() != null)
+				.map(cell -> History.createByCell(cell, gameId, position))
+				.collect(Collectors.toList());
 	}
 
 	private List<History> createStartHistory(long gameId) {
@@ -233,38 +250,8 @@ public class GameServiceImpl implements GameService {
 	}
 
 	private List<List<CellDTO>> createStartCellsMatrix(long gameId) {
-		return createCellsMatrixByHistory(createStartHistory(gameId));
+		return ChessUtils.createCellsMatrixByHistory(createStartHistory(gameId));
 	}
-
-	private List<List<CellDTO>> createCellsMatrixByHistory(List<History> historyList) {
-		List<List<CellDTO>> cellsMatrix = createEmptyCellsMatrix();
-
-		for (History item : historyList) {
-			CellDTO cell = cellsMatrix.get(item.getRowIndex()).get(item.getColumnIndex());
-			cell.setSide(item.getPiece().getSide());
-			cell.setPiece(item.getPiece().getType());
-		}
-
-		return cellsMatrix;
-	}
-
-	private List<List<CellDTO>> createEmptyCellsMatrix() {
-		List<List<CellDTO>> cellsMatrix = new ArrayList<>(BOARD_SIZE);
-
-		//1-8
-		for (int rowIndex = 0; rowIndex < BOARD_SIZE; rowIndex++) {
-			List<CellDTO> rowCells = new ArrayList<>(BOARD_SIZE);
-
-			//A-H
-			for (int columnIndex = 0; columnIndex < BOARD_SIZE; columnIndex++) {
-				rowCells.add(new CellDTO(rowIndex, columnIndex));
-			}
-			cellsMatrix.add(rowCells);
-		}
-
-		return cellsMatrix;
-	}
-
 
 	private Piece findPieceBySideAndType(Side side, PieceType type) {
 		return piecesBySideAndTypeMap.get(side).get(type);

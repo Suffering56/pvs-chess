@@ -2,6 +2,7 @@ package com.example.chess.service.impl;
 
 import com.example.chess.dto.PointDTO;
 import com.example.chess.dto.output.CellDTO;
+import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
 import com.example.chess.service.GameService;
 import com.example.chess.service.MoveService;
@@ -14,23 +15,27 @@ import java.util.List;
 @Service //prototype
 public class MoveServiceImpl implements MoveService {
 
+	private Game game;
 	private List<List<CellDTO>> cellsMatrix;
 	private CellDTO selectedCell;
+
 	private int selectedRow;
 	private int selectedColumn;
 	private Side alliedSide;
 	private Side enemySide;
 
 	@Override
-	public List<PointDTO> getAvailableMoves(List<List<CellDTO>> cellsMatrix, PointDTO point) {
+	public List<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO point) {
+		this.game = game;
 		this.cellsMatrix = cellsMatrix;
 		this.selectedCell = ChessUtils.getCell(cellsMatrix, point);
+
 		this.selectedRow = selectedCell.getRowIndex();
 		this.selectedColumn = selectedCell.getColumnIndex();
-		this.alliedSide = selectedCell.getSide();
+		this.alliedSide = selectedCell.getPieceSide();
 		this.enemySide = getEnemySide(selectedCell);
 
-		switch (selectedCell.getPiece()) {
+		switch (selectedCell.getPieceType()) {
 			case pawn: {
 				return getMovesForPawn();
 			}
@@ -58,7 +63,7 @@ public class MoveServiceImpl implements MoveService {
 		List<PointDTO> result = new ArrayList<>();
 
 		int vector = 1;
-		if (selectedCell.getSide() == Side.black) {
+		if (selectedCell.getPieceSide() == Side.black) {
 			vector = -1;
 		}
 
@@ -105,7 +110,7 @@ public class MoveServiceImpl implements MoveService {
 
 	private void checkAndAddKnightMove(List<PointDTO> resultMovesList, int rowOffset, int columnOffset) {
 		CellDTO cell = getSelectedCell(selectedRow + rowOffset, selectedColumn + columnOffset);
-		if (cell != null && cell.getSide() != alliedSide) {
+		if (cell != null && cell.getPieceSide() != alliedSide) {
 			resultMovesList.add(cell);
 		}
 	}
@@ -154,9 +159,16 @@ public class MoveServiceImpl implements MoveService {
 		addAvailableMovesForRay(result, -1, -1, 1);
 
 		//TODO: реализовать рокировку
+		if (isAvailableShortCastling()) {
+			addMove(result, getSelectedCell(selectedRow, selectedColumn - 2));
+		}
+		if (isAvailableLongCastling()) {
+			addMove(result, getSelectedCell(selectedRow, selectedColumn + 2));
+		}
 
 		return result;
 	}
+
 
 	private void addAvailableMovesForRay(List<PointDTO> resultMovesList, int rowVector, int columnVector) {
 		addAvailableMovesForRay(resultMovesList, rowVector, columnVector, 7);
@@ -172,28 +184,28 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private boolean addMove(List<PointDTO> moves, CellDTO cell) {
-		if (cell == null || cell.getSide() == alliedSide) {
+		if (cell == null || cell.getPieceSide() == alliedSide) {
 			//IndexOutOfBounds
 			return false;
 		}
 
 		moves.add(cell);
-		return cell.getSide() != enemySide;
+		return cell.getPieceSide() != enemySide;
 	}
 
 	private boolean addPawnMove(List<PointDTO> moves, CellDTO cell, boolean isAttack) {
-		if (cell == null || cell.getSide() == alliedSide) {
+		if (cell == null || cell.getPieceSide() == alliedSide) {
 			//IndexOutOfBounds
 			return false;
 		}
 
 		if (isAttack) {
-			if (cell.getSide() == enemySide) {
+			if (cell.getPieceSide() == enemySide) {
 				moves.add(cell);
 			}
 			return false;
 		} else {
-			if (cell.getSide() == enemySide) {
+			if (cell.getPieceSide() == enemySide) {
 				return false;
 			} else {
 				moves.add(cell);
@@ -202,10 +214,25 @@ public class MoveServiceImpl implements MoveService {
 		}
 	}
 
+	private boolean isAvailableShortCastling() {
+		if (alliedSide == Side.white) {
+			return game.getIsWhiteShortCastlingAvailable();
+		} else {
+			return game.getIsBlackShortCastlingAvailable();
+		}
+	}
+
+	private boolean isAvailableLongCastling() {
+		if (alliedSide == Side.white) {
+			return game.getIsWhiteLongCastlingAvailable();
+		} else {
+			return game.getIsBlackLongCastlingAvailable();
+		}
+	}
 
 	private Side getEnemySide(CellDTO selectedCell) {
 		Side enemySide = Side.black;
-		if (selectedCell.getSide() == Side.black) {
+		if (selectedCell.getPieceSide() == Side.black) {
 			enemySide = Side.white;
 		}
 		return enemySide;

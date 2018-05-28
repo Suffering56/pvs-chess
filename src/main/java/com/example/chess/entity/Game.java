@@ -22,4 +22,20 @@ public class Game {
 	private String whiteSessionId;
 
 	private String blackSessionId;
+
+	@ColumnDefault("true")
+	@Column(nullable = false)
+	private Boolean isWhiteLongCastlingAvailable = true;
+
+	@ColumnDefault("true")
+	@Column(nullable = false)
+	private Boolean isWhiteShortCastlingAvailable = true;
+
+	@ColumnDefault("true")
+	@Column(nullable = false)
+	private Boolean isBlackLongCastlingAvailable = true;
+
+	@ColumnDefault("true")
+	@Column(nullable = false)
+	private Boolean isBlackShortCastlingAvailable = true;
 }

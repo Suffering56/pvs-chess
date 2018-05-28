@@ -83,7 +83,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
             selectedCell.selected = false;
         }
 
-        if (cell.side && cell.side === getExpectedSide()) {
+        if (cell.piece != null && cell.piece.side && cell.piece.side === getExpectedSide()) {
             cell.selected = true;
             selectedCell = cell;
 
@@ -132,9 +132,9 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
 
         if (cell.piece) {
             result.push("piece");
-            result.push(cell.piece + "-" + cell.side);
-            if (cell.piece === "king") {
-                if ((params.checkWhiteKing === true && cell.side === "white") || (params.checkBlackKing === true && cell.side === "black")) {
+            result.push(cell.piece.type + "-" + cell.piece.side);
+            if (cell.piece.type === "king") {
+                if ((params.checkWhiteKing === true && cell.piece.side === "white") || (params.checkBlackKing === true && cell.piece.side === "black")) {
                     result.push("check");
                 }
             }
@@ -144,7 +144,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
             result.push('selected');
         } else if (cell.available === true) {
             result.push('available');
-            if (cell.side === getEnemySide()){
+            if (cell.piece != null && cell.piece.side === getEnemySide()){
                 result.push('capture');
             }
         }

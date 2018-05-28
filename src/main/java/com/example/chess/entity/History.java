@@ -1,5 +1,6 @@
 package com.example.chess.entity;
 
+import com.example.chess.dto.output.CellDTO;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,6 +23,18 @@ public class History {
 		return result;
 	}
 
+	public static History createByCell(CellDTO cell, Long gameId, Integer position) {
+		History result = new History();
+
+		result.gameId = gameId;
+		result.position = position;
+		result.pieceId = cell.getPiece().getId();
+		result.rowIndex = cell.getRowIndex();
+		result.columnIndex = cell.getColumnIndex();
+
+		return result;
+	}
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	private Long id;
@@ -33,7 +46,7 @@ public class History {
 	private Integer position;
 
 	@Column(nullable = false, name = "piece_id")
-	private Long pieceId;
+	private Integer pieceId;
 
 	@ManyToOne
 	@JoinColumn(name = "piece_id", nullable = false, insertable = false, updatable = false)

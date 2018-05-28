@@ -2,6 +2,7 @@ package com.example.chess.entity;
 
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,7 +16,7 @@ public class Piece {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
-	private Long id;
+	private Integer id;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -26,6 +27,7 @@ public class Piece {
 	private PieceType type;
 
 	@OneToMany(mappedBy = "piece", fetch = FetchType.LAZY)
+	@JsonIgnore
 	private List<History> history;
 
 }
