@@ -93,9 +93,28 @@ public class MoveServiceImpl implements MoveService {
 		cell = getCell(selectedRow + vector, selectedColumn - 1);
 		addPawnMove(moves, cell, true);
 
-		//TODO: реализовать взятие на проходе
+		Integer enemyLongMoveColumnIndex = game.getPawnLongMoveColumnIndex(enemySide);
+		if (enemyLongMoveColumnIndex != null) {	//противник только что сделал длинный ход пешкой
+
+			if (Math.abs(enemyLongMoveColumnIndex - selectedCell.getColumnIndex()) == 1) {	//и эта пешка рядом с выделенной (слева или справа)
+
+				if (selectedCell.getRowIndex() == 3 || selectedCell.getRowIndex() == 4) {	//и это творится на нужной горизонтали
+					//значит можно делать взятие на проходе
+					//проверять ничего не нужно, эта ячейка 100% пуста (не могла же пешка перепрыгнуть фигуру)
+					moves.add(new PointDTO(selectedCell.getRowIndex() + getPawnMoveVector(), enemyLongMoveColumnIndex));
+				}
+			}
+		}
 
 		return moves;
+	}
+
+	private Integer getPawnMoveVector() {
+		if (alliedSide == Side.white) {
+			return 1;
+		} else {
+			return -1;
+		}
 	}
 
 	private Set<PointDTO> getMovesForKnight() {
@@ -154,8 +173,6 @@ public class MoveServiceImpl implements MoveService {
 	private Set<PointDTO> getMovesForKing() {
 		Set<PointDTO> moves = new HashSet<>();
 
-
-
 		addAvailableMovesForRay(moves, 1, 0, 1);
 		addAvailableMovesForRay(moves, -1, 0, 1);
 		addAvailableMovesForRay(moves, 0, 1, 1);
@@ -165,13 +182,12 @@ public class MoveServiceImpl implements MoveService {
 		addAvailableMovesForRay(moves, 1, -1, 1);
 		addAvailableMovesForRay(moves, -1, -1, 1);
 
-		//TODO: реализовать рокировку
-		if (game.isShortCastlingAvailableForSide(alliedSide)) {
+		if (game.isShortCastlingAvailable(alliedSide)) {
 			if (isEmptyCellsBySelectedRow(1, 2)) {
 				addMove(moves, getCell(selectedRow, selectedColumn - 2));
 			}
 		}
-		if (game.isLongCastlingAvailableForSide(alliedSide)) {
+		if (game.isLongCastlingAvailable(alliedSide)) {
 			if (isEmptyCellsBySelectedRow(4, 5, 6)) {
 				addMove(moves, getCell(selectedRow, selectedColumn + 2));
 			}
@@ -260,7 +276,7 @@ public class MoveServiceImpl implements MoveService {
 
 	private Set<PointDTO> getAllAvailableMovesForSide(Side expectedSide) {
 		if (isExternalCall) {
-			isExternalCall = false;
+			isExternalCall = false;				//FIXME: костыль. починю при реализации механики шаха
 			return cellsMatrix.stream()
 					.flatMap(List::stream)
 					.filter(cell -> cell.getPieceSide() == expectedSide)

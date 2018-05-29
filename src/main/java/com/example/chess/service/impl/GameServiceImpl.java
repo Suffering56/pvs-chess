@@ -20,6 +20,7 @@ import com.example.chess.service.MoveService;
 import com.example.chess.utils.ChessUtils;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -105,23 +106,44 @@ public class GameServiceImpl implements GameService {
 		List<List<CellDTO>> cellsMatrix = ChessUtils.createCellsMatrixByHistory(beforeMoveHistory);
 
 		//move piece
-		Piece moveablePiece = executeMove(cellsMatrix, move);
-		Side moveableSide = moveablePiece.getSide();
+		Pair<Piece, Piece> pair = executeMove(cellsMatrix, move);
+		Piece pieceFrom = pair.getLeft();
+		Piece pieceTo = pair.getRight();
+		Side sideFrom = pieceFrom.getSide();
 
-		if (moveablePiece.getType() == PieceType.king) {
+		game.setPawnLongMoveColumnIndex(sideFrom, null);
+
+		if (pieceFrom.getType() == PieceType.king) {
 			//do castling (only the rook moves)
 			checkAndExecuteCastling(cellsMatrix, move);
 
-			game.disableShortCasting(moveableSide);
-			game.disableLongCasting(moveableSide);
+			game.disableShortCasting(sideFrom);
+			game.disableLongCasting(sideFrom);
 
-		} else if (moveablePiece.getType() == PieceType.rook) {
+		} else if (pieceFrom.getType() == PieceType.rook) {
 
-			if (game.isShortCastlingAvailableForSide(moveableSide) && move.getFrom().getColumnIndex() == ROOK_SHORT_COLUMN_INDEX) {
-				game.disableShortCasting(moveableSide);
+			if (game.isShortCastlingAvailable(sideFrom) && move.getFrom().getColumnIndex() == ROOK_SHORT_COLUMN_INDEX) {
+				game.disableShortCasting(sideFrom);
 
-			} else if (game.isLongCastlingAvailableForSide(moveableSide) && move.getFrom().getColumnIndex() == ROOK_LONG_COLUMN_INDEX) {
-				game.disableLongCasting(moveableSide);
+			} else if (game.isLongCastlingAvailable(sideFrom) && move.getFrom().getColumnIndex() == ROOK_LONG_COLUMN_INDEX) {
+				game.disableLongCasting(sideFrom);
+			}
+		} else if (pieceFrom.getType() == PieceType.pawn) {
+			int diff = move.getFrom().getRowIndex() - move.getTo().getRowIndex();
+
+			if (Math.abs(diff) == 2) {//is long move
+				game.setPawnLongMoveColumnIndex(sideFrom, move.getFrom().getColumnIndex());
+			}
+
+			if (!Objects.equals(move.getFrom().getColumnIndex(), move.getTo().getColumnIndex())) {
+
+				if (pieceTo == null) {
+					//так это взятие на проходе (не могла же пешка покинуть свою вертикаль и при этом ничего не срубив)
+
+					//рубим пешку
+					CellDTO enemyPawnCell = ChessUtils.getCell(cellsMatrix, move.getFrom().getRowIndex(), move.getTo().getColumnIndex());
+					enemyPawnCell.setPiece(null);
+				}
 			}
 		}
 
@@ -155,16 +177,17 @@ public class GameServiceImpl implements GameService {
 		}
 	}
 
-	private Piece executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+	private Pair<Piece, Piece> executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
 		CellDTO cellFrom = ChessUtils.getCell(cellsMatrix, move.getFrom());
 		CellDTO cellTo = ChessUtils.getCell(cellsMatrix, move.getTo());
 
-		Piece piece = cellFrom.getPiece();
+		Piece pieceFrom = cellFrom.getPiece();
+		Piece pieceTo = cellTo.getPiece();
 
 		cellTo.setPiece(cellFrom.getPiece());
 		cellFrom.setPiece(null);
 
-		return piece;
+		return Pair.of(pieceFrom, pieceTo);
 	}
 
 	@Override

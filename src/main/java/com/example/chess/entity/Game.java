@@ -40,6 +40,10 @@ public class Game {
 	@Column(nullable = false)
 	private Boolean isBlackShortCastlingAvailable = true;
 
+	//если пешка сделала длинный ход (на 2 клетки вперед) здесь храним индекс
+	private Integer whitePawnLongMoveColumnIndex;
+	private Integer blackPawnLongMoveColumnIndex;
+
 	public void disableShortCasting(Side side) {
 		if (side == Side.white) {
 			setIsWhiteShortCastlingAvailable(false);
@@ -56,7 +60,7 @@ public class Game {
 		}
 	}
 
-	public boolean isShortCastlingAvailableForSide(Side side) {
+	public boolean isShortCastlingAvailable(Side side) {
 		if (side == Side.white) {
 			return getIsWhiteShortCastlingAvailable();
 		} else {
@@ -64,11 +68,27 @@ public class Game {
 		}
 	}
 
-	public boolean isLongCastlingAvailableForSide(Side side) {
+	public boolean isLongCastlingAvailable(Side side) {
 		if (side == Side.white) {
 			return getIsWhiteLongCastlingAvailable();
 		} else {
 			return getIsBlackLongCastlingAvailable();
+		}
+	}
+
+	public Integer getPawnLongMoveColumnIndex(Side side) {
+		if (side == Side.white) {
+			return getWhitePawnLongMoveColumnIndex();
+		} else {
+			return getBlackPawnLongMoveColumnIndex();
+		}
+	}
+
+	public void setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
+		if (side == Side.white) {
+			setWhitePawnLongMoveColumnIndex(columnIndex);
+		} else {
+			setBlackPawnLongMoveColumnIndex(columnIndex);
 		}
 	}
 }
