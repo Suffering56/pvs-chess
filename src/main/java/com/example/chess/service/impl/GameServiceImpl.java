@@ -18,9 +18,9 @@ import com.example.chess.repository.PieceRepository;
 import com.example.chess.service.GameService;
 import com.example.chess.service.MoveService;
 import com.example.chess.utils.ChessUtils;
+import com.example.chess.utils.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -106,9 +106,8 @@ public class GameServiceImpl implements GameService {
 		List<List<CellDTO>> cellsMatrix = ChessUtils.createCellsMatrixByHistory(beforeMoveHistory);
 
 		//move piece
-		Pair<Piece, Piece> pair = executeMove(cellsMatrix, move);
-		Piece pieceFrom = pair.getLeft();
-		Piece pieceTo = pair.getRight();
+		MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, move);
+		Piece pieceFrom = moveResult.getPieceFrom();
 		Side sideFrom = pieceFrom.getSide();
 
 		game.setPawnLongMoveColumnIndex(sideFrom, null);
@@ -137,7 +136,7 @@ public class GameServiceImpl implements GameService {
 
 			if (!Objects.equals(move.getFrom().getColumnIndex(), move.getTo().getColumnIndex())) {
 
-				if (pieceTo == null) {
+				if (moveResult.getPieceTo() == null) {
 					//так это взятие на проходе (не могла же пешка покинуть свою вертикаль и при этом ничего не срубив)
 
 					//рубим пешку
@@ -173,21 +172,8 @@ public class GameServiceImpl implements GameService {
 			}
 
 			//move rook
-			executeMove(cellsMatrix, new MoveDTO(rookFrom, rookTo));
+			ChessUtils.executeMove(cellsMatrix, new MoveDTO(rookFrom, rookTo));
 		}
-	}
-
-	private Pair<Piece, Piece> executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
-		CellDTO cellFrom = ChessUtils.getCell(cellsMatrix, move.getFrom());
-		CellDTO cellTo = ChessUtils.getCell(cellsMatrix, move.getTo());
-
-		Piece pieceFrom = cellFrom.getPiece();
-		Piece pieceTo = cellTo.getPiece();
-
-		cellTo.setPiece(cellFrom.getPiece());
-		cellFrom.setPiece(null);
-
-		return Pair.of(pieceFrom, pieceTo);
 	}
 
 	@Override

@@ -1,21 +1,24 @@
 package com.example.chess.service.impl;
 
 import com.example.chess.dto.PointDTO;
+import com.example.chess.dto.input.MoveDTO;
 import com.example.chess.dto.output.CellDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
 import com.example.chess.service.MoveService;
 import com.example.chess.utils.ChessUtils;
+import com.example.chess.utils.MoveResult;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.example.chess.ChessConstants.BOARD_SIZE;
 
 @Service //prototype
+@Log4j2
 public class MoveServiceImpl implements MoveService {
 
 	private Game game;
@@ -24,44 +27,87 @@ public class MoveServiceImpl implements MoveService {
 
 	private int selectedRow;
 	private int selectedColumn;
-	private Side alliedSide;
+	private Side selfSide;
 	private Side enemySide;
 
-	boolean isExternalCall = true;
-
 	@Override
-	public Set<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO point) {
+	public Set<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO pointFrom) {
 		this.game = game;
 		this.cellsMatrix = cellsMatrix;
-		this.selectedCell = ChessUtils.getCell(cellsMatrix, point);
+		CellDTO currentCell = ChessUtils.getCell(cellsMatrix, pointFrom);
 
-		this.selectedRow = selectedCell.getRowIndex();
-		this.selectedColumn = selectedCell.getColumnIndex();
-		this.alliedSide = selectedCell.getPieceSide();
-		this.enemySide = getEnemySide(selectedCell);
+		Set<PointDTO> moves = getAvailableMovesForCell(currentCell);
 
-		switch (selectedCell.getPieceType()) {
+		PointDTO selfKingPoint = findKingPoint(currentCell.getPieceSide());
+
+//		return moves.stream()
+//				//only for long-range pieces
+//				.filter(doesNotThrowCheck(currentCell, selfKingPoint))
+//				.collect(Collectors.toSet());
+
+		return moves;
+	}
+
+	private Set<PointDTO> getAvailableMovesForCell(CellDTO cell) {
+		this.selectedCell = cell;
+		this.selectedRow = cell.getRowIndex();
+		this.selectedColumn = cell.getColumnIndex();
+		this.selfSide = cell.getPieceSide();
+		this.enemySide = getEnemySide(cell);
+
+		Set<PointDTO> moves;
+
+		switch (cell.getPieceType()) {
 			case pawn: {
-				return getMovesForPawn();
+				moves = getMovesForPawn();
+				break;
 			}
 			case knight: {
-				return getMovesForKnight();
+				moves = getMovesForKnight();
+				break;
 			}
 			case bishop: {
-				return getMovesForBishop();
+				moves = getMovesForBishop();
+				break;
 			}
 			case rook: {
-				return getMovesForRook();
+				moves = getMovesForRook();
+				break;
 			}
 			case queen: {
-				return getMovesForQueen();
+				moves = getMovesForQueen();
+				break;
 			}
 			case king: {
-				return getMovesForKing();
+				moves = getMovesForKing();
+				break;
 			}
+			default:
+				moves = new HashSet<>();
 		}
+		return moves;
+	}
 
-		return new HashSet<>();
+	private Predicate<PointDTO> doesNotThrowCheck(CellDTO currentCell, PointDTO kingPoint) {
+		return pointTo -> {
+			//имитируем ход
+			MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, new MoveDTO(currentCell.generatePoint(), pointTo));
+
+			boolean isAvailable = cellsMatrix.stream()
+					.flatMap(List::stream)
+					//для всех дальнобойных фигур
+					.filter(isLongRangeEnemy(currentCell))
+					//собираем все доступные ходы
+					.map(this::getAvailableMovesForCell)
+					.flatMap(Set::stream)
+					//и проверяем могут ли они срубить нашего короля
+					.noneMatch(point -> point.equals(kingPoint));
+
+			//откатываем ход
+			moveResult.rollbackMove();
+
+			return isAvailable;
+		};
 	}
 
 	private Set<PointDTO> getMovesForPawn() {
@@ -94,11 +140,11 @@ public class MoveServiceImpl implements MoveService {
 		addPawnMove(moves, cell, true);
 
 		Integer enemyLongMoveColumnIndex = game.getPawnLongMoveColumnIndex(enemySide);
-		if (enemyLongMoveColumnIndex != null) {	//противник только что сделал длинный ход пешкой
+		if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
 
-			if (Math.abs(enemyLongMoveColumnIndex - selectedCell.getColumnIndex()) == 1) {	//и эта пешка рядом с выделенной (слева или справа)
+			if (Math.abs(enemyLongMoveColumnIndex - selectedCell.getColumnIndex()) == 1) {    //и эта пешка рядом с выделенной (слева или справа)
 
-				if (selectedCell.getRowIndex() == 3 || selectedCell.getRowIndex() == 4) {	//и это творится на нужной горизонтали
+				if (selectedCell.getRowIndex() == 3 || selectedCell.getRowIndex() == 4) {    //и это творится на нужной горизонтали
 					//значит можно делать взятие на проходе
 					//проверять ничего не нужно, эта ячейка 100% пуста (не могла же пешка перепрыгнуть фигуру)
 					moves.add(new PointDTO(selectedCell.getRowIndex() + getPawnMoveVector(), enemyLongMoveColumnIndex));
@@ -110,7 +156,7 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private Integer getPawnMoveVector() {
-		if (alliedSide == Side.white) {
+		if (selfSide == Side.white) {
 			return 1;
 		} else {
 			return -1;
@@ -134,7 +180,7 @@ public class MoveServiceImpl implements MoveService {
 
 	private void checkAndAddKnightMove(Set<PointDTO> moves, int rowOffset, int columnOffset) {
 		CellDTO cell = getCell(selectedRow + rowOffset, selectedColumn + columnOffset);
-		if (cell != null && cell.getPieceSide() != alliedSide) {
+		if (cell != null && cell.getPieceSide() != selfSide) {
 			moves.add(cell.generatePoint());
 		}
 	}
@@ -182,20 +228,29 @@ public class MoveServiceImpl implements MoveService {
 		addAvailableMovesForRay(moves, 1, -1, 1);
 		addAvailableMovesForRay(moves, -1, -1, 1);
 
-		if (game.isShortCastlingAvailable(alliedSide)) {
+		if (game.isShortCastlingAvailable(selfSide)) {
 			if (isEmptyCellsBySelectedRow(1, 2)) {
 				addMove(moves, getCell(selectedRow, selectedColumn - 2));
 			}
 		}
-		if (game.isLongCastlingAvailable(alliedSide)) {
+		if (game.isLongCastlingAvailable(selfSide)) {
 			if (isEmptyCellsBySelectedRow(4, 5, 6)) {
 				addMove(moves, getCell(selectedRow, selectedColumn + 2));
 			}
 		}
 
-		Set<PointDTO> allEnemyMoves = getAllAvailableMovesForSide(enemySide);
+
+		Set<PointDTO> enemyPawnAndKnightMoves = getEnemyPawnAndKnightMoves();
+		PointDTO enemyKingPoint = findKingPoint(enemySide);
+
 		return moves.stream()
-				.filter(point -> !allEnemyMoves.contains(point))
+				//проверяем не зашли ли мы в шах от коня или пешки	      && и не подошли ли близко к вражескому королю
+				.filter(point ->
+//								!enemyPawnAndKnightMoves.contains(point)
+//						&&
+								!point.isBorderedBy(enemyKingPoint)
+				)
+				//остальные фигуры проверим после (т.к. они long-range)
 				.collect(Collectors.toSet());
 	}
 
@@ -228,7 +283,7 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private boolean addMove(Set<PointDTO> moves, CellDTO cell) {
-		if (cell == null || cell.getPieceSide() == alliedSide) {
+		if (cell == null || cell.getPieceSide() == selfSide) {
 			//IndexOutOfBounds
 			return false;
 		}
@@ -238,7 +293,7 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private boolean addPawnMove(Set<PointDTO> moves, CellDTO cell, boolean isAttack) {
-		if (cell == null || cell.getPieceSide() == alliedSide) {
+		if (cell == null || cell.getPieceSide() == selfSide) {
 			//IndexOutOfBounds
 			return false;
 		}
@@ -258,12 +313,12 @@ public class MoveServiceImpl implements MoveService {
 		}
 	}
 
-	private Side getEnemySide(CellDTO selectedCell) {
-		Side enemySide = Side.black;
-		if (selectedCell.getPieceSide() == Side.black) {
-			enemySide = Side.white;
+	private Side getEnemySide(CellDTO cell) {
+		if (cell.getPieceSide() == Side.black) {
+			return Side.white;
+		} else {
+			return Side.black;
 		}
-		return enemySide;
 	}
 
 	private CellDTO getCell(int rowIndex, int columnIndex) {
@@ -274,18 +329,28 @@ public class MoveServiceImpl implements MoveService {
 		}
 	}
 
-	private Set<PointDTO> getAllAvailableMovesForSide(Side expectedSide) {
-		if (isExternalCall) {
-			isExternalCall = false;				//FIXME: костыль. починю при реализации механики шаха
-			return cellsMatrix.stream()
-					.flatMap(List::stream)
-					.filter(cell -> cell.getPieceSide() == expectedSide)
-					.map(cell -> getAvailableMoves(game, cellsMatrix, cell.generatePoint()))
-					.flatMap(Set::stream)
-					.collect(Collectors.toSet());
+	private Set<PointDTO> getEnemyPawnAndKnightMoves() {
+		final Side expectedSide = enemySide;
 
-		}
-		return new HashSet<>();
+		return cellsMatrix.stream()
+				.flatMap(List::stream)
+				.filter(cell -> cell.getPieceSide() == expectedSide && (cell.hasPawn() || cell.hasKnight()))
+				.map(this::getAvailableMovesForCell)
+				.flatMap(Set::stream)
+				.collect(Collectors.toSet());
+	}
+
+	private PointDTO findKingPoint(Side side) {
+		return cellsMatrix.stream()
+				.flatMap(List::stream)
+				.filter(cell -> cell.hasKing(side))
+				.findFirst()
+				.orElseThrow(() -> new RuntimeException("king not found on board"))
+				.generatePoint();
+	}
+
+	private Predicate<CellDTO> isLongRangeEnemy(CellDTO currentCell) {
+		return cell -> cell.isEnemyForOther(currentCell) && cell.hasLongRangePiece();
 	}
 
 }

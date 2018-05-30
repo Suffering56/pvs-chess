@@ -30,4 +30,7 @@ public class Piece {
 	@JsonIgnore
 	private List<History> history;
 
+	public boolean isLongRange() {
+		return type == PieceType.rook || type == PieceType.bishop || type == PieceType.queen;
+	}
 }

@@ -1,10 +1,13 @@
 package com.example.chess.utils;
 
 import com.example.chess.dto.PointDTO;
+import com.example.chess.dto.input.MoveDTO;
 import com.example.chess.dto.output.CellDTO;
 import com.example.chess.entity.History;
+import com.example.chess.entity.Piece;
 import com.google.common.base.Preconditions;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +16,19 @@ import static com.example.chess.ChessConstants.BOARD_SIZE;
 
 @Log4j2
 public class ChessUtils {
+
+	public static MoveResult executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+		CellDTO cellFrom = getCell(cellsMatrix, move.getFrom());
+		CellDTO cellTo = getCell(cellsMatrix, move.getTo());
+
+		Piece pieceFrom = cellFrom.getPiece();
+		Piece pieceTo = cellTo.getPiece();
+
+		cellTo.setPiece(cellFrom.getPiece());
+		cellFrom.setPiece(null);
+
+		return new MoveResult(cellFrom, cellTo, pieceFrom, pieceTo);
+	}
 
 	public static CellDTO getCell(List<List<CellDTO>> cellsMatrix, int rowIndex, int columnIndex) {
 		checkPoint(rowIndex, columnIndex);
@@ -66,7 +82,7 @@ public class ChessUtils {
 	}
 
 	public static List<List<CellDTO>> createCellsMatrixByHistory(List<History> historyList) {
-		List<List<CellDTO>> cellsMatrix = ChessUtils.createEmptyCellsMatrix();
+		List<List<CellDTO>> cellsMatrix = createEmptyCellsMatrix();
 
 		for (History item : historyList) {
 			CellDTO cell = cellsMatrix.get(item.getRowIndex()).get(item.getColumnIndex());
