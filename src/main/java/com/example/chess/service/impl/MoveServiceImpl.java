@@ -43,10 +43,30 @@ public class MoveServiceImpl implements MoveService {
 
 		Set<PointDTO> moves = getAvailableMovesForCell(originalCell);
 
-		return moves.stream()
+		moves = moves.stream()
 				//only for long-range pieces
 				.filter(isNoThrowLongCheck(originalCell))
 				.collect(Collectors.toSet());
+
+		if (originalCell.getPieceType() == PieceType.king) {
+			Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(pointFrom, moves);
+			moves.removeAll(unavailableCastlingMoves);			//запрещаем рокировку если король пересекает битое поле
+		}
+
+		return moves;
+	}
+
+	private Set<PointDTO> getUnavailableCastlingPoints(PointDTO pointFrom, Set<PointDTO> moves) {
+		return moves.stream()
+				.filter(pointTo -> !pointFrom.isBorderedBy(pointTo))			//если pointTo не граничит с позицией короля значит это рокировка
+				.filter(castlingPoint -> {
+					int castlingVector = (castlingPoint.getColumnIndex() - pointFrom.getColumnIndex()) / 2;        	//определяем вектор рокировки
+					int crossColumnIndex = pointFrom.getColumnIndex() + castlingVector;                             //прибавляем к позиции короля
+					PointDTO crossPoint = new PointDTO(pointFrom.getRowIndex(), crossColumnIndex);					//получаем пересекаемое при рокировке поле
+
+					//проверяем есть ли оно среди доступных ходов (если нет -> значит оно битое -> значит рокировка в эту сторону запрещена)
+					return !moves.contains(crossPoint);
+				}).collect(Collectors.toSet());
 	}
 
 	private Set<PointDTO> getAvailableMovesForCell(CellDTO cell) {
@@ -215,7 +235,7 @@ public class MoveServiceImpl implements MoveService {
 		}
 		if (game.isLongCastlingAvailable(activeSelfSide)) {
 			if (isEmptyCellsByActiveRow(4, 5, 6)) {
-				addMove(moves, getCell(activeCell.getRowIndex(), activeCell.getColumnIndex() - 2 + 2));
+				addMove(moves, getCell(activeCell.getRowIndex(), activeCell.getColumnIndex() + 2));
 			}
 		}
 
@@ -247,7 +267,6 @@ public class MoveServiceImpl implements MoveService {
 		PointDTO kingPoint = findKingPoint(originalPiece.getSide());
 
 		return pointTo -> {
-			System.out.println("isNoThrowLongCheck!!!: iter");
 			//имитируем ход
 			MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, new MoveDTO(originalCell.generatePoint(), pointTo));
 
@@ -299,6 +318,11 @@ public class MoveServiceImpl implements MoveService {
 	private Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
 		return allPiecesStream()
 				.filter(containsPieces(side, pieceTypes));
+	}
+
+	private Stream<CellDTO> allPiecesStreamBySide(Side side) {
+		return allPiecesStream()
+				.filter(cell -> cell.getPieceSide() == side);
 	}
 
 	private Stream<CellDTO> allPiecesStream() {
