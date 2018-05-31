@@ -44,6 +44,9 @@ public class Game {
 	private Integer whitePawnLongMoveColumnIndex;
 	private Integer blackPawnLongMoveColumnIndex;
 
+	@Enumerated(EnumType.STRING)
+	private Side underCheckSide;
+
 	public void disableShortCasting(Side side) {
 		if (side == Side.white) {
 			setIsWhiteShortCastlingAvailable(false);

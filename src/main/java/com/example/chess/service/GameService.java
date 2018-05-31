@@ -11,7 +11,7 @@ import java.util.Set;
 
 public interface GameService {
 
-	ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException;
+	ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException, GameNotFoundException;
 
 	Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
 

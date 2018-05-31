@@ -1,5 +1,6 @@
 package com.example.chess.service.impl;
 
+import com.example.chess.aspects.Profile;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.CellDTO;
@@ -28,6 +29,8 @@ public class MoveServiceImpl implements MoveService {
 	private Game game;
 	private List<List<CellDTO>> cellsMatrix;
 	private Side originalEnemySide;
+	private PointDTO originalKingPoint;
+	private Piece originalPiece;
 
 	//changed recursive
 	private CellDTO activeCell;
@@ -35,38 +38,34 @@ public class MoveServiceImpl implements MoveService {
 	private Side activeEnemySide;
 
 	@Override
-	public Set<PointDTO> getAvailableMoves(Game game, List<List<CellDTO>> cellsMatrix, PointDTO pointFrom) {
-		this.game = game;
-		this.cellsMatrix = cellsMatrix;
+	public boolean isEnemyKingUnderAttack(Side attackingSide) {
+		PointDTO enemyKingPoint = findKingPoint(attackingSide.reverse());
+		Set<PointDTO> enemyMoves = getPiecesMoves(attackingSide, PieceType.pawn, PieceType.knight, PieceType.bishop, PieceType.rook, PieceType.queen);
+		return enemyMoves.contains(enemyKingPoint);
+	}
+
+	@Override
+	@Profile
+	public Set<PointDTO> getAvailableMoves(PointDTO pointFrom) {
 		CellDTO originalCell = ChessUtils.getCell(cellsMatrix, pointFrom);
+		this.originalPiece = originalCell.getPiece();
 		this.originalEnemySide = getEnemySide(originalCell);
+		this.originalKingPoint = findKingPoint(originalCell.getPieceSide());
 
 		Set<PointDTO> moves = getAvailableMovesForCell(originalCell);
 
 		moves = moves.stream()
-				//only for long-range pieces
-				.filter(isNoThrowLongCheck(originalCell))
+				.filter(isNotAttackingBySimpleEnemyPieces(originalCell)
+						.and(isNotAttackingByEnemyPawns())
+				)
 				.collect(Collectors.toSet());
 
 		if (originalCell.getPieceType() == PieceType.king) {
 			Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(pointFrom, moves);
-			moves.removeAll(unavailableCastlingMoves);			//запрещаем рокировку если король пересекает битое поле
+			moves.removeAll(unavailableCastlingMoves);            //запрещаем рокировку если король пересекает битое поле
 		}
 
 		return moves;
-	}
-
-	private Set<PointDTO> getUnavailableCastlingPoints(PointDTO pointFrom, Set<PointDTO> moves) {
-		return moves.stream()
-				.filter(pointTo -> !pointFrom.isBorderedBy(pointTo))			//если pointTo не граничит с позицией короля значит это рокировка
-				.filter(castlingPoint -> {
-					int castlingVector = (castlingPoint.getColumnIndex() - pointFrom.getColumnIndex()) / 2;        	//определяем вектор рокировки
-					int crossColumnIndex = pointFrom.getColumnIndex() + castlingVector;                             //прибавляем к позиции короля
-					PointDTO crossPoint = new PointDTO(pointFrom.getRowIndex(), crossColumnIndex);					//получаем пересекаемое при рокировке поле
-
-					//проверяем есть ли оно среди доступных ходов (если нет -> значит оно битое -> значит рокировка в эту сторону запрещена)
-					return !moves.contains(crossPoint);
-				}).collect(Collectors.toSet());
 	}
 
 	private Set<PointDTO> getAvailableMovesForCell(CellDTO cell) {
@@ -239,39 +238,26 @@ public class MoveServiceImpl implements MoveService {
 			}
 		}
 
-		//остальные фигуры проверим после (т.к. они long-range)
 		return moves.stream()
-				.filter(isNoThrowShortCheck())
+				//фильровать здесь!!!
+				//если это делать там, где происходят остальные проверки на шах - попадем в бесконечную рекурсию
+				.filter(isNotAttackingByEnemyKing())
 				.collect(Collectors.toSet());
 	}
 
 	/**
-	 * Проверяет встали ли мы королем под шах НЕдальнобойнной фигуры (короля/пешки/коня) противника.
+	 * Проверяет не встали ли мы под шах от простой фигуры (коня/слона/ладьи/ферзя).
+	 * Так же проверяет, не передвинули ли мы фигуру, защищающую короля от шаха вражеской простой фигуры
 	 */
-	private Predicate<PointDTO> isNoThrowShortCheck() {
-		PointDTO enemyKingPoint = findKingPoint(originalEnemySide);
-		Set<PointDTO> enemyKnightMoves = getPiecesMoves(originalEnemySide, PieceType.knight);
-		Set<PointDTO> enemyPawnAttackMoves = getPawnAttackMoves(originalEnemySide);
-
-		return point -> !enemyKnightMoves.contains(point)    //а не встали ли мы под вражеского коня?
-				&& !enemyPawnAttackMoves.contains(point)    //или под вражескую пешку?
-				&& !point.isBorderedBy(enemyKingPoint);    //или может мы подошли вплотную к вражескому королю?
-	}
-
-	/**
-	 * Проверяет не встали ли мы под шах от дальнобойной фигуры (ладьи/слона/ферзя).
-	 * Так же проверяет, не передвинули ли мы фигуру, защищающую короля от шаха вражеской дальнобойной фигуры
-	 */
-	private Predicate<PointDTO> isNoThrowLongCheck(CellDTO originalCell) {
+	private Predicate<PointDTO> isNotAttackingBySimpleEnemyPieces(CellDTO originalCell) {
 		Piece originalPiece = originalCell.getPiece();
-		PointDTO kingPoint = findKingPoint(originalPiece.getSide());
 
 		return pointTo -> {
 			//имитируем ход
 			MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, new MoveDTO(originalCell.generatePoint(), pointTo));
 
 			//для всех дальнобойных фигур собираем все доступные ходы врага на следующий ход
-			Set<PointDTO> rayPieceMoves = getPiecesMoves(originalEnemySide, PieceType.rook, PieceType.bishop, PieceType.queen);
+			Set<PointDTO> rayPieceMoves = getPiecesMoves(originalEnemySide, PieceType.knight, PieceType.bishop, PieceType.rook, PieceType.queen);
 
 			//и проверяем, что мы не поставили нашего короля под атаку
 			boolean isCanAttack;
@@ -280,7 +266,7 @@ public class MoveServiceImpl implements MoveService {
 				isCanAttack = rayPieceMoves.contains(pointTo);
 			} else {
 				//если другой фигурой - а не открылся ли шах
-				isCanAttack = rayPieceMoves.contains(kingPoint);
+				isCanAttack = rayPieceMoves.contains(originalKingPoint);
 			}
 			//откатываем ход
 			moveResult.rollbackMove();
@@ -289,8 +275,51 @@ public class MoveServiceImpl implements MoveService {
 		};
 	}
 
-	private Set<PointDTO> getPawnAttackMoves(Side side) {
+	/**
+	 * Проверяет не встали ли мы королем под шах пешки противника
+	 */
+	private Predicate<? super PointDTO> isNotAttackingByEnemyPawns() {
+
+		if (originalPiece.getType() == PieceType.king) {				//если ходим королем, то не даем ему пойти под шах от пешки
+			Set<PointDTO> enemyPawnAttackMoves = getPawnAttackMoves(originalEnemySide, null);
+			return pointTo -> !enemyPawnAttackMoves.contains(pointTo);
+
+		} else {														//если другой фигурой
+			if (game.getUnderCheckSide() == originalPiece.getSide()) {	//и наш король находится под шахом от вражеской пешки
+																		//не даем фигурам ходить, кроме случая если она рубит пешку объявившую шах
+				return pointTo -> !getPawnAttackMoves(originalEnemySide, pointTo).contains(originalKingPoint);
+
+			} else {													//если король не под шахом то шаха от вражеской пешки быть не может
+				return pointTo -> true;									//ведь шаха не было, а ходим мы не королем
+			}
+		}
+	}
+
+	/**
+	 * Проверяет не встали ли мы королем под шах вражеского короля.
+	 */
+	private Predicate<PointDTO> isNotAttackingByEnemyKing() {
+		PointDTO enemyKingPoint = findKingPoint(originalEnemySide);
+		return point -> !point.isBorderedBy(enemyKingPoint);  //или может подошли вплотную к вражескому королю?
+	}
+
+	private Set<PointDTO> getUnavailableCastlingPoints(PointDTO pointFrom, Set<PointDTO> moves) {
+		return moves.stream()
+				.filter(pointTo -> !pointFrom.isBorderedBy(pointTo))            //если pointTo не граничит с позицией короля значит это рокировка
+				.filter(castlingPoint -> {
+					int castlingVector = (castlingPoint.getColumnIndex() - pointFrom.getColumnIndex()) / 2;             //определяем вектор рокировки
+					int crossColumnIndex = pointFrom.getColumnIndex() + castlingVector;                                 //прибавляем к позиции короля
+					PointDTO crossPoint = new PointDTO(pointFrom.getRowIndex(), crossColumnIndex);                      //получаем пересекаемое при рокировке поле
+
+					//проверяем есть ли оно среди доступных ходов (если нет -> значит оно битое -> значит рокировка в эту сторону запрещена)
+					return !moves.contains(crossPoint);
+				}).collect(Collectors.toSet());
+	}
+
+	private Set<PointDTO> getPawnAttackMoves(Side side, PointDTO excludePoint) {
 		Set<PointDTO> enemyPawnCoords = findPiecesCoords(side, PieceType.pawn);
+		enemyPawnCoords.remove(excludePoint);
+
 		int vector = getPawnMoveVector(side);
 
 		Set<PointDTO> pawnAttackMoves = new HashSet<>();
@@ -318,11 +347,6 @@ public class MoveServiceImpl implements MoveService {
 	private Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
 		return allPiecesStream()
 				.filter(containsPieces(side, pieceTypes));
-	}
-
-	private Stream<CellDTO> allPiecesStreamBySide(Side side) {
-		return allPiecesStream()
-				.filter(cell -> cell.getPieceSide() == side);
 	}
 
 	private Stream<CellDTO> allPiecesStream() {
@@ -416,5 +440,15 @@ public class MoveServiceImpl implements MoveService {
 				.findFirst()
 				.orElseThrow(() -> new RuntimeException("king not found on board"))
 				.generatePoint();
+	}
+
+	@Override
+	public void setGame(Game game) {
+		this.game = game;
+	}
+
+	@Override
+	public void setCellsMatrix(List<List<CellDTO>> cellsMatrix) {
+		this.cellsMatrix = cellsMatrix;
 	}
 }

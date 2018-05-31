@@ -7,10 +7,9 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
         isViewer: false,    //if true = disable moves
         game: {
             id: null,
-            position: null
-        },
-        checkWhiteKing: false,
-        checkBlackKing: false
+            position: null,
+            underCheckSide: null
+        }
     };
 
     var params = $scope.params;
@@ -28,7 +27,9 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
             method: "GET",
             url: "/api/init/" + params.game.id + "/arrangement/" + params.game.position
         }).then(function (response) {
-            $scope.cellsMatrix = response.data.cellsMatrix;
+            var arrangementDTO = response.data;
+            $scope.cellsMatrix = arrangementDTO.cellsMatrix;
+            params.game.underCheckSide = arrangementDTO.underCheckSide;
             params.gameStarted = true;
         });
     }
@@ -68,6 +69,8 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
 
             game.position = arrangementDTO.position;
             $scope.cellsMatrix = arrangementDTO.cellsMatrix;
+            game.underCheckSide = arrangementDTO.underCheckSide;
+
             utils.updateAddressBarPathByParams(params);
 
         }, function (reason) {
@@ -134,7 +137,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
             result.push("piece");
             result.push(cell.piece.type + "-" + cell.piece.side);
             if (cell.piece.type === "king") {
-                if ((params.checkWhiteKing === true && cell.piece.side === "white") || (params.checkBlackKing === true && cell.piece.side === "black")) {
+                if (params.game.underCheckSide  === cell.piece.side) {
                     result.push("check");
                 }
             }

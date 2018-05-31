@@ -86,7 +86,7 @@ public class GameServiceImpl implements GameService {
 		Game game = findAndCheckGame(gameId);
 		List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
 
-		return moveService.get().getAvailableMoves(game, cellsMatrix, point);
+		return getMoveServiceInstance(game, cellsMatrix).getAvailableMoves(point);
 	}
 
 	@Override
@@ -111,6 +111,7 @@ public class GameServiceImpl implements GameService {
 		Side sideFrom = pieceFrom.getSide();
 
 		game.setPawnLongMoveColumnIndex(sideFrom, null);
+		game.setUnderCheckSide(null);
 
 		if (pieceFrom.getType() == PieceType.king) {
 			//do castling (only the rook moves)
@@ -149,10 +150,16 @@ public class GameServiceImpl implements GameService {
 		List<History> afterMoveHistory = createHistoryByCellsMatrix(cellsMatrix, gameId, newPosition);
 		game.setPosition(newPosition);
 
+		boolean isEnemyKingUnderAttack = getMoveServiceInstance(game, cellsMatrix).isEnemyKingUnderAttack(sideFrom);
+		if (isEnemyKingUnderAttack) {
+			game.setUnderCheckSide(sideFrom.reverse());
+		}
+
 		historyRepository.save(afterMoveHistory);
 		gameRepository.save(game);
 
-		return new ArrangementDTO(newPosition, cellsMatrix);
+
+		return new ArrangementDTO(newPosition, cellsMatrix, game.getUnderCheckSide());
 	}
 
 	private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
@@ -177,7 +184,8 @@ public class GameServiceImpl implements GameService {
 	}
 
 	@Override
-	public ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException {
+	public ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException, GameNotFoundException {
+		Game game = findAndCheckGame(gameId);
 		ArrangementDTO result = new ArrangementDTO();
 
 		if (position > 0) {
@@ -187,6 +195,7 @@ public class GameServiceImpl implements GameService {
 		}
 
 		result.setPosition(position);
+		result.setUnderCheckSide(game.getUnderCheckSide());
 
 		return result;
 	}
@@ -278,5 +287,12 @@ public class GameServiceImpl implements GameService {
 
 	private Piece findPieceBySideAndType(Side side, PieceType type) {
 		return piecesBySideAndTypeMap.get(side).get(type);
+	}
+
+	private MoveService getMoveServiceInstance(Game game, List<List<CellDTO>> cellsMatrix) {
+		MoveService moveServiceInstance = moveService.get();
+		moveServiceInstance.setGame(game);
+		moveServiceInstance.setCellsMatrix(cellsMatrix);
+		return moveServiceInstance;
 	}
 }
