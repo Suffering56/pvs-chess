@@ -1,8 +1,8 @@
 package com.example.chess.web;
 
-import com.example.chess.dto.input.SideChooseDTO;
-import com.example.chess.dto.output.ArrangementDTO;
-import com.example.chess.dto.output.ParamsPlayerDTO;
+import com.example.chess.dto.SideChooseDTO;
+import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.dto.ParamsPlayerDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.repository.GameRepository;

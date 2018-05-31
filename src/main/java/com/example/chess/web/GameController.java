@@ -1,8 +1,8 @@
 package com.example.chess.web;
 
 import com.example.chess.dto.PointDTO;
-import com.example.chess.dto.input.MoveDTO;
-import com.example.chess.dto.output.ArrangementDTO;
+import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.service.GameService;

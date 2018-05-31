@@ -1,17 +1,18 @@
-package com.example.chess.dto.input;
+package com.example.chess.dto;
 
-import com.example.chess.dto.PointDTO;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Setter
+import java.util.List;
+
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class MoveDTO {
+public class ArrangementDTO {
 
-	private PointDTO from;
-	private PointDTO to;
+	private int position;
+	private List<List<CellDTO>> cellsMatrix;
 }

@@ -1,4 +1,4 @@
-package com.example.chess.dto.input;
+package com.example.chess.dto;
 
 import lombok.Getter;
 import lombok.Setter;

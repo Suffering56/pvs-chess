@@ -1,6 +1,6 @@
 package com.example.chess.utils;
 
-import com.example.chess.dto.output.CellDTO;
+import com.example.chess.dto.CellDTO;
 import com.example.chess.entity.Piece;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

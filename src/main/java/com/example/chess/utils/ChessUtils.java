@@ -1,13 +1,12 @@
 package com.example.chess.utils;
 
 import com.example.chess.dto.PointDTO;
-import com.example.chess.dto.input.MoveDTO;
-import com.example.chess.dto.output.CellDTO;
+import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.CellDTO;
 import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
 import com.google.common.base.Preconditions;
 import lombok.extern.log4j.Log4j2;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.List;

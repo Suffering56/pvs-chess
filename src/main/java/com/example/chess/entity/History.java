@@ -1,6 +1,6 @@
 package com.example.chess.entity;
 
-import com.example.chess.dto.output.CellDTO;
+import com.example.chess.dto.CellDTO;
 import lombok.Getter;
 import lombok.Setter;
 

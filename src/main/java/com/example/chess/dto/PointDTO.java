@@ -1,7 +1,6 @@
 package com.example.chess.dto;
 
 import lombok.*;
-import lombok.extern.log4j.Log4j2;
 
 import java.util.Objects;
 
@@ -9,7 +8,6 @@ import java.util.Objects;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Log4j2
 public class PointDTO {
 
 	protected Integer rowIndex;
@@ -20,10 +18,15 @@ public class PointDTO {
 			throw new RuntimeException("isBorderedBy self???");
 		}
 
-		int diff = Math.abs(rowIndex - other.rowIndex) +  Math.abs(columnIndex - other.columnIndex);
-		log.info("diff[{}.{}]: " + diff, other.rowIndex, other.columnIndex);
+		int rowDiff = Math.abs(rowIndex - other.rowIndex);
+		int columnDiff = Math.abs(columnIndex - other.columnIndex);
+		int diff = rowDiff + columnDiff;
 
-		return Math.abs(rowIndex - other.rowIndex) +  Math.abs(columnIndex - other.columnIndex) == 1;
+		if (diff == 1) {
+			return true;
+		} else {
+			return diff == 2 && rowDiff == columnDiff;
+		}
 	}
 
 	@Override

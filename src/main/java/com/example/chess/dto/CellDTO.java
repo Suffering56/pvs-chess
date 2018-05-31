@@ -1,6 +1,5 @@
-package com.example.chess.dto.output;
+package com.example.chess.dto;
 
-import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
@@ -73,5 +72,9 @@ public class CellDTO {
 
 	public boolean hasKnight() {
 		return piece != null  && piece.getType() == PieceType.knight;
+	}
+
+	public boolean hasKnight(Side side) {
+		return piece != null  && getPieceSide() == side && piece.getType() == PieceType.knight;
 	}
 }
