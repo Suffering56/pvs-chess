@@ -300,12 +300,12 @@ public class MoveServiceImpl implements MoveService {
 	 */
 	private Predicate<PointDTO> isNotAttackingByEnemyKing() {
 		PointDTO enemyKingPoint = findKingPoint(originalEnemySide);
-		return point -> !point.isBorderedBy(enemyKingPoint);  //или может подошли вплотную к вражескому королю?
+		return enemyKingPoint::isNotBorderedBy;  //или может подошли вплотную к вражескому королю?
 	}
 
 	private Set<PointDTO> getUnavailableCastlingPoints(PointDTO pointFrom, Set<PointDTO> moves) {
 		return moves.stream()
-				.filter(pointTo -> !pointFrom.isBorderedBy(pointTo))            //если pointTo не граничит с позицией короля значит это рокировка
+				.filter(pointFrom::isNotBorderedBy)            //если pointTo не граничит с позицией короля значит это рокировка
 				.filter(castlingPoint -> {
 					int castlingVector = (castlingPoint.getColumnIndex() - pointFrom.getColumnIndex()) / 2;             //определяем вектор рокировки
 					int crossColumnIndex = pointFrom.getColumnIndex() + castlingVector;                                 //прибавляем к позиции короля

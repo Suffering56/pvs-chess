@@ -17,9 +17,4 @@ public class ArrangementDTO {
 	private int position;
 	private List<List<CellDTO>> cellsMatrix;
 	private Side underCheckSide;
-
-	public ArrangementDTO(int position, List<List<CellDTO>> cellsMatrix) {
-		this.position = position;
-		this.cellsMatrix = cellsMatrix;
-	}
 }

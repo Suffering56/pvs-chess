@@ -45,7 +45,6 @@ public class GameServiceImpl implements GameService {
 	private final HistoryRepository historyRepository;
 	private final PieceRepository pieceRepository;
 
-	private Map<Integer, Piece> piecesByIdMap;
 	private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
 	@Autowired
@@ -62,9 +61,6 @@ public class GameServiceImpl implements GameService {
 		if (Iterables.isEmpty(pieces)) {
 			throw new RuntimeException("pieces not found");
 		}
-
-		piecesByIdMap = StreamSupport.stream(pieces.spliterator(), false)
-				.collect(Collectors.toMap(Piece::getId, identity()));
 
 		piecesBySideAndTypeMap = StreamSupport
 				.stream(pieces.spliterator(), false)

@@ -29,8 +29,4 @@ public class Piece {
 	@OneToMany(mappedBy = "piece", fetch = FetchType.LAZY)
 	@JsonIgnore
 	private List<History> history;
-
-	public boolean isLongRange() {
-		return type == PieceType.rook || type == PieceType.bishop || type == PieceType.queen;
-	}
 }

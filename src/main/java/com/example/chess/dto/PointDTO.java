@@ -13,7 +13,7 @@ public class PointDTO {
 	protected Integer rowIndex;
 	protected Integer columnIndex;
 
-	public boolean isBorderedBy(PointDTO other) {
+	public boolean isNotBorderedBy(PointDTO other) {
 		if (equals(other)) {
 			throw new RuntimeException("isBorderedBy self???");
 		}
@@ -23,9 +23,9 @@ public class PointDTO {
 		int diff = rowDiff + columnDiff;
 
 		if (diff == 1) {
-			return true;
+			return false;
 		} else {
-			return diff == 2 && rowDiff == columnDiff;
+			return diff != 2 || rowDiff != columnDiff;
 		}
 	}
 
