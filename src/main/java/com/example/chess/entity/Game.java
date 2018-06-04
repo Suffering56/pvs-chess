@@ -3,6 +3,7 @@ package com.example.chess.entity;
 import com.example.chess.enums.Side;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
@@ -10,6 +11,7 @@ import javax.persistence.*;
 @Entity
 @Getter
 @Setter
+@ToString
 public class Game {
 
 	@Id

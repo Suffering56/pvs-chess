@@ -6,10 +6,12 @@ import com.example.chess.enums.Side;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 public class CellDTO {
 
 	private Piece piece;
