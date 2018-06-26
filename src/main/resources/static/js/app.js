@@ -1,4 +1,4 @@
-var app = angular.module("app", []);
+var app = angular.module("app", ["ui.bootstrap", "dialogs.main"]);
 
 const GAME_PREFIX = "/game/";
 const POSITION_PREFIX = "/position/";

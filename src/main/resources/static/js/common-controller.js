@@ -1,4 +1,4 @@
-app.controller("common", function ($scope, $http, $window, initService, utils) {
+app.controller("common", function ($scope, $http, $window, initService, utils, dialogs) {
     $scope.horizontalLabels = ["h", "g", "f", "e", "d", "c", "b", "a"];
     $scope.verticalLabels = ["1", "2", "3", "4", "5", "6", "7", "8"];
     $scope.params = {
@@ -50,6 +50,11 @@ app.controller("common", function ($scope, $http, $window, initService, utils) {
     };
 
     function applyMove(cell) {
+        // if (cell.columnIndex == 0) {
+        //     dialogs.confirm('Please Confirm', 'confirm');
+        //     return;
+        // }
+
         var url = "/api/game/" + game.id + "/move";
         $http({
             method: "POST",
