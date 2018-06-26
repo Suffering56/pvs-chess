@@ -7,6 +7,7 @@ import com.example.chess.entity.Game;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.GameService;
+import com.example.chess.utils.CustomResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -79,9 +80,9 @@ public class InitController {
 
 	@PostMapping("/{gameId}/side")
 	@ResponseStatus(value = HttpStatus.OK)
-	public void setSide(@PathVariable("gameId") Long gameId,
-						@RequestBody SideChooseDTO dto,
-						HttpServletRequest request) throws GameNotFoundException {
+	public CustomResponse setSide(@PathVariable("gameId") Long gameId,
+								  @RequestBody SideChooseDTO dto,
+								  HttpServletRequest request) throws GameNotFoundException {
 
 		Game game = gameService.findAndCheckGame(gameId);
 		String sessionId = request.getSession().getId();
@@ -93,6 +94,8 @@ public class InitController {
 		}
 
 		gameRepository.save(game);
+
+		return CustomResponse.createVoid();
 	}
 
 	@GetMapping("/{gameId}/arrangement/{position}")
