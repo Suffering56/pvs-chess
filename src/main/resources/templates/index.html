@@ -1,6 +1,6 @@
 <!DOCTYPE HTML>
 <!--suppress HtmlUnknownTarget -->
-<html>
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Chess application</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -17,6 +17,8 @@
     <script src="/js/app.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/init-service.js"></script>
+
+    <script src="/js/modal/piece-chooser-controller.js"></script>
     <script src="/js/common-controller.js"></script>
 </head>
 
@@ -51,6 +53,8 @@
         </div>
     </div>
 </div>
+
+<div th:include="modal/piece-chooser :: root"></div>
 
 </body>
 </html>

@@ -51,7 +51,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
 
     function applyMove(cell) {
         // if (cell.columnIndex == 0) {
-        //     dialogs.confirm('Please Confirm', 'confirm');
+        //     var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", {}, {size: "lg"});
         //     return;
         // }
 
@@ -142,18 +142,18 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
             result.push("piece");
             result.push(cell.piece.type + "-" + cell.piece.side);
             if (cell.piece.type === "king") {
-                if (params.game.underCheckSide  === cell.piece.side) {
+                if (params.game.underCheckSide === cell.piece.side) {
                     result.push("check");
                 }
             }
         }
 
         if (cell.selected === true) {
-            result.push('selected');
+            result.push("selected");
         } else if (cell.available === true) {
-            result.push('available');
-            if (cell.piece != null && cell.piece.side === getEnemySide()){
-                result.push('capture');
+            result.push("available");
+            if (cell.piece != null && cell.piece.side === getEnemySide()) {
+                result.push("capture");
             }
         }
 

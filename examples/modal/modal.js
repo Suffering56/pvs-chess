@@ -1,90 +1,170 @@
-angular.module('modalTest',['ui.bootstrap','dialogs'])
-    .controller('dialogServiceTest',function($scope,$rootScope,$timeout,$dialogs){
-        $scope.confirmed = 'You have yet to be confirmed!';
-        $scope.name = '"Your name here."';
+angular.module('modalTest',['ui.bootstrap','dialogs.main','pascalprecht.translate','dialogs.default-translations'])
+    .controller('dialogServiceTest',function($scope,$rootScope,$timeout,$translate,dialogs){
+
+        //-- Variables --//
+
+        $scope.lang = 'en-US';
+        $scope.language = 'English';
+
+        var _progress = 33;
+
+        $scope.name = '';
+        $scope.confirmed = 'No confirmation yet!';
+
+        $scope.custom = {
+            val: 'Initial Value'
+        };
+
+        //-- Listeners & Watchers --//
+
+        $scope.$watch('lang',function(val,old){
+            switch(val){
+                case 'en-US':
+                    $scope.language = 'English';
+                    break;
+                case 'es':
+                    $scope.language = 'Spanish';
+                    break;
+            }
+        });
+
+        //-- Methods --//
+
+        $scope.setLanguage = function(lang){
+            $scope.lang = lang;
+            $translate.use(lang);
+        };
 
         $scope.launch = function(which){
-            var dlg = null;
             switch(which){
-
-                // Error Dialog
                 case 'error':
-                    dlg = $dialogs.error('This is my error message');
+                    dialogs.error();
                     break;
-
-                // Wait / Progress Dialog
                 case 'wait':
-                    dlg = $dialogs.wait(msgs[i++],progress);
-                    fakeProgress();
+                    var dlg = dialogs.wait(undefined,undefined,_progress);
+                    _fakeWaitProgress();
                     break;
-
-                // Notify Dialog
+                case 'customwait':
+                    var dlg = dialogs.wait('Custom Wait Header','Custom Wait Message',_progress);
+                    _fakeWaitProgress();
+                    break;
                 case 'notify':
-                    dlg = $dialogs.notify('Something Happened!','Something happened that I need to tell you.');
+                    dialogs.notify();
                     break;
-
-                // Confirm Dialog
                 case 'confirm':
-                    dlg = $dialogs.confirm('Please Confirm','Is this awesome or what?');
+                    var dlg = dialogs.confirm();
                     dlg.result.then(function(btn){
-                        $scope.confirmed = 'You thought this quite awesome!';
+                        $scope.confirmed = 'You confirmed "Yes."';
                     },function(btn){
-                        $scope.confirmed = 'Shame on you for not thinking this is awesome!';
+                        $scope.confirmed = 'You confirmed "No."';
                     });
                     break;
-
-                // Create Your Own Dialog
-                case 'create':
-                    dlg = $dialogs.create('/dialogs/whatsyourname.html','whatsYourNameCtrl',{},{key: false,back: 'static'});
+                case 'confirm2':
+                    var dlg = dialogs.confirm(undefined, undefined, {
+                        btnMessages: {
+                            DIALOGS_YES: 'Submit',
+                            DIALOGS_NO: 'Abort'
+                        }
+                    });
+                    dlg.result.then(function(btn){
+                        $scope.confirmed = 'You confirmed "Yes."';
+                    },function(btn){
+                        $scope.confirmed = 'You confirmed "No."';
+                    });
+                    break;
+                case 'custom':
+                    var dlg = dialogs.create('/templates/piece_chooser_dlg.html','customDialogCtrl',{},{size:'lg',keyboard: true,backdrop: false,windowClass: 'my-class'});
                     dlg.result.then(function(name){
                         $scope.name = name;
                     },function(){
-                        $scope.name = 'You decided not to enter in your name, that makes me sad.';
+                        if(angular.equals($scope.name,''))
+                            $scope.name = 'You did not enter in your name!';
                     });
-
                     break;
-            }; // end switch
+                case 'custom2':
+                    var dlg = dialogs.create('/dialogs/custom2.html','customDialogCtrl2',$scope.custom,{size:'lg'});
+                    break;
+            }
         }; // end launch
 
-        // for faking the progress bar in the wait dialog
-        var progress = 25;
-        var msgs = [
-            'Hey! I\'m waiting here...',
-            'About half way done...',
-            'Almost there?',
-            'Woo Hoo! I made it!'
-        ];
-        var i = 0;
-
-        var fakeProgress = function(){
+        var _fakeWaitProgress = function(){
             $timeout(function(){
-                if(progress < 100){
-                    progress += 25;
-                    $rootScope.$broadcast('dialogs.wait.progress',{msg: msgs[i++],'progress': progress});
-                    fakeProgress();
+                if(_progress < 100){
+                    _progress += 33;
+                    $rootScope.$broadcast('dialogs.wait.progress',{'progress' : _progress});
+                    _fakeWaitProgress();
                 }else{
                     $rootScope.$broadcast('dialogs.wait.complete');
+                    _progress = 0;
                 }
             },1000);
-        }; // end fakeProgress
+        };
+    }) // end controller(dialogsServiceTest)
 
-    }) // end dialogsServiceTest
-    .controller('whatsYourNameCtrl',function($scope,$modalInstance,data){
+    .controller('customDialogCtrl',function($scope,$uibModalInstance,data){
+        //-- Variables --//
+
         $scope.user = {name : ''};
 
+        //-- Methods --//
+
         $scope.cancel = function(){
-            $modalInstance.dismiss('canceled');
+            $uibModalInstance.dismiss('Canceled');
         }; // end cancel
 
         $scope.save = function(){
-            $modalInstance.close($scope.user.name);
+            $uibModalInstance.close($scope.user.name);
         }; // end save
 
         $scope.hitEnter = function(evt){
-            if(angular.equals(evt.keyCode,13) && !(angular.equals($scope.name,null) || angular.equals($scope.name,'')))
+            if(angular.equals(evt.keyCode,13) && !(angular.equals($scope.user.name,null) || angular.equals($scope.user.name,'')))
                 $scope.save();
-        }; // end hitEnter
-    }) // end whatsYourNameCtrl
+        };
+    }) // end controller(customDialogCtrl)
+
+    .controller('customDialogCtrl2',function($scope,$uibModalInstance,data){
+
+        $scope.data = data;
+
+        //-- Methods --//
+
+        $scope.done = function(){
+            $uibModalInstance.close($scope.data);
+        }; // end done
+
+        $scope.hitEnter = function(evt){
+            if(angular.equals(evt.keyCode,13) && !(angular.equals($scope.user.name,null) || angular.equals($scope.user.name,'')))
+                $scope.done();
+        };
+    })
+
+    .config(['dialogsProvider','$translateProvider',function(dialogsProvider,$translateProvider){
+        dialogsProvider.useBackdrop('static');
+        dialogsProvider.useEscClose(false);
+        dialogsProvider.useCopy(false);
+        dialogsProvider.setSize('sm');
+
+        $translateProvider.translations('es',{
+            DIALOGS_ERROR: "Error",
+            DIALOGS_ERROR_MSG: "Se ha producido un error desconocido.",
+            DIALOGS_CLOSE: "Cerca",
+            DIALOGS_PLEASE_WAIT: "Espere por favor",
+            DIALOGS_PLEASE_WAIT_ELIPS: "Espere por favor...",
+            DIALOGS_PLEASE_WAIT_MSG: "Esperando en la operacion para completar.",
+            DIALOGS_PERCENT_COMPLETE: "% Completado",
+            DIALOGS_NOTIFICATION: "Notificacion",
+            DIALOGS_NOTIFICATION_MSG: "Notificacion de aplicacion Desconocido.",
+            DIALOGS_CONFIRMATION: "Confirmacion",
+            DIALOGS_CONFIRMATION_MSG: "Se requiere confirmacion.",
+            DIALOGS_OK: "Bueno",
+            DIALOGS_YES: "Si",
+            DIALOGS_NO: "No"
+        });
+
+        $translateProvider.preferredLanguage('en-US');
+    }])
+
     .run(['$templateCache',function($templateCache){
-        $templateCache.put('/dialogs/whatsyourname.html','<div class="modal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title"><span class="glyphicon glyphicon-star"></span> User\'s Name</h4></div><div class="modal-body"><ng-form name="nameDialog" novalidate role="form"><div class="form-group input-group-lg" ng-class="{true: \'has-error\'}[nameDialog.username.$dirty && nameDialog.username.$invalid]"><label class="control-label" for="username">Name:</label><input type="text" class="form-control" name="username" id="username" ng-model="user.name" ng-keyup="hitEnter($event)" required><span class="help-block">Enter your full name, first &amp; last.</span></div></ng-form></div><div class="modal-footer"><button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button><button type="button" class="btn btn-primary" ng-click="save()" ng-disabled="(nameDialog.$dirty && nameDialog.$invalid) || nameDialog.$pristine">Save</button></div></div></div></div>');
-    }]); // end run / module
+        $templateCache.put('/dialogs/custom.html','<div class="modal-header"><h4 class="modal-title"><span class="glyphicon glyphicon-star"></span> User\'s Name</h4></div><div class="modal-body"><ng-form name="nameDialog" novalidate role="form"><div class="form-group input-group-lg" ng-class="{true: \'has-error\'}[nameDialog.username.$dirty && nameDialog.username.$invalid]"><label class="control-label" for="course">Name:</label><input type="text" class="form-control" name="username" id="username" ng-model="user.name" ng-keyup="hitEnter($event)" required><span class="help-block">Enter your full name, first &amp; last.</span></div></ng-form></div><div class="modal-footer"><button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button><button type="button" class="btn btn-primary" ng-click="save()" ng-disabled="(nameDialog.$dirty && nameDialog.$invalid) || nameDialog.$pristine">Save</button></div>');
+        $templateCache.put('/dialogs/custom2.html','<div class="modal-header"><h4 class="modal-title"><span class="glyphicon glyphicon-star"></span> Custom Dialog 2</h4></div><div class="modal-body"><label class="control-label" for="customValue">Custom Value:</label><input type="text" class="form-control" id="customValue" ng-model="data.val" ng-keyup="hitEnter($event)"><span class="help-block">Using "dialogsProvider.useCopy(false)" in your applications config function will allow data passed to a custom dialog to retain its two-way binding with the scope of the calling controller.</span></div><div class="modal-footer"><button type="button" class="btn btn-default" ng-click="done()">Done</button></div>')
+    }]);
