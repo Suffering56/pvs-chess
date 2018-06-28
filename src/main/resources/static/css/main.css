@@ -43,6 +43,13 @@
     overflow: hidden;
 }
 
+.kek {
+    height: var(--cell-size);
+    width: var(--cell-size);
+    display: inline-block;
+    overflow: hidden;
+}
+
 .chessboard-cell.white {
     background-color: #f0d9b5;
 }
@@ -156,4 +163,9 @@
 
 .pawn-black {
     background-position: -455px -95px;
+}
+
+.modal-md {
+    width: 370px;
+    margin: 250px auto;
 }

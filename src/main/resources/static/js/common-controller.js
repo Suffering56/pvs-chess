@@ -50,10 +50,14 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     };
 
     function applyMove(cell) {
-        // if (cell.columnIndex == 0) {
-        //     var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", {}, {size: "lg"});
-        //     return;
-        // }
+        if (cell.columnIndex == 0) {
+            var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", {
+                side: "white"
+            }, {
+                size: "md"
+            });
+            return;
+        }
 
         var url = "/api/game/" + game.id + "/move";
         $http({
