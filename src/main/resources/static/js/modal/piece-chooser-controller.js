@@ -1,25 +1,20 @@
-app.controller("pieceChooserController", function ($scope, data) {
+app.controller("pieceChooserController", function ($scope, $uibModalInstance, data) {
 
     var side = data.side;
     $scope.availablePieces = ["queen", "rook", "bishop", "knight"];
 
-    $scope.onPieceClicked = function(pieceType) {
-        if ($scope.onSelect) {
-            $scope.onSelect(pieceType);
-        }
+    $scope.onSuccess = function(pieceType) {
+        $uibModalInstance.close(pieceType);
     };
 
     $scope.onCancel = function() {
-        if ($scope.onSelect) {
-            $scope.onSelect(null);
-        }
+        $uibModalInstance.dismiss();
     };
 
     $scope.getItemClass = function (pieceType) {
         var result = [];
 
-        result.push("kek");
-        result.push("piece");
+        result.push("modal-piece");
         result.push(pieceType + "-" + side);
 
         return result;

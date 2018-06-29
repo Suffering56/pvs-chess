@@ -1,3 +1,4 @@
+/** @namespace selectedCell.piece */
 app.controller("common", function ($scope, $http, $window, initService, utils, dialogs) {
     $scope.horizontalLabels = ["h", "g", "f", "e", "d", "c", "b", "a"];
     $scope.verticalLabels = ["1", "2", "3", "4", "5", "6", "7", "8"];
@@ -38,6 +39,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     var availablePoints;
 
     $scope.doClick = function (cell) {
+        //cell = CellDTO
         if (params.isViewer === true || cell.selected === true) {
             return;
         }
@@ -50,29 +52,52 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     };
 
     function applyMove(cell) {
-        if (cell.columnIndex == 0) {
-            var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", {
-                side: "white"
-            }, {
-                size: "md"
-            });
-            return;
+        //cell = CellDTO
+        if (selectedCell.piece.type == "pawn") {
+            if (cell.rowIndex == 0 || cell.rowIndex == 7) {
+                showPieceChooser(cell);
+                return;
+            }
         }
 
+        sendApplyMoveRequest(cell);
+    }
+
+    function showPieceChooser(cell) {
+        var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController",
+            {side: selectedCell.piece.side}, {size: "md"});
+
+        dlg.result.then(function (pieceType) {
+            //success
+            sendApplyMoveRequest(cell, pieceType);
+        }, function () {
+            //canceled = do nothing
+        });
+    }
+
+    function sendApplyMoveRequest(cell, selectedPieceType) {
         var url = "/api/game/" + game.id + "/move";
+
+        var moveDTO = {
+            from: {
+                rowIndex: selectedCell.rowIndex,
+                columnIndex: selectedCell.columnIndex
+            },
+            to: {
+                rowIndex: cell.rowIndex,
+                columnIndex: cell.columnIndex
+            },
+            pieceType: null
+        };
+
+        if (selectedPieceType) {
+            moveDTO.pieceType = selectedPieceType;
+        }
+
         $http({
             method: "POST",
             url: url,
-            data: {
-                from: {
-                    rowIndex: selectedCell.rowIndex,
-                    columnIndex: selectedCell.columnIndex
-                },
-                to: {
-                    rowIndex: cell.rowIndex,
-                    columnIndex: cell.columnIndex
-                }
-            }
+            data: moveDTO
         }).then(function (response) {
             var arrangementDTO = response.data;
 
@@ -89,8 +114,9 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     }
 
     function selectCell(cell) {
-
+        //cell = cellDTO
         clearAvailablePoints();
+
         if (selectedCell) {
             selectedCell.selected = false;
         }
@@ -112,11 +138,13 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
                 columnIndex: cell.columnIndex
             }
         }).then(function (response) {
+            //response.data = Set<PointDTO>
             handleAvailableMoves(response.data);
         });
     }
 
     var handleAvailableMoves = function (points) {
+        //points = Set<PointDTO>
         points.map(function (point) {
             getCellByPoint(point).available = true;
         });
@@ -132,6 +160,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     }
 
     $scope.getCellClass = function (cell) {
+        //cell = cellDTO
         if ((cell.rowIndex + cell.columnIndex) % 2 === 0) {
             return "white";
         } else {
@@ -140,6 +169,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     };
 
     $scope.getInnerCellClass = function (cell) {
+        //cell = cellDTO
         var result = [];
 
         if (cell.piece) {

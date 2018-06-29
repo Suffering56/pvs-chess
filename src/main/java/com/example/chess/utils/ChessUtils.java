@@ -17,13 +17,21 @@ import static com.example.chess.ChessConstants.BOARD_SIZE;
 public class ChessUtils {
 
 	public static MoveResult executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+		return executeMove(cellsMatrix, move, null);
+	}
+
+	public static MoveResult executeMove(List<List<CellDTO>> cellsMatrix, MoveDTO move, Piece pieceFromPawn) {
 		CellDTO cellFrom = getCell(cellsMatrix, move.getFrom());
 		CellDTO cellTo = getCell(cellsMatrix, move.getTo());
 
 		Piece pieceFrom = cellFrom.getPiece();
 		Piece pieceTo = cellTo.getPiece();
 
-		cellTo.setPiece(cellFrom.getPiece());
+		if (pieceFromPawn == null) {
+			cellTo.setPiece(cellFrom.getPiece());
+		} else {
+			cellTo.setPiece(pieceFromPawn);
+		}
 		cellFrom.setPiece(null);
 
 		return new MoveResult(cellFrom, cellTo, pieceFrom, pieceTo);

@@ -2,11 +2,11 @@
 
 <script type="text/ng-template" id="/modal/piece-chooser.html" ng-controller="pieceChooserController">
     <div class="modal-header">
-        <h4 class="modal-title"><span class="glyphicon glyphicon-star"></span>Choose the piece</h4>
+        <h4 class="modal-title">Choose the piece</h4>
     </div>
     <!--<div class="modal-body">-->
     <div class="modal-body">
-        <div ng-repeat="pieceType in availablePieces" ng-class="getItemClass(pieceType)" ng-click="onPieceClicked(pieceType)"></div>
+        <div ng-repeat="pieceType in availablePieces" ng-class="getItemClass(pieceType)" ng-click="onSuccess(pieceType)"></div>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-default" ng-click="onCancel()">Cancel</button>

@@ -102,7 +102,8 @@ public class GameServiceImpl implements GameService {
 		List<List<CellDTO>> cellsMatrix = ChessUtils.createCellsMatrixByHistory(beforeMoveHistory);
 
 		//move piece
-		MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, move);
+		Piece transformationPiece = getPawnTransformationPiece(cellsMatrix, move);
+		MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, move, transformationPiece);
 		Piece pieceFrom = moveResult.getPieceFrom();
 		Side sideFrom = pieceFrom.getSide();
 
@@ -161,7 +162,7 @@ public class GameServiceImpl implements GameService {
 	private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
 		int diff = move.getFrom().getColumnIndex() - move.getTo().getColumnIndex();
 
-		if (Math.abs(diff) == 2) {	//is castling
+		if (Math.abs(diff) == 2) {    //is castling
 			Integer kingFromColumnIndex = move.getFrom().getColumnIndex();
 
 			//short
@@ -177,6 +178,15 @@ public class GameServiceImpl implements GameService {
 			//move rook
 			ChessUtils.executeMove(cellsMatrix, new MoveDTO(rookFrom, rookTo));
 		}
+	}
+
+	private Piece getPawnTransformationPiece(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+		if (move.getPieceType() == null) {
+			return null;
+		}
+
+		CellDTO cellFrom = ChessUtils.getCell(cellsMatrix, move.getFrom());
+		return findPieceBySideAndType(cellFrom.getPieceSide(), move.getPieceType());
 	}
 
 	@Override
