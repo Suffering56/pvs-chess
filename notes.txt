@@ -1,0 +1,4 @@
+- доделать game-mode
+- добавить возможность выбора white/black/VIEWER
+- разбить game на game и game_params (с колонкой side) с oneToMany связью (видимо будет коллекция из двух элементов - в идеале это в Map<Side, GameParams> замапить)
+
