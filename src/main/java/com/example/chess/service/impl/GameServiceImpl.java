@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -152,11 +153,20 @@ public class GameServiceImpl implements GameService {
 			game.setUnderCheckSide(sideFrom.reverse());
 		}
 
+		updateGameLastVisitDate(game, sideFrom);
 		historyRepository.save(afterMoveHistory);
 		gameRepository.save(game);
 
-
 		return new ArrangementDTO(newPosition, cellsMatrix, game.getUnderCheckSide());
+	}
+
+	private void updateGameLastVisitDate(Game game, Side side) {
+		LocalDateTime now = LocalDateTime.now();
+		if (side == Side.white) {
+			game.setWhiteLastVisitDate(now);
+		} else {
+			game.setBlackLastVisitDate(now);
+		}
 	}
 
 	private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {

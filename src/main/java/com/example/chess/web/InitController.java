@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @RestController
@@ -89,8 +90,10 @@ public class InitController {
 
 		if (dto.getIsWhite()) {
 			game.setWhiteSessionId(sessionId);
+			game.setWhiteLastVisitDate(LocalDateTime.now());
 		} else {
 			game.setBlackSessionId(sessionId);
+			game.setBlackLastVisitDate(LocalDateTime.now());
 		}
 
 		gameRepository.save(game);

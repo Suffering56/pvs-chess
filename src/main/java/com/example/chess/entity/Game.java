@@ -1,5 +1,6 @@
 package com.example.chess.entity;
 
+import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
 import lombok.Getter;
 import lombok.Setter;
@@ -7,6 +8,7 @@ import lombok.ToString;
 import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -22,9 +24,16 @@ public class Game {
 	@Column(nullable = false)
 	private Integer position = 0;
 
+	@Enumerated(EnumType.STRING)
+	private GameMode mode;
+
 	private String whiteSessionId;
 
 	private String blackSessionId;
+
+	private LocalDateTime whiteLastVisitDate;
+
+	private LocalDateTime blackLastVisitDate;
 
 	@ColumnDefault("true")
 	@Column(nullable = false)
@@ -49,6 +58,7 @@ public class Game {
 	@Enumerated(EnumType.STRING)
 	private Side underCheckSide;
 
+	@Transient
 	public void disableShortCasting(Side side) {
 		if (side == Side.white) {
 			setIsWhiteShortCastlingAvailable(false);
@@ -57,6 +67,7 @@ public class Game {
 		}
 	}
 
+	@Transient
 	public void disableLongCasting(Side side) {
 		if (side == Side.white) {
 			setIsWhiteLongCastlingAvailable(false);
@@ -65,6 +76,7 @@ public class Game {
 		}
 	}
 
+	@Transient
 	public boolean isShortCastlingAvailable(Side side) {
 		if (side == Side.white) {
 			return getIsWhiteShortCastlingAvailable();
@@ -73,6 +85,7 @@ public class Game {
 		}
 	}
 
+	@Transient
 	public boolean isLongCastlingAvailable(Side side) {
 		if (side == Side.white) {
 			return getIsWhiteLongCastlingAvailable();
@@ -81,6 +94,7 @@ public class Game {
 		}
 	}
 
+	@Transient
 	public Integer getPawnLongMoveColumnIndex(Side side) {
 		if (side == Side.white) {
 			return getWhitePawnLongMoveColumnIndex();
@@ -88,6 +102,7 @@ public class Game {
 			return getBlackPawnLongMoveColumnIndex();
 		}
 	}
+	@Transient
 
 	public void setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
 		if (side == Side.white) {
