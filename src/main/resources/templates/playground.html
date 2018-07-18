@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="root">
+
+<div class="playground">
+    <div class="chessboard">
+        <div class="chessboard-row"
+             ng-repeat="rowIndex in cellsMatrix | chessboardReverse:params.isWhite">
+            <div class="chessboard-cell"
+                 ng-repeat="cell in rowIndex | chessboardReverse:params.isWhite"
+                 ng-class="getCellClass(cell)">
+                <div class="chessboard-cell inner"
+                     ng-class="getInnerCellClass(cell)"
+                     ng-click="doClick(cell)"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="horizontal-label" ng-repeat="hLabel in horizontalLabels | chessboardReverse:params.isWhite">
+        {{hLabel}}
+    </div>
+    <div class="vertical-label_wrapper">
+        <div class="vertical-label" ng-repeat="vLabel in verticalLabels | chessboardReverse:params.isWhite">
+            {{vLabel}}
+        </div>
+    </div>
+
+</div>
+</html>

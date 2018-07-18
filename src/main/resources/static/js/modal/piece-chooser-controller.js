@@ -1,6 +1,5 @@
 app.controller("pieceChooserController", function ($scope, $uibModalInstance, data) {
 
-    var side = data.side;
     $scope.availablePieces = ["queen", "rook", "bishop", "knight"];
 
     $scope.onSuccess = function(pieceType) {
@@ -15,7 +14,7 @@ app.controller("pieceChooserController", function ($scope, $uibModalInstance, da
         var result = [];
 
         result.push("modal-piece");
-        result.push(pieceType + "-" + side);
+        result.push(pieceType + "-" + data.side);
 
         return result;
     };

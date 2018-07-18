@@ -1,13 +1,12 @@
-app.factory("initService", function ($http, $location, $window) {
+/** @namespace selectedCell.piece */
+app.controller("initController", function ($rootScope, $scope, $http, utils) {
+    var params = $rootScope.params;
+    var path = utils.getCurrentUrl();
 
-    var path = $location.path();
-    var params;
-    var onStartGame;
+    initializeGame();   //starting new game or continue already started game
+    $scope.sideClick = sideClick;
 
-    this.init = function (_params, _onStartGame) {
-        onStartGame = _onStartGame;
-        params = _params;
-
+    function initializeGame() {
         if (path.indexOf(GAME_PREFIX) !== -1) {
             var pathParts = path.split("/");
             params.game.id = pathParts[2];
@@ -22,7 +21,35 @@ app.factory("initService", function ($http, $location, $window) {
         } else {
             continueGame();
         }
-    };
+    }
+
+    function updateArrangement() {
+        utils.updateAddressBarPathByParams(params);
+
+        $http({
+            method: "GET",
+            url: "/api/init/" + params.game.id + "/arrangement/" + params.game.position
+        }).then(function (response) {
+
+            var arrangementDTO = response.data;
+            $rootScope.cellsMatrix = arrangementDTO.cellsMatrix;
+            params.game.underCheckSide = arrangementDTO.underCheckSide;
+            params.gameStarted = true;
+        });
+    }
+
+    function sideClick(isWhite) {
+        $http({
+            method: "POST",
+            url: "/api/init/" + params.game.id + "/side",
+            data: {
+                isWhite: isWhite
+            }
+        }).then(function () {
+            params.isWhite = isWhite;
+            call(updateArrangement());
+        });
+    }
 
     function createGame() {
         $http({
@@ -43,7 +70,7 @@ app.factory("initService", function ($http, $location, $window) {
             var game = response.data;
             if (!game) {
                 alert("game not found. Starting a new game...");
-                redirectToIndex();
+                utils.redirectToIndex();
             } else {
                 params.game.id = game.id;
 
@@ -72,40 +99,16 @@ app.factory("initService", function ($http, $location, $window) {
 
             if (paramsPlayerDTO.isViewer === true) {
                 alert("all gaming places are occupied - you can only view this game");
-                call(onStartGame());
+                call(updateArrangement());
             } else if (paramsPlayerDTO.isWhite != null) {
-                call(onStartGame());
+                call(updateArrangement());
             }
         });
     }
-
-    this.sideClick = function (isWhite) {
-        $http({
-            method: "POST",
-            url: "/api/init/" + params.game.id + "/side",
-            data: {
-                isWhite: isWhite
-            }
-        }).then(function () {
-            params.isWhite = isWhite;
-            call(onStartGame());
-        });
-    };
-
-    this.redirectTo = function (href) {
-        $window.location.href = href;
-    };
-
-    this.redirectToIndex = function () {
-        redirectTo("/");
-    };
 
     function call(callback) {
         if (callback) {
             callback();
         }
     }
-
-    return this;
-})
-;
+});

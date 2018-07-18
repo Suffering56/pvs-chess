@@ -1,44 +1,20 @@
 /** @namespace selectedCell.piece */
-app.controller("common", function ($scope, $http, $window, initService, utils, dialogs) {
+app.controller("playgroundController", function ($rootScope, $scope, $http, utils, dialogs) {
     $scope.horizontalLabels = ["h", "g", "f", "e", "d", "c", "b", "a"];
     $scope.verticalLabels = ["1", "2", "3", "4", "5", "6", "7", "8"];
-    $scope.params = {
-        gameStarted: false,
-        isWhite: null,      //null = unselected, true = white, false = black
-        isViewer: false,    //if true = disable moves
-        game: {
-            id: null,
-            position: null,
-            underCheckSide: null
-        }
-    };
 
-    var params = $scope.params;
+    $scope.doClick = doClick;
+    $scope.getCellClass = getCellClass;
+    $scope.getInnerCellClass = getInnerCellClass;
+
+    var params = $rootScope.params;
     var game = params.game;
-
-    //initialize game (starting new game or continue already started game)
-    initService.init(params, updateArrangement);
-    //handle the click of side selection button
-    $scope.sideClick = initService.sideClick;
-
-    function updateArrangement() {
-        utils.updateAddressBarPathByParams(params);
-
-        $http({
-            method: "GET",
-            url: "/api/init/" + params.game.id + "/arrangement/" + params.game.position
-        }).then(function (response) {
-            var arrangementDTO = response.data;
-            $scope.cellsMatrix = arrangementDTO.cellsMatrix;
-            params.game.underCheckSide = arrangementDTO.underCheckSide;
-            params.gameStarted = true;
-        });
-    }
 
     var selectedCell;
     var availablePoints;
 
-    $scope.doClick = function (cell) {
+
+    function doClick(cell) {
         //cell = CellDTO
         if (params.isViewer === true || cell.selected === true) {
             return;
@@ -49,7 +25,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
         } else {
             selectCell(cell);
         }
-    };
+    }
 
     function applyMove(cell) {
         //cell = CellDTO
@@ -64,8 +40,8 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
     }
 
     function showPieceChooser(cell) {
-        var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController",
-            {side: selectedCell.piece.side}, {size: "md"});
+        var data = {side: selectedCell.piece.side};
+        var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", data, {size: "md"});
 
         dlg.result.then(function (pieceType) {
             //success
@@ -102,7 +78,7 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
             var arrangementDTO = response.data;
 
             game.position = arrangementDTO.position;
-            $scope.cellsMatrix = arrangementDTO.cellsMatrix;
+            $rootScope.cellsMatrix = arrangementDTO.cellsMatrix;
             game.underCheckSide = arrangementDTO.underCheckSide;
 
             utils.updateAddressBarPathByParams(params);
@@ -143,13 +119,13 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
         });
     }
 
-    var handleAvailableMoves = function (points) {
+    function handleAvailableMoves(points) {
         //points = Set<PointDTO>
         points.map(function (point) {
             getCellByPoint(point).available = true;
         });
         availablePoints = points;
-    };
+    }
 
     function clearAvailablePoints() {
         if (availablePoints) {
@@ -159,16 +135,16 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
         }
     }
 
-    $scope.getCellClass = function (cell) {
+    function getCellClass(cell) {
         //cell = cellDTO
         if ((cell.rowIndex + cell.columnIndex) % 2 === 0) {
             return "white";
         } else {
             return "black";
         }
-    };
+    }
 
-    $scope.getInnerCellClass = function (cell) {
+    function getInnerCellClass(cell) {
         //cell = cellDTO
         var result = [];
 
@@ -192,10 +168,10 @@ app.controller("common", function ($scope, $http, $window, initService, utils, d
         }
 
         return result;
-    };
+    }
 
     function getCell(rowIndex, columnIndex) {
-        return $scope.cellsMatrix[rowIndex][columnIndex];
+        return $rootScope.cellsMatrix[rowIndex][columnIndex];
     }
 
     function getCellByPoint(point) {

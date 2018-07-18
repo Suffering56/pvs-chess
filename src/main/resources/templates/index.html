@@ -17,45 +17,23 @@
 
     <script src="/js/app.js"></script>
     <script src="/js/utils.js"></script>
-    <script src="/js/init-service.js"></script>
-
+    <script src="/js/init-controller.js"></script>
     <script src="/js/modal/piece-chooser-controller.js"></script>
-    <script src="/js/common-controller.js"></script>
+    <script src="/js/playground-controller.js"></script>
 </head>
 
 
-<body ng-app="app" ng-controller="common" class="body">
+<body ng-app="app" class="body">
 
-<div class="start-panel" ng-if="params.isWhite == null">
+<div ng-controller="initController" class="start-panel" ng-if="params.isWhite == null">
     <button ng-click="sideClick(true)">white</button>
     <button ng-click="sideClick(false)">black</button>
 </div>
 
-<div class="playground" ng-if="params.gameStarted">
-    <div class="chessboard">
-        <div class="chessboard-row"
-             ng-repeat="rowIndex in cellsMatrix | chessboardReverse:params.isWhite">
-            <div class="chessboard-cell"
-                 ng-repeat="cell in rowIndex | chessboardReverse:params.isWhite"
-                 ng-class="getCellClass(cell)">
-                <div class="chessboard-cell inner"
-                     ng-class="getInnerCellClass(cell)"
-                     ng-click="doClick(cell)"></div>
-            </div>
-        </div>
-    </div>
+<div ng-controller="playgroundController" th:include="playground :: root" ng-if="params.gameStarted"></div>
 
-    <div class="horizontal-label" ng-repeat="hLabel in horizontalLabels | chessboardReverse:params.isWhite">
-        {{hLabel}}
-    </div>
-    <div class="vertical-label_wrapper">
-        <div class="vertical-label" ng-repeat="vLabel in verticalLabels | chessboardReverse:params.isWhite">
-            {{vLabel}}
-        </div>
-    </div>
-</div>
-
-<div th:include="modal/piece-chooser :: root"></div>
+<!--modals-->
+<div th:include="modal/piece-chooser :: root"></div>    <!--ng-controller="pieceChooserController"-->
 
 </body>
 </html>
