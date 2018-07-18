@@ -25,9 +25,22 @@
 
 <body ng-app="app" class="body">
 
-<div ng-controller="initController" class="start-panel" ng-if="params.isWhite == null">
-    <button ng-click="sideClick(true)">white</button>
-    <button ng-click="sideClick(false)">black</button>
+<div ng-controller="initController">
+
+    <div class="init-panel" ng-if="isShowModePanel()">
+        <H1>Choose mode</H1>
+
+        <button class="mode-button" ng-click="modeClick('PVP')">PvP</button>
+        <button class="mode-button" ng-click="modeClick('AI')">AI</button>
+        <button class="mode-button" ng-click="modeClick('HIMSELF')">Himself</button>
+    </div>
+
+    <div class="init-panel" ng-if="isShowSidePanel()">
+        <H1>Choose side</H1>
+
+        <button class="side-button" ng-click="sideClick(true)">white</button>
+        <button class="side-button" ng-click="sideClick(false)">black</button>
+    </div>
 </div>
 
 <div ng-controller="playgroundController" th:include="playground :: root" ng-if="params.gameStarted"></div>

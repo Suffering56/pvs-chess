@@ -5,6 +5,35 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
 
     initializeGame();   //starting new game or continue already started game
     $scope.sideClick = sideClick;
+    $scope.modeClick = modeClick;
+    $scope.isShowModePanel = isShowModePanel;
+    $scope.isShowSidePanel = isShowSidePanel;
+
+
+    function isShowModePanel() {
+        return params.mode == null && params.gameStarted == false;
+    }
+
+    function isShowSidePanel() {
+        return params.mode != null && params.isWhite == null;
+    }
+
+    function modeClick(mode) {
+        params.mode = mode;
+    }
+
+    function sideClick(isWhite) {
+        $http({
+            method: "POST",
+            url: "/api/init/" + params.game.id + "/side",
+            data: {
+                isWhite: isWhite
+            }
+        }).then(function () {
+            params.isWhite = isWhite;
+            call(updateArrangement());
+        });
+    }
 
     function initializeGame() {
         if (path.indexOf(GAME_PREFIX) !== -1) {
@@ -35,19 +64,6 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
             $rootScope.cellsMatrix = arrangementDTO.cellsMatrix;
             params.game.underCheckSide = arrangementDTO.underCheckSide;
             params.gameStarted = true;
-        });
-    }
-
-    function sideClick(isWhite) {
-        $http({
-            method: "POST",
-            url: "/api/init/" + params.game.id + "/side",
-            data: {
-                isWhite: isWhite
-            }
-        }).then(function () {
-            params.isWhite = isWhite;
-            call(updateArrangement());
         });
     }
 

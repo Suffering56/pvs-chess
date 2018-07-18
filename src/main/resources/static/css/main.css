@@ -12,6 +12,12 @@
     background-color: lightgrey;
 }
 
+H1 {
+    /*color: red;*/
+    width: 100%;
+    text-align: center;
+}
+
 .playground {
     width: var(--playground-size);
     height: var(--playground-size);
@@ -20,9 +26,31 @@
     position: relative;
 }
 
-.start-panel {
-    display: inline-block;
+.init-panel {
     overflow: hidden;
+    margin: 10% auto auto auto;
+    width: 400px;
+    height: 400px;
+}
+
+.mode-button {
+    display: inline-block;
+    width: 30%;
+    height: 30%;
+    margin-left: 1%;
+    margin-right: 1%;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.side-button {
+    display: inline-block;
+    width: 45%;
+    height: 45%;
+    margin-left: 2%;
+    margin-right: 2%;
+    font-size: 22px;
+    font-weight: bold;
 }
 
 .chessboard {

@@ -7,6 +7,7 @@ app.run(['$rootScope', function ($rootScope) {
 
     $rootScope.cellsMatrix = null;
     $rootScope.params = {
+        mode: null,         //null = unselected, PVP, AI, HIMSELF
         gameStarted: false,
         isWhite: null,      //null = unselected, true = white, false = black
         isViewer: false,    //if true = disable moves
