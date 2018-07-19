@@ -1,5 +1,6 @@
 package com.example.chess.web;
 
+import com.example.chess.dto.ModeDTO;
 import com.example.chess.dto.SideChooseDTO;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.ParamsPlayerDTO;
@@ -37,6 +38,19 @@ public class InitController {
 	@GetMapping("/{gameId}")
 	public Game getGame(@PathVariable("gameId") long gameId) throws GameNotFoundException {
 		return gameService.findAndCheckGame(gameId);
+	}
+
+	@PostMapping("/{gameId}/mode")
+	@ResponseStatus(value = HttpStatus.OK)
+	public CustomResponse setMode(@PathVariable("gameId") Long gameId,
+								  @RequestBody ModeDTO dto,
+								  HttpServletRequest request) throws GameNotFoundException {
+
+		Game game = gameService.findAndCheckGame(gameId);
+		game.setMode(dto.getMode());
+		gameRepository.save(game);
+
+		return CustomResponse.createVoid();
 	}
 
 	@GetMapping("/{gameId}/side")

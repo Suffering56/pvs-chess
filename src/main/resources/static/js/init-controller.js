@@ -15,14 +15,29 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
     }
 
     function isShowSidePanel() {
-        return params.mode != null && params.isWhite == null;
+        return params.mode != null && params.isWhite == null && params.gameStarted == false;
     }
 
     function modeClick(mode) {
-        params.mode = mode;
+        $http({
+            method: "POST",
+            url: "/api/init/" + params.game.id + "/mode",
+            data: {
+                mode: mode
+            }
+        }).then(function () {
+            params.mode = mode;
+        });
     }
 
     function sideClick(isWhite) {
+        if (isWhite == null) {
+            params.isWhite = isWhite;
+            params.isViewer = true;
+            updateArrangement();
+            return;
+        }
+        
         $http({
             method: "POST",
             url: "/api/init/" + params.game.id + "/side",
@@ -31,7 +46,7 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
             }
         }).then(function () {
             params.isWhite = isWhite;
-            call(updateArrangement());
+            updateArrangement();
         });
     }
 
@@ -89,6 +104,7 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
                 utils.redirectToIndex();
             } else {
                 params.game.id = game.id;
+                params.mode = game.mode;
 
                 if (params.game.position) {
                     if (params.game.position > game.position) {
@@ -115,16 +131,11 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
 
             if (paramsPlayerDTO.isViewer === true) {
                 alert("all gaming places are occupied - you can only view this game");
-                call(updateArrangement());
+                updateArrangement();
             } else if (paramsPlayerDTO.isWhite != null) {
-                call(updateArrangement());
+                updateArrangement();
             }
         });
     }
 
-    function call(callback) {
-        if (callback) {
-            callback();
-        }
-    }
 });

@@ -13,7 +13,6 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     var selectedCell;
     var availablePoints;
 
-
     function doClick(cell) {
         //cell = CellDTO
         if (params.isViewer === true || cell.selected === true) {
@@ -90,6 +89,20 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function selectCell(cell) {
+        if (params.mode != MODE_HIMSELF) {
+            var expectedSide = getExpectedSide();
+            if (cell.piece == null || cell.piece.side != expectedSide) {
+                return;
+            }
+            if (params.isWhite && expectedSide != "white") {
+                return;
+            }
+
+            if (!params.isWhite && expectedSide != "black") {
+                return;
+            }
+        }
+
         //cell = cellDTO
         clearAvailablePoints();
 
@@ -97,7 +110,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
             selectedCell.selected = false;
         }
 
-        if (cell.piece != null && cell.piece.side && cell.piece.side === getExpectedSide()) {
+        if (cell.piece != null && cell.piece.side === getExpectedSide()) {
             cell.selected = true;
             selectedCell = cell;
 

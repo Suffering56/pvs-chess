@@ -3,6 +3,10 @@ var app = angular.module("app", ["ui.bootstrap", "dialogs.main"]);
 const GAME_PREFIX = "/game/";
 const POSITION_PREFIX = "/position/";
 
+const MODE_PVP = "PVP";
+const MODE_AI = "AI";
+const MODE_HIMSELF = "HIMSELF";
+
 app.run(['$rootScope', function ($rootScope) {
 
     $rootScope.cellsMatrix = null;
@@ -28,10 +32,10 @@ app.config(["$locationProvider", function ($locationProvider) {
 
 app.filter("chessboardReverse", function () {
     return function (items, isWhite) {
-        if (isWhite) {
-            return items.slice().reverse();
-        } else {
+        if (isWhite == false) {
             return items;
+        } else {
+            return items.slice().reverse();
         }
     };
 });
