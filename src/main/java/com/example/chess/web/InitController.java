@@ -7,6 +7,7 @@ import com.example.chess.entity.Game;
 import com.example.chess.entity.GameFeatures;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.GameService;
 import com.example.chess.utils.CustomResponse;
@@ -100,7 +101,7 @@ public class InitController {
 	@ResponseStatus(value = HttpStatus.OK)
 	public CustomResponse setSide(@PathVariable("gameId") Long gameId,
 								  @RequestBody SideDTO dto,
-								  HttpServletRequest request) throws GameNotFoundException {
+								  HttpServletRequest request) throws GameNotFoundException, HistoryNotFoundException {
 
 		Side side = dto.getSideAsEnum();
 		if (SideDTO.VIEWER.equals(dto.getSide())) {
@@ -121,8 +122,9 @@ public class InitController {
 	@GetMapping("/{gameId}/arrangement/{position}")
 	public ArrangementDTO getArrangementByPosition(@PathVariable("gameId") long gameId,
 												   @PathVariable("position") int position) throws Exception {
-
-		return gameService.getArrangementByPosition(gameId, position);
+		ArrangementDTO result = gameService.getArrangementByPosition(gameId, position);
+		gameService.applyFirstBotMove(gameId);
+		return result;
 	}
 
 

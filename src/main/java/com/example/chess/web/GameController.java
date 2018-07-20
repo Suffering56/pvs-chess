@@ -3,10 +3,13 @@ package com.example.chess.web;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.entity.Game;
+import com.example.chess.enums.GameMode;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -16,6 +19,7 @@ import java.util.Set;
 public class GameController {
 
 	private final GameService gameService;
+
 
 	@Autowired
 	public GameController(GameService gameService) {
@@ -34,6 +38,15 @@ public class GameController {
 	public ArrangementDTO applyMove(@PathVariable("gameId") long gameId,
 									@RequestBody MoveDTO dto) throws GameNotFoundException, HistoryNotFoundException {
 
-		return gameService.applyMove(gameId, dto);
+		ArrangementDTO arrangementDTO = gameService.applyMove(gameId, dto);
+		gameService.applyMirrorMove(gameId, dto);
+		return arrangementDTO;
+	}
+
+	@GetMapping("/{gameId}/listen")
+	public ArrangementDTO getLastGameArrangement(@PathVariable("gameId") long gameId) throws GameNotFoundException, HistoryNotFoundException {
+
+		Game game = gameService.findAndCheckGame(gameId);
+		return gameService.getArrangementByPosition(game, game.getPosition());
 	}
 }

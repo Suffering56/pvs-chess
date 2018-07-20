@@ -8,6 +8,7 @@ import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
+import com.example.chess.enums.GameMode;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
@@ -22,6 +23,7 @@ import com.example.chess.utils.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +49,11 @@ public class GameServiceImpl implements GameService {
 	private final PieceRepository pieceRepository;
 
 	private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
+
+	@Value("${app.game.bots.move-}")
+	private Boolean isMirrorEnabled;
+	@Value("${app.game.bots.move-delay}")
+	private Long botMoveDelay;
 
 	@Autowired
 	public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, Supplier<MoveService> moveService, PieceRepository pieceRepository) {
@@ -192,20 +199,25 @@ public class GameServiceImpl implements GameService {
 	}
 
 	@Override
-	public ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException, GameNotFoundException {
-		Game game = findAndCheckGame(gameId);
+	public ArrangementDTO getArrangementByPosition(Game game, int position) throws HistoryNotFoundException {
 		ArrangementDTO result = new ArrangementDTO();
 
 		if (position > 0) {
-			result.setCellsMatrix(createCellsMatrixByGameIdAndPosition(gameId, position));
+			result.setCellsMatrix(createCellsMatrixByGameIdAndPosition(game.getId(), position));
 		} else {
-			result.setCellsMatrix(createStartCellsMatrix(gameId));
+			result.setCellsMatrix(createStartCellsMatrix(game.getId()));
 		}
 
 		result.setPosition(position);
 		result.setUnderCheckSide(game.getUnderCheckSide());
 
 		return result;
+	}
+
+	@Override
+	public ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException, GameNotFoundException {
+		Game game = findAndCheckGame(gameId);
+		return getArrangementByPosition(game, position);
 	}
 
 	private List<List<CellDTO>> createCellsMatrixByGame(Game game) throws HistoryNotFoundException {
@@ -303,4 +315,59 @@ public class GameServiceImpl implements GameService {
 		moveServiceInstance.setCellsMatrix(cellsMatrix);
 		return moveServiceInstance;
 	}
+
+	@Override
+	public void applyMirrorMove(long gameId, MoveDTO dto) throws GameNotFoundException {
+		if (isMirrorEnabled) {
+			Game game = findAndCheckGame(gameId);
+
+			if (game.getMode() == GameMode.AI) {
+				executeInSecondaryThread(() -> {
+					Thread.sleep(botMoveDelay);
+					MoveDTO mirrorMoveDTO = dto.getMirror();
+					applyMove(gameId, mirrorMoveDTO);
+				});
+			}
+		}
+	}
+
+	@Override
+	public void applyFirstBotMove(long gameId) throws GameNotFoundException {
+		if (isMirrorEnabled) {
+			Game game = findAndCheckGame(gameId);
+
+			Side selectedSide = null;
+			if (game.getWhiteFeatures().getSessionId() != null && game.getBlackFeatures().getSessionId() == null) {
+				selectedSide = Side.white;
+			}
+			if (game.getBlackFeatures().getSessionId() != null && game.getWhiteFeatures().getSessionId() == null) {
+				selectedSide = Side.black;
+			}
+
+			if (game.getMode() == GameMode.AI && selectedSide == Side.black) {
+				executeInSecondaryThread(() -> {
+					Thread.sleep(botMoveDelay);
+					MoveDTO moveDTO = new MoveDTO();
+					moveDTO.setFrom(new PointDTO(1, PieceType.king.getStartColumnIndex()));
+					moveDTO.setTo(new PointDTO(3, PieceType.king.getStartColumnIndex()));
+					applyMove(gameId, moveDTO);
+				});
+			}
+		}
+	}
+
+	private void executeInSecondaryThread(Callback callback) {
+		new Thread(() -> {
+			try {
+				callback.call();
+			} catch (InterruptedException | GameNotFoundException | HistoryNotFoundException e) {
+				e.printStackTrace();
+			}
+		}).start();
+	}
+
+	private interface Callback {
+		void call() throws  InterruptedException, GameNotFoundException, HistoryNotFoundException;
+	}
+
 }

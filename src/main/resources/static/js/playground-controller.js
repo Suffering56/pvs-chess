@@ -13,6 +13,25 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     var selectedCell;
     var availablePoints;
 
+    if (params.mode == MODE_AI || params.mode == MODE_PVP) {
+        utils.createAndStartTimer(function () {
+            listenEnemyActions();
+        }, 500);
+    }
+    // utils.stopTimer(timer);
+
+    function listenEnemyActions() {
+        $http({
+            method: "GET",
+            url: "/api/game/" + game.id + "/listen"
+        }).then(function (response) {
+            var arrangementDTO = response.data;
+            if (arrangementDTO.position != params.game.position) {
+                updateArrangement(arrangementDTO);
+            }
+        });
+    }
+
     function doClick(cell) {
         //cell = CellDTO
         if (params.side === SIDE_VIEWER || cell.selected === true) {
@@ -74,18 +93,19 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
             url: url,
             data: moveDTO
         }).then(function (response) {
-            var arrangementDTO = response.data;
-
-            game.position = arrangementDTO.position;
-            $rootScope.cellsMatrix = arrangementDTO.cellsMatrix;
-            game.underCheckSide = arrangementDTO.underCheckSide;
-
-            utils.updateAddressBarPathByParams(params);
-
+            updateArrangement(response.data);
         }, function (reason) {
             console.log(reason);
             alert(reason);
         });
+    }
+
+    function updateArrangement(arrangementDTO) {
+        game.position = arrangementDTO.position;
+        $rootScope.cellsMatrix = arrangementDTO.cellsMatrix;
+        game.underCheckSide = arrangementDTO.underCheckSide;
+
+        utils.updateAddressBarPathByParams(params);
     }
 
     function selectCell(cell) {
