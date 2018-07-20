@@ -4,9 +4,9 @@
 <div class="playground">
     <div class="chessboard">
         <div class="chessboard-row"
-             ng-repeat="rowIndex in cellsMatrix | chessboardReverse:params.isWhite">
+             ng-repeat="rowIndex in cellsMatrix | chessboardReverse:params.side">
             <div class="chessboard-cell"
-                 ng-repeat="cell in rowIndex | chessboardReverse:params.isWhite"
+                 ng-repeat="cell in rowIndex | chessboardReverse:params.side"
                  ng-class="getCellClass(cell)">
                 <div class="chessboard-cell inner"
                      ng-class="getInnerCellClass(cell)"
@@ -15,11 +15,11 @@
         </div>
     </div>
 
-    <div class="horizontal-label" ng-repeat="hLabel in horizontalLabels | chessboardReverse:params.isWhite">
+    <div class="horizontal-label" ng-repeat="hLabel in horizontalLabels | chessboardReverse:params.side">
         {{hLabel}}
     </div>
     <div class="vertical-label_wrapper">
-        <div class="vertical-label" ng-repeat="vLabel in verticalLabels | chessboardReverse:params.isWhite">
+        <div class="vertical-label" ng-repeat="vLabel in verticalLabels | chessboardReverse:params.side">
             {{vLabel}}
         </div>
     </div>

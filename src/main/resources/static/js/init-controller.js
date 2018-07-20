@@ -11,11 +11,11 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
 
 
     function isShowModePanel() {
-        return params.mode == null && params.gameStarted == false;
+        return params.mode == MODE_UNSELECTED && params.gameStarted == false;
     }
 
     function isShowSidePanel() {
-        return params.mode != null && params.isWhite == null && params.gameStarted == false;
+        return params.mode != MODE_UNSELECTED && params.side == SIDE_UNSELECTED && params.gameStarted == false;
     }
 
     function modeClick(mode) {
@@ -30,10 +30,9 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
         });
     }
 
-    function sideClick(isWhite) {
-        if (isWhite == null) {
-            params.isWhite = isWhite;
-            params.isViewer = true;
+    function sideClick(side) {
+        if (side == SIDE_VIEWER) {
+            params.side = side;
             updateArrangement();
             return;
         }
@@ -42,10 +41,10 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
             method: "POST",
             url: "/api/init/" + params.game.id + "/side",
             data: {
-                isWhite: isWhite
+                side: side
             }
         }).then(function () {
-            params.isWhite = isWhite;
+            params.side = side;
             updateArrangement();
         });
     }
@@ -124,17 +123,18 @@ app.controller("initController", function ($rootScope, $scope, $http, utils) {
             method: "GET",
             url: "/api/init/" + params.game.id + "/side"
         }).then(function (response) {
-            var paramsPlayerDTO = response.data;
+            var sideDTO = response.data;
+            params.side = sideDTO.side;
 
-            params.isWhite = paramsPlayerDTO.isWhite;
-            params.isViewer = paramsPlayerDTO.isViewer;
-
-            if (paramsPlayerDTO.isViewer === true) {
-                alert("all gaming places are occupied - you can only view this game");
-                updateArrangement();
-            } else if (paramsPlayerDTO.isWhite != null) {
-                updateArrangement();
+            if (params.side == SIDE_UNSELECTED) {
+                return;
             }
+
+            if (params.side == SIDE_VIEWER) {
+                alert("all gaming places are occupied - you can only view this game");
+            }
+
+            updateArrangement();
         });
     }
 

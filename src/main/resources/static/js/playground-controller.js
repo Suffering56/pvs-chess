@@ -15,7 +15,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function doClick(cell) {
         //cell = CellDTO
-        if (params.isViewer === true || cell.selected === true) {
+        if (params.side === SIDE_VIEWER || cell.selected === true) {
             return;
         }
 
@@ -89,16 +89,13 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function selectCell(cell) {
-        if (params.mode != MODE_HIMSELF) {
+        if (params.mode != MODE_SINGLE) {
             var expectedSide = getExpectedSide();
+
             if (cell.piece == null || cell.piece.side != expectedSide) {
                 return;
             }
-            if (params.isWhite && expectedSide != "white") {
-                return;
-            }
-
-            if (!params.isWhite && expectedSide != "black") {
+            if (params.side != expectedSide) {
                 return;
             }
         }
@@ -192,11 +189,11 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function getExpectedSide() {
-        return (game.position % 2 === 0) ? "white" : "black";
+        return (game.position % 2 === 0) ? SIDE_WHITE : SIDE_BLACK;
     }
 
     function getEnemySide() {
-        return (game.position % 2 === 0) ? "black" : "white";
+        return (game.position % 2 === 0) ? SIDE_BLACK : SIDE_WHITE;
     }
 
 });

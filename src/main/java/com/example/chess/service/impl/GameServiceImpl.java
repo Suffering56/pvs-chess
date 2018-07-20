@@ -153,20 +153,12 @@ public class GameServiceImpl implements GameService {
 			game.setUnderCheckSide(sideFrom.reverse());
 		}
 
-		updateGameLastVisitDate(game, sideFrom);
+		game.getSideFeatures(sideFrom).setLastVisitDate(LocalDateTime.now());
+
 		historyRepository.save(afterMoveHistory);
 		gameRepository.save(game);
 
 		return new ArrangementDTO(newPosition, cellsMatrix, game.getUnderCheckSide());
-	}
-
-	private void updateGameLastVisitDate(Game game, Side side) {
-		LocalDateTime now = LocalDateTime.now();
-		if (side == Side.white) {
-			game.setWhiteLastVisitDate(now);
-		} else {
-			game.setBlackLastVisitDate(now);
-		}
 	}
 
 	private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {

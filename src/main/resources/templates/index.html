@@ -30,17 +30,17 @@
     <div class="init-panel" ng-if="isShowModePanel()">
         <H1>Choose mode</H1>
 
-        <button class="mode-button" ng-click="modeClick('PVP')">PvP</button>
-        <button class="mode-button" ng-click="modeClick('AI')">AI</button>
-        <button class="mode-button" ng-click="modeClick('HIMSELF')">Himself</button>
+        <button class="mode-button" ng-click="modeClick(MODE_PVP)">PvP</button>
+        <button class="mode-button" ng-click="modeClick(MODE_AI)">AI</button>
+        <button class="mode-button" ng-click="modeClick(MODE_SINGLE)">Single</button>
     </div>
 
     <div class="init-panel" ng-if="isShowSidePanel()">
         <H1>Choose side</H1>
 
-        <button class="side-button" ng-click="sideClick(true)">white</button>
-        <button class="side-button" ng-click="sideClick(false)">black</button>
-        <button class="side-button" ng-click="sideClick(null)">viewer</button>
+        <button class="side-button" ng-click="sideClick(SIDE_WHITE)">white</button>
+        <button class="side-button" ng-click="sideClick(SIDE_BLACK)">black</button>
+        <button class="side-button" ng-click="sideClick(SIDE_VIEWER)">viewer</button>
     </div>
 </div>
 

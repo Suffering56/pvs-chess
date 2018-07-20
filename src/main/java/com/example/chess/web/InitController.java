@@ -1,10 +1,11 @@
 package com.example.chess.web;
 
-import com.example.chess.dto.ModeDTO;
-import com.example.chess.dto.SideChooseDTO;
 import com.example.chess.dto.ArrangementDTO;
-import com.example.chess.dto.ParamsPlayerDTO;
+import com.example.chess.dto.ModeDTO;
+import com.example.chess.dto.SideDTO;
 import com.example.chess.entity.Game;
+import com.example.chess.entity.GameFeatures;
+import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.GameService;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/init")
@@ -32,7 +33,13 @@ public class InitController {
 
 	@GetMapping
 	public Game createGame() {
-		return gameRepository.save(new Game());
+		Game game = new Game();
+		game.setFeaturesMap(new HashMap<Side, GameFeatures>() {{
+			put(Side.white, new GameFeatures(game, Side.white));
+			put(Side.black, new GameFeatures(game, Side.black));
+		}});
+
+		return gameRepository.save(game);
 	}
 
 	@GetMapping("/{gameId}")
@@ -43,8 +50,7 @@ public class InitController {
 	@PostMapping("/{gameId}/mode")
 	@ResponseStatus(value = HttpStatus.OK)
 	public CustomResponse setMode(@PathVariable("gameId") Long gameId,
-								  @RequestBody ModeDTO dto,
-								  HttpServletRequest request) throws GameNotFoundException {
+								  @RequestBody ModeDTO dto) throws GameNotFoundException {
 
 		Game game = gameService.findAndCheckGame(gameId);
 		game.setMode(dto.getMode());
@@ -54,61 +60,58 @@ public class InitController {
 	}
 
 	@GetMapping("/{gameId}/side")
-	public ParamsPlayerDTO getSide(@PathVariable("gameId") Long gameId,
-								   HttpServletRequest request) throws Exception {
+	public SideDTO getSideBySessionId(@PathVariable("gameId") Long gameId,
+									  HttpServletRequest request) throws Exception {
 
 		Game game = gameService.findAndCheckGame(gameId);
 		String sessionId = request.getSession().getId();
 
-		if (game.getWhiteSessionId() == null && game.getBlackSessionId() == null) {
+		int freeSlotsCount = 0;
+		Side freeSide = null;
+
+		for (GameFeatures features : game.getFeaturesMap().values()) {
+			if (sessionId.equals(features.getSessionId())) {
+				return new SideDTO(features.getSide());
+			}
+
+			if (features.getSessionId() == null) {
+				freeSlotsCount++;
+				freeSide = features.getSide();
+			}
+		}
+
+		if (freeSlotsCount == 2) {
 			//unselected
-			return new ParamsPlayerDTO(null, false);
+			return SideDTO.createUnselected();
 		}
 
-		if (Objects.equals(game.getWhiteSessionId(), sessionId)) {
-			//white (selected)
-			return new ParamsPlayerDTO(true, false);
-		}
+		//TODO: здесь нужно добавить проверку на то как давно пользователь был неактивен.
 
-		if (Objects.equals(game.getBlackSessionId(), sessionId)) {
-			//black (selected)
-			return new ParamsPlayerDTO(false, false);
+		if (freeSlotsCount == 0) {
+			//no free slots => viewer mode
+			return new SideDTO(SideDTO.VIEWER);
+		} else {    //freeSlotsCount = 1
+			//take free slot
+			return new SideDTO(freeSide);
 		}
-
-		if (game.getWhiteSessionId() != null && game.getBlackSessionId() != null) {
-			//viewer
-			return new ParamsPlayerDTO(null, true);
-		}
-
-		if (game.getWhiteSessionId() == null) {
-			//white (unselected)
-			return new ParamsPlayerDTO(true, false);
-		}
-
-		if (game.getBlackSessionId() == null) {
-			//black (unselected)
-			return new ParamsPlayerDTO(false, false);
-		}
-
-		throw new Exception("This should not have happened!");
 	}
 
 	@PostMapping("/{gameId}/side")
 	@ResponseStatus(value = HttpStatus.OK)
 	public CustomResponse setSide(@PathVariable("gameId") Long gameId,
-								  @RequestBody SideChooseDTO dto,
+								  @RequestBody SideDTO dto,
 								  HttpServletRequest request) throws GameNotFoundException {
+
+		Side side = dto.getSideAsEnum();
+		if (SideDTO.VIEWER.equals(dto.getSide())) {
+			return CustomResponse.createVoid();
+		}
 
 		Game game = gameService.findAndCheckGame(gameId);
 		String sessionId = request.getSession().getId();
 
-		if (dto.getIsWhite()) {
-			game.setWhiteSessionId(sessionId);
-			game.setWhiteLastVisitDate(LocalDateTime.now());
-		} else {
-			game.setBlackSessionId(sessionId);
-			game.setBlackLastVisitDate(LocalDateTime.now());
-		}
+		game.getSideFeatures(side).setSessionId(sessionId);
+		game.getSideFeatures(side).setLastVisitDate(LocalDateTime.now());
 
 		gameRepository.save(game);
 

@@ -8,7 +8,7 @@ import lombok.ToString;
 import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
+import java.util.Map;
 
 @Entity
 @Getter
@@ -27,88 +27,73 @@ public class Game {
 	@Enumerated(EnumType.STRING)
 	private GameMode mode;
 
-	private String whiteSessionId;
-
-	private String blackSessionId;
-
-	private LocalDateTime whiteLastVisitDate;
-
-	private LocalDateTime blackLastVisitDate;
-
-	@ColumnDefault("true")
-	@Column(nullable = false)
-	private Boolean isWhiteLongCastlingAvailable = true;
-
-	@ColumnDefault("true")
-	@Column(nullable = false)
-	private Boolean isWhiteShortCastlingAvailable = true;
-
-	@ColumnDefault("true")
-	@Column(nullable = false)
-	private Boolean isBlackLongCastlingAvailable = true;
-
-	@ColumnDefault("true")
-	@Column(nullable = false)
-	private Boolean isBlackShortCastlingAvailable = true;
-
-	//если пешка сделала длинный ход (на 2 клетки вперед) здесь храним индекс
-	private Integer whitePawnLongMoveColumnIndex;
-	private Integer blackPawnLongMoveColumnIndex;
-
-	@Enumerated(EnumType.STRING)
-	private Side underCheckSide;
+	@OneToMany(mappedBy = "game", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+	@MapKey(name = "side")
+	private Map<Side, GameFeatures> featuresMap;
 
 	@Transient
 	public void disableShortCasting(Side side) {
-		if (side == Side.white) {
-			setIsWhiteShortCastlingAvailable(false);
-		} else {
-			setIsBlackShortCastlingAvailable(false);
-		}
+		featuresMap.get(side).setShortCastlingAvailable(false);
 	}
 
 	@Transient
 	public void disableLongCasting(Side side) {
-		if (side == Side.white) {
-			setIsWhiteLongCastlingAvailable(false);
-		} else {
-			setIsBlackLongCastlingAvailable(false);
-		}
+		featuresMap.get(side).setLongCastlingAvailable(false);
 	}
 
 	@Transient
 	public boolean isShortCastlingAvailable(Side side) {
-		if (side == Side.white) {
-			return getIsWhiteShortCastlingAvailable();
-		} else {
-			return getIsBlackShortCastlingAvailable();
-		}
+		return featuresMap.get(side).getShortCastlingAvailable();
 	}
 
 	@Transient
 	public boolean isLongCastlingAvailable(Side side) {
-		if (side == Side.white) {
-			return getIsWhiteLongCastlingAvailable();
-		} else {
-			return getIsBlackLongCastlingAvailable();
-		}
+		return featuresMap.get(side).getLongCastlingAvailable();
 	}
 
 	@Transient
 	public Integer getPawnLongMoveColumnIndex(Side side) {
-		if (side == Side.white) {
-			return getWhitePawnLongMoveColumnIndex();
+		return featuresMap.get(side).getPawnLongMoveColumnIndex();
+	}
+
+	@Transient
+	public void setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
+		featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
+	}
+
+	@Transient
+	public GameFeatures getSideFeatures(Side side) {
+		return featuresMap.get(side);
+	}
+
+	@Transient
+	public Side getUnderCheckSide() {
+		for (GameFeatures features : featuresMap.values()) {
+			if (features.getIsUnderCheck()) {
+				return features.getSide();
+			}
+		}
+		return null;
+	}
+
+	@Transient
+	public void setUnderCheckSide(Side side) {
+		if (side != null) {
+			featuresMap.get(side).setIsUnderCheck(true);
+			featuresMap.get(side.reverse()).setIsUnderCheck(false);
 		} else {
-			return getBlackPawnLongMoveColumnIndex();
+			getWhiteFeatures().setIsUnderCheck(false);
+			getBlackFeatures().setIsUnderCheck(false);
 		}
 	}
-	@Transient
 
-	public void setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
-		if (side == Side.white) {
-			setWhitePawnLongMoveColumnIndex(columnIndex);
-		} else {
-			setBlackPawnLongMoveColumnIndex(columnIndex);
-		}
+	@Transient
+	public GameFeatures getWhiteFeatures() {
+		return featuresMap.get(Side.white);
+	}
+
+	@Transient
+	public GameFeatures getBlackFeatures() {
+		return featuresMap.get(Side.black);
 	}
 }
