@@ -50,7 +50,7 @@ public class GameServiceImpl implements GameService {
 
 	private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
-	@Value("${app.game.bots.move-}")
+	@Value("${dev.move.mirror.enable}")
 	private Boolean isMirrorEnabled;
 	@Value("${app.game.bots.move-delay}")
 	private Long botMoveDelay;
