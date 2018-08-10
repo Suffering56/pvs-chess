@@ -78,11 +78,7 @@ public class GameServiceImpl implements GameService {
 
 	@Override
 	public Game findAndCheckGame(long gameId) throws GameNotFoundException {
-		Game game = gameRepository.findOne(gameId);
-		if (game == null) {
-			throw new GameNotFoundException();
-		}
-		return game;
+		return gameRepository.findById(gameId).orElseThrow(GameNotFoundException::new);
 	}
 
 	@Override
@@ -162,7 +158,7 @@ public class GameServiceImpl implements GameService {
 
 		game.getSideFeatures(sideFrom).setLastVisitDate(LocalDateTime.now());
 
-		historyRepository.save(afterMoveHistory);
+		historyRepository.saveAll(afterMoveHistory);
 		gameRepository.save(game);
 
 		return new ArrangementDTO(newPosition, cellsMatrix, game.getUnderCheckSide());
@@ -367,7 +363,7 @@ public class GameServiceImpl implements GameService {
 	}
 
 	private interface Callback {
-		void call() throws  InterruptedException, GameNotFoundException, HistoryNotFoundException;
+		void call() throws InterruptedException, GameNotFoundException, HistoryNotFoundException;
 	}
 
 }
