@@ -102,8 +102,7 @@ public class InitController {
 	public CustomResponse setSide(@PathVariable("gameId") Long gameId,
 								  @RequestBody SideDTO dto,
 								  HttpServletRequest request) throws GameNotFoundException, HistoryNotFoundException {
-
-		Side side = dto.getSideAsEnum();
+		
 		if (SideDTO.VIEWER.equals(dto.getSide())) {
 			return CustomResponse.createVoid();
 		}
@@ -111,6 +110,7 @@ public class InitController {
 		Game game = gameService.findAndCheckGame(gameId);
 		String sessionId = request.getSession().getId();
 
+		Side side = dto.getSideAsEnum();
 		game.getSideFeatures(side).setSessionId(sessionId);
 		game.getSideFeatures(side).setLastVisitDate(LocalDateTime.now());
 
