@@ -4,20 +4,19 @@ import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.Immutable;
 
 import javax.persistence.*;
 import java.util.List;
 
 @Entity
+@Immutable
 @Getter
-@Setter
 @ToString
 public class Piece {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
 	private Integer id;
 
 	@Enumerated(EnumType.STRING)

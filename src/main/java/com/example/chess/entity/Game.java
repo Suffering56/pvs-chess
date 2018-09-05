@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.util.Map;
@@ -17,7 +18,8 @@ import java.util.Map;
 public class Game {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@GenericGenerator(name = "game_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "game_id_seq"))
+	@GeneratedValue(generator = "game_id_seq")
 	private Long id;
 
 	@ColumnDefault("0")
@@ -89,11 +91,11 @@ public class Game {
 
 	@Transient
 	public GameFeatures getWhiteFeatures() {
-		return featuresMap.get(Side.white);
+		return featuresMap.get(Side.WHITE);
 	}
 
 	@Transient
 	public GameFeatures getBlackFeatures() {
-		return featuresMap.get(Side.black);
+		return featuresMap.get(Side.BLACK);
 	}
 }
