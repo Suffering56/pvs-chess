@@ -114,14 +114,14 @@ public class GameServiceImpl implements GameService {
 		game.setPawnLongMoveColumnIndex(sideFrom, null);
 		game.setUnderCheckSide(null);
 
-		if (pieceFrom.getType() == PieceType.king) {
-			//do castling (only the rook moves)
+		if (pieceFrom.getType() == PieceType.KING) {
+			//do castling (only the ROOK moves)
 			checkAndExecuteCastling(cellsMatrix, move);
 
 			game.disableShortCasting(sideFrom);
 			game.disableLongCasting(sideFrom);
 
-		} else if (pieceFrom.getType() == PieceType.rook) {
+		} else if (pieceFrom.getType() == PieceType.ROOK) {
 
 			if (game.isShortCastlingAvailable(sideFrom) && move.getFrom().getColumnIndex() == ROOK_SHORT_COLUMN_INDEX) {
 				game.disableShortCasting(sideFrom);
@@ -129,7 +129,7 @@ public class GameServiceImpl implements GameService {
 			} else if (game.isLongCastlingAvailable(sideFrom) && move.getFrom().getColumnIndex() == ROOK_LONG_COLUMN_INDEX) {
 				game.disableLongCasting(sideFrom);
 			}
-		} else if (pieceFrom.getType() == PieceType.pawn) {
+		} else if (pieceFrom.getType() == PieceType.PAWN) {
 			int diff = move.getFrom().getRowIndex() - move.getTo().getRowIndex();
 
 			if (Math.abs(diff) == 2) {//is long move
@@ -180,7 +180,7 @@ public class GameServiceImpl implements GameService {
 				rookTo.setColumnIndex(kingFromColumnIndex + 1);
 			}
 
-			//move rook
+			//move ROOK
 			ChessUtils.executeMove(cellsMatrix, new MoveDTO(rookFrom, rookTo));
 		}
 	}
@@ -255,25 +255,25 @@ public class GameServiceImpl implements GameService {
 
 				Side side = null;
 				if (rowIndex == 0 || rowIndex == 1) {
-					side = Side.white;
+					side = Side.WHITE;
 				} else if (rowIndex == 7 || rowIndex == 6) {
-					side = Side.black;
+					side = Side.BLACK;
 				}
 
 				PieceType pieceType = null;
 				if (rowIndex == 1 || rowIndex == 6) {
-					pieceType = PieceType.pawn;
+					pieceType = PieceType.PAWN;
 				} else if (rowIndex == 0 || rowIndex == 7) {
 					if (columnIndex == 0 || columnIndex == 7) {
-						pieceType = PieceType.rook;
+						pieceType = PieceType.ROOK;
 					} else if (columnIndex == 1 || columnIndex == 6) {
-						pieceType = PieceType.knight;
+						pieceType = PieceType.KNIGHT;
 					} else if (columnIndex == 2 || columnIndex == 5) {
-						pieceType = PieceType.bishop;
+						pieceType = PieceType.BISHOP;
 					} else if (columnIndex == 3) {
-						pieceType = PieceType.king;
+						pieceType = PieceType.KING;
 					} else {  //columnIndex == 4
-						pieceType = PieceType.queen;
+						pieceType = PieceType.QUEEN;
 					}
 				}
 
@@ -334,18 +334,18 @@ public class GameServiceImpl implements GameService {
 
 			Side selectedSide = null;
 			if (game.getWhiteFeatures().getSessionId() != null && game.getBlackFeatures().getSessionId() == null) {
-				selectedSide = Side.white;
+				selectedSide = Side.WHITE;
 			}
 			if (game.getBlackFeatures().getSessionId() != null && game.getWhiteFeatures().getSessionId() == null) {
-				selectedSide = Side.black;
+				selectedSide = Side.BLACK;
 			}
 
-			if (game.getMode() == GameMode.AI && selectedSide == Side.black) {
+			if (game.getMode() == GameMode.AI && selectedSide == Side.BLACK) {
 				executeInSecondaryThread(() -> {
 					Thread.sleep(botMoveDelay);
 					MoveDTO moveDTO = new MoveDTO();
-					moveDTO.setFrom(new PointDTO(1, PieceType.king.getStartColumnIndex()));
-					moveDTO.setTo(new PointDTO(3, PieceType.king.getStartColumnIndex()));
+					moveDTO.setFrom(new PointDTO(1, PieceType.KING.getStartColumnIndex()));
+					moveDTO.setTo(new PointDTO(3, PieceType.KING.getStartColumnIndex()));
 					applyMove(gameId, moveDTO);
 				});
 			}

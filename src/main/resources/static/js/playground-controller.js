@@ -47,7 +47,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function applyMove(cell) {
         //cell = CellDTO
-        if (selectedCell.piece.type == "pawn") {
+        if (selectedCell.piece.type == PIECE_PAWN) {
             if (cell.rowIndex == 0 || cell.rowIndex == 7) {
                 showPieceChooser(cell);
                 return;
@@ -181,7 +181,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
         if (cell.piece) {
             result.push("piece");
             result.push(cell.piece.type + "-" + cell.piece.side);
-            if (cell.piece.type === "king") {
+            if (cell.piece.type === PIECE_KING) {
                 if (params.game.underCheckSide === cell.piece.side) {
                     result.push("check");
                 }

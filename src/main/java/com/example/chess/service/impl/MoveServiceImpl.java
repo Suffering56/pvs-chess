@@ -40,7 +40,7 @@ public class MoveServiceImpl implements MoveService {
 	@Override
 	public boolean isEnemyKingUnderAttack(Side attackingSide) {
 		PointDTO enemyKingPoint = findKingPoint(attackingSide.reverse());
-		Set<PointDTO> enemyMoves = getPiecesMoves(attackingSide, PieceType.pawn, PieceType.knight, PieceType.bishop, PieceType.rook, PieceType.queen);
+		Set<PointDTO> enemyMoves = getPiecesMoves(attackingSide, PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
 		return enemyMoves.contains(enemyKingPoint);
 	}
 
@@ -60,7 +60,7 @@ public class MoveServiceImpl implements MoveService {
 				)
 				.collect(Collectors.toSet());
 
-		if (originalCell.getPieceType() == PieceType.king) {
+		if (originalCell.getPieceType() == PieceType.KING) {
 			Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(pointFrom, moves);
 			moves.removeAll(unavailableCastlingMoves);            //запрещаем рокировку если король пересекает битое поле
 		}
@@ -76,27 +76,27 @@ public class MoveServiceImpl implements MoveService {
 		Set<PointDTO> moves;
 
 		switch (cell.getPieceType()) {
-			case pawn: {
+			case PAWN: {
 				moves = getMovesForPawn();
 				break;
 			}
-			case knight: {
+			case KNIGHT: {
 				moves = getMovesForKnight();
 				break;
 			}
-			case bishop: {
+			case BISHOP: {
 				moves = getMovesForBishop();
 				break;
 			}
-			case rook: {
+			case ROOK: {
 				moves = getMovesForRook();
 				break;
 			}
-			case queen: {
+			case QUEEN: {
 				moves = getMovesForQueen();
 				break;
 			}
-			case king: {
+			case KING: {
 				moves = getMovesForKing();
 				break;
 			}
@@ -113,7 +113,7 @@ public class MoveServiceImpl implements MoveService {
 		int activeColumn = activeCell.getColumnIndex();
 
 		int vector = 1;
-		if (activeCell.getPieceSide() == Side.black) {
+		if (activeCell.getPieceSide() == Side.BLACK) {
 			vector = -1;
 		}
 
@@ -155,7 +155,7 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private int getPawnMoveVector(Side side) {
-		if (side == Side.white) {
+		if (side == Side.WHITE) {
 			return 1;
 		} else {
 			return -1;
@@ -257,11 +257,11 @@ public class MoveServiceImpl implements MoveService {
 			MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, new MoveDTO(originalCell.generatePoint(), pointTo));
 
 			//для всех дальнобойных фигур собираем все доступные ходы врага на следующий ход
-			Set<PointDTO> rayPieceMoves = getPiecesMoves(originalEnemySide, PieceType.knight, PieceType.bishop, PieceType.rook, PieceType.queen);
+			Set<PointDTO> rayPieceMoves = getPiecesMoves(originalEnemySide, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
 
 			//и проверяем, что мы не поставили нашего короля под атаку
 			boolean isCanAttack;
-			if (originalPiece.getType() == PieceType.king) {
+			if (originalPiece.getType() == PieceType.KING) {
 				//если мы пошли королем, то не встал ли он под шах
 				isCanAttack = rayPieceMoves.contains(pointTo);
 			} else {
@@ -280,7 +280,7 @@ public class MoveServiceImpl implements MoveService {
 	 */
 	private Predicate<? super PointDTO> isNotAttackingByEnemyPawns() {
 
-		if (originalPiece.getType() == PieceType.king) {				//если ходим королем, то не даем ему пойти под шах от пешки
+		if (originalPiece.getType() == PieceType.KING) {				//если ходим королем, то не даем ему пойти под шах от пешки
 			Set<PointDTO> enemyPawnAttackMoves = getPawnAttackMoves(originalEnemySide, null);
 			return pointTo -> !enemyPawnAttackMoves.contains(pointTo);
 
@@ -317,7 +317,7 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private Set<PointDTO> getPawnAttackMoves(Side side, PointDTO excludePoint) {
-		Set<PointDTO> enemyPawnCoords = findPiecesCoords(side, PieceType.pawn);
+		Set<PointDTO> enemyPawnCoords = findPiecesCoords(side, PieceType.PAWN);
 		enemyPawnCoords.remove(excludePoint);
 
 		int vector = getPawnMoveVector(side);
@@ -418,10 +418,10 @@ public class MoveServiceImpl implements MoveService {
 	}
 
 	private Side getEnemySide(CellDTO cell) {
-		if (cell.getPieceSide() == Side.black) {
-			return Side.white;
+		if (cell.getPieceSide() == Side.BLACK) {
+			return Side.WHITE;
 		} else {
-			return Side.black;
+			return Side.BLACK;
 		}
 	}
 
@@ -436,9 +436,9 @@ public class MoveServiceImpl implements MoveService {
 	private PointDTO findKingPoint(Side side) {
 		Objects.requireNonNull(side, "side is null");
 
-		return filteredPiecesStream(side, PieceType.king)
+		return filteredPiecesStream(side, PieceType.KING)
 				.findFirst()
-				.orElseThrow(() -> new RuntimeException("king not found on board"))
+				.orElseThrow(() -> new RuntimeException("KING not found on board"))
 				.generatePoint();
 	}
 

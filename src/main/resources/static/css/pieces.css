@@ -1,47 +1,47 @@
-.rook-white {
+.ROOK-WHITE {
     background-position: -5px -5px;
 }
 
-.rook-black {
+.ROOK-BLACK {
     background-position: -5px -95px;
 }
 
-.knight-white {
+.KNIGHT-WHITE {
     background-position: -95px -5px;
 }
 
-.knight-black {
+.KNIGHT-BLACK {
     background-position: -95px -95px;
 }
 
-.bishop-white {
+.BISHOP-WHITE {
     background-position: -185px -5px;
 }
 
-.bishop-black {
+.BISHOP-BLACK {
     background-position: -185px -95px;
 }
 
-.king-white {
+.KING-WHITE {
     background-position: -275px -5px;
 }
 
-.king-black {
+.KING-BLACK {
     background-position: -275px -95px;
 }
 
-.queen-white {
+.QUEEN-WHITE {
     background-position: -365px -5px;
 }
 
-.queen-black {
+.QUEEN-BLACK {
     background-position: -365px -95px;
 }
 
-.pawn-white {
+.PAWN-WHITE {
     background-position: -455px -5px;
 }
 
-.pawn-black {
+.PAWN-BLACK {
     background-position: -455px -95px;
 }

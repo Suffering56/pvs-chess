@@ -36,8 +36,8 @@ public class InitController {
 	public Game createGame() {
 		Game game = new Game();
 		game.setFeaturesMap(new HashMap<Side, GameFeatures>() {{
-			put(Side.white, new GameFeatures(game, Side.white));
-			put(Side.black, new GameFeatures(game, Side.black));
+			put(Side.WHITE, new GameFeatures(game, Side.WHITE));
+			put(Side.BLACK, new GameFeatures(game, Side.BLACK));
 		}});
 
 		return gameRepository.save(game);
@@ -101,7 +101,7 @@ public class InitController {
 	@ResponseStatus(value = HttpStatus.OK)
 	public CustomResponse setSide(@PathVariable("gameId") Long gameId,
 								  @RequestBody SideDTO dto,
-								  HttpServletRequest request) throws GameNotFoundException, HistoryNotFoundException {
+								  HttpServletRequest request) throws GameNotFoundException {
 		
 		if (SideDTO.VIEWER.equals(dto.getSide())) {
 			return CustomResponse.createVoid();

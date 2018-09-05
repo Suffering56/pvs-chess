@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class SideDTO {
 
-	public static String VIEWER = "viewer";
+	public static String VIEWER = "VIEWER";
 
 	private String side;
 

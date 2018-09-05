@@ -9,9 +9,16 @@ const MODE_AI = "AI";
 const MODE_SINGLE = "SINGLE";
 
 const SIDE_UNSELECTED = null;
-const SIDE_WHITE = "white";
-const SIDE_BLACK = "black";
-const SIDE_VIEWER = "viewer";
+const SIDE_WHITE = "WHITE";
+const SIDE_BLACK = "BLACK";
+const SIDE_VIEWER = "VIEWER";
+
+const PIECE_PAWN = "PAWN";
+const PIECE_KNIGHT = "KNIGHT";
+const PIECE_BISHOP = "BISHOP";
+const PIECE_ROOK = "ROOK";
+const PIECE_QUEEN = "QUEEN";
+const PIECE_KING = "KING";
 
 app.run(['$rootScope', function ($rootScope) {
 
@@ -19,7 +26,7 @@ app.run(['$rootScope', function ($rootScope) {
     $rootScope.params = {
         mode: MODE_UNSELECTED,         //null = unselected, PVP, AI, HIMSELF
         gameStarted: false,
-        side: SIDE_UNSELECTED,         //white, black, viewer, null (unselected)
+        side: SIDE_UNSELECTED,         //WHITE, BLACK, VIEWER, null (unselected)
         game: {
             id: null,
             position: null,

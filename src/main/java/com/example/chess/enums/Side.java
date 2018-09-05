@@ -1,13 +1,13 @@
 package com.example.chess.enums;
 
 public enum Side {
-	white, black;
+	WHITE, BLACK;
 
 	public Side reverse() {
-		if (this == white) {
-			return black;
+		if (this == WHITE) {
+			return BLACK;
 		} else {
-			return white;
+			return WHITE;
 		}
 	}
 }

@@ -1,6 +1,6 @@
 app.controller("pieceChooserController", function ($scope, $uibModalInstance, data) {
 
-    $scope.availablePieces = ["queen", "rook", "bishop", "knight"];
+    $scope.availablePieces = [PIECE_QUEEN, PIECE_ROOK, PIECE_BISHOP, PIECE_KNIGHT];
 
     $scope.onSuccess = function(pieceType) {
         $uibModalInstance.close(pieceType);

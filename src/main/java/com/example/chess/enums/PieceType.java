@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public enum PieceType {
-	pawn, knight, bishop, rook, queen(4), king(3);
+	PAWN, KNIGHT, BISHOP, ROOK, QUEEN(4), KING(3);
 
 	private int startColumnIndex;
 }
