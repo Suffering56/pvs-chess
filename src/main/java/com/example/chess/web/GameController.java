@@ -21,6 +21,7 @@ public class GameController {
 	private final GameService gameService;
 
 
+
 	@Autowired
 	public GameController(GameService gameService) {
 		this.gameService = gameService;
@@ -38,8 +39,13 @@ public class GameController {
 	public ArrangementDTO applyMove(@PathVariable("gameId") long gameId,
 									@RequestBody MoveDTO dto) throws GameNotFoundException, HistoryNotFoundException {
 
-		ArrangementDTO arrangementDTO = gameService.applyMove(gameId, dto);
-		gameService.applyMirrorMove(gameId, dto);
+		Game game = gameService.findAndCheckGame(gameId);
+
+		ArrangementDTO arrangementDTO = gameService.applyMove(game, dto);
+
+		if (gameService.isMirrorEnabled() && game.getMode() == GameMode.AI) {
+			gameService.applyMirrorMove(game, dto);
+		}
 		return arrangementDTO;
 	}
 
