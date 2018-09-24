@@ -26,4 +26,6 @@ public interface GameService {
 	void applyFirstBotMove(Game game) throws HistoryNotFoundException;
 
 	boolean isMirrorEnabled();
+
+	void applyBotMove(Game game) throws HistoryNotFoundException;
 }

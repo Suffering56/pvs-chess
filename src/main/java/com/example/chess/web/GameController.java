@@ -20,8 +20,6 @@ public class GameController {
 
 	private final GameService gameService;
 
-
-
 	@Autowired
 	public GameController(GameService gameService) {
 		this.gameService = gameService;
@@ -43,8 +41,12 @@ public class GameController {
 
 		ArrangementDTO arrangementDTO = gameService.applyMove(game, dto);
 
-		if (gameService.isMirrorEnabled() && game.getMode() == GameMode.AI) {
-			gameService.applyMirrorMove(game, dto);
+		if (game.getMode() == GameMode.AI) {
+			if (gameService.isMirrorEnabled()) {
+				gameService.applyMirrorMove(game, dto);
+			} else {
+				gameService.applyBotMove(game);
+			}
 		}
 		return arrangementDTO;
 	}

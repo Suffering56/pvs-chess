@@ -331,7 +331,8 @@ public class MoveServiceImpl implements MoveService {
 		return pawnAttackMoves;
 	}
 
-	private Set<PointDTO> getPiecesMoves(Side side, PieceType... pieceTypes) {
+	@Override
+	public Set<PointDTO> getPiecesMoves(Side side, PieceType... pieceTypes) {
 		return filteredPiecesStream(side, pieceTypes)
 				.map(this::getAvailableMovesForCell)
 				.flatMap(Set::stream)
@@ -344,12 +345,14 @@ public class MoveServiceImpl implements MoveService {
 				.collect(Collectors.toSet());
 	}
 
-	private Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
+	@Override
+    public Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
 		return allPiecesStream()
 				.filter(containsPieces(side, pieceTypes));
 	}
 
-	private Stream<CellDTO> allPiecesStream() {
+	@Override
+	public Stream<CellDTO> allPiecesStream() {
 		return cellsMatrix.stream()
 				.flatMap(List::stream);
 	}

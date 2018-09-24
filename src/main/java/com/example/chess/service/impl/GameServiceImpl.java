@@ -1,14 +1,13 @@
 package com.example.chess.service.impl;
 
 import com.example.chess.aspects.Profile;
-import com.example.chess.dto.PointDTO;
-import com.example.chess.dto.MoveDTO;
-import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
-import com.example.chess.enums.GameMode;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
@@ -16,13 +15,13 @@ import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
 import com.example.chess.repository.PieceRepository;
+import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import com.example.chess.service.MoveService;
 import com.example.chess.utils.ChessUtils;
 import com.example.chess.utils.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,24 +29,22 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static com.example.chess.ChessConstants.BOARD_SIZE;
-import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
-import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
+import static com.example.chess.ChessConstants.*;
 import static java.util.function.Function.identity;
 
 @Log4j2
 @Service
 public class GameServiceImpl implements GameService {
 
-    private final Supplier<MoveService> moveService;
     private final GameRepository gameRepository;
     private final HistoryRepository historyRepository;
     private final PieceRepository pieceRepository;
-
+    private final Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory;
+    private final Function<Game, Function<List<List<CellDTO>>, BotService>> botServiceFactory;
     private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
     @Value("${dev.move.mirror.enable}")
@@ -55,12 +52,14 @@ public class GameServiceImpl implements GameService {
     @Value("${app.game.bots.move-delay}")
     private Long botMoveDelay;
 
-    @Autowired
-    public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, Supplier<MoveService> moveService, PieceRepository pieceRepository) {
+    public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, PieceRepository pieceRepository,
+                           Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory,
+                           Function<Game, Function<List<List<CellDTO>>, BotService>> botServiceFactory) {
         this.gameRepository = gameRepository;
         this.historyRepository = historyRepository;
-        this.moveService = moveService;
         this.pieceRepository = pieceRepository;
+        this.moveServiceFactory = moveServiceFactory;
+        this.botServiceFactory = botServiceFactory;
     }
 
     @PostConstruct
@@ -86,7 +85,7 @@ public class GameServiceImpl implements GameService {
         Game game = findAndCheckGame(gameId);
         List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
 
-        return getMoveServiceInstance(game, cellsMatrix).getAvailableMoves(point);
+        return moveServiceFactory.apply(game).apply(cellsMatrix).getAvailableMoves(point);
     }
 
     @Override
@@ -151,7 +150,7 @@ public class GameServiceImpl implements GameService {
         List<History> afterMoveHistory = createHistoryByCellsMatrix(cellsMatrix, gameId, newPosition);
         game.setPosition(newPosition);
 
-        boolean isEnemyKingUnderAttack = getMoveServiceInstance(game, cellsMatrix).isEnemyKingUnderAttack(sideFrom);
+        boolean isEnemyKingUnderAttack = moveServiceFactory.apply(game).apply(cellsMatrix).isEnemyKingUnderAttack(sideFrom);
         if (isEnemyKingUnderAttack) {
             game.setUnderCheckSide(sideFrom.reverse());
         }
@@ -305,13 +304,6 @@ public class GameServiceImpl implements GameService {
         return piecesBySideAndTypeMap.get(side).get(type);
     }
 
-    private MoveService getMoveServiceInstance(Game game, List<List<CellDTO>> cellsMatrix) {
-        MoveService moveServiceInstance = moveService.get();
-        moveServiceInstance.setGame(game);
-        moveServiceInstance.setCellsMatrix(cellsMatrix);
-        return moveServiceInstance;
-    }
-
     @Override
     public void applyMirrorMove(Game game, MoveDTO dto) {
         executeInSecondaryThread(() -> {
@@ -322,7 +314,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public void applyFirstBotMove(Game game)  {
+    public void applyFirstBotMove(Game game) {
         Side selectedSide = null;
         if (game.getWhiteFeatures().getSessionId() != null && game.getBlackFeatures().getSessionId() == null) {
             selectedSide = Side.WHITE;
@@ -357,6 +349,15 @@ public class GameServiceImpl implements GameService {
             return false;
         }
         return mirrorEnabled;
+    }
+
+    @Override
+    public void applyBotMove(Game game) {
+        executeInSecondaryThread(() -> {
+            List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
+            BotService botServiceImpl = botServiceFactory.apply(game).apply(cellsMatrix);
+            botServiceImpl.applyBotMove();
+        });
     }
 
     private interface Callback {
