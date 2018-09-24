@@ -2,6 +2,7 @@ package com.example.chess.service.impl;
 
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.MoveRatingDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
@@ -26,18 +27,16 @@ public class BotServiceImpl implements BotService {
 
     private Game game;
     private List<List<CellDTO>> cellsMatrix;
-
-    @SuppressWarnings("SpringJavaAutowiredFieldsWarningInspection")
     private Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory;
 
     @Override
     @Profile
-    public void applyBotMove() {
-        log.info("applyBotMove");
+    public MoveDTO generateBotMove() {
+        log.info("generateBotMove");
         log.info("game: " + game);
         log.info("cellsMatrix: " + cellsMatrix);
         log.info("moveServiceFactory: " + moveServiceFactory);
-        
+
         MoveService moveServiceImpl = moveServiceFactory.apply(game).apply(cellsMatrix);
         Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
@@ -59,6 +58,11 @@ public class BotServiceImpl implements BotService {
         }
 
         log.info("ratingList.size: " + ratingList.size());
+        long i = Math.round(ratingList.size() * Math.random());
+
+        MoveRatingDTO ratingDTO = ratingList.get((int) i);
+
+        return new MoveDTO(ratingDTO.getCellFrom().generatePoint(), ratingDTO.getPointTo());
     }
 
     @Autowired

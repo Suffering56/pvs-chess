@@ -356,7 +356,8 @@ public class GameServiceImpl implements GameService {
         executeInSecondaryThread(() -> {
             List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
             BotService botServiceImpl = botServiceFactory.apply(game).apply(cellsMatrix);
-            botServiceImpl.applyBotMove();
+            MoveDTO moveDTO = botServiceImpl.generateBotMove();
+            applyMove(game, moveDTO);
         });
     }
 
