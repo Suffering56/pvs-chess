@@ -6,6 +6,7 @@ import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.MoveRatingDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
+import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
@@ -32,11 +33,6 @@ public class BotServiceImpl implements BotService {
     @Override
     @Profile
     public MoveDTO generateBotMove() {
-        log.info("generateBotMove");
-        log.info("game: " + game);
-        log.info("cellsMatrix: " + cellsMatrix);
-        log.info("moveServiceFactory: " + moveServiceFactory);
-
         MoveService moveServiceImpl = moveServiceFactory.apply(game).apply(cellsMatrix);
         Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
@@ -44,10 +40,7 @@ public class BotServiceImpl implements BotService {
                 .filteredPiecesStream(sideFrom, PieceType.values())
                 .collect(Collectors.toMap(Function.identity(), cellFrom -> moveServiceImpl.getAvailableMoves(cellFrom.generatePoint())));
 
-        log.info("movesMap.size: " + movesMap.size());
-
         List<MoveRatingDTO> ratingList = new ArrayList<>();
-
         for (CellDTO cellFrom : movesMap.keySet()) {
             Set<PointDTO> moves = movesMap.get(cellFrom);
             for (PointDTO pointTo : moves) {
@@ -57,12 +50,28 @@ public class BotServiceImpl implements BotService {
             }
         }
 
-        log.info("ratingList.size: " + ratingList.size());
-        long i = Math.round(ratingList.size() * Math.random());
+        if (ratingList.isEmpty()) {
+            throw new RuntimeException("Game is end!");
+        }
 
-        MoveRatingDTO ratingDTO = ratingList.get((int) i);
+        MoveRatingDTO bestMove = null;
+        int maxValue = 0;
+        for (MoveRatingDTO ratingDTO : ratingList) {
+            PieceType attackedPiece = ratingDTO.getAttackedPiece();
+            if (attackedPiece != null) {
+                if (attackedPiece.getValue() > maxValue) {
+                    maxValue = attackedPiece.getValue();
+                    bestMove = ratingDTO;
+                }
+            }
+        }
 
-        return new MoveDTO(ratingDTO.getCellFrom().generatePoint(), ratingDTO.getPointTo());
+        if (bestMove == null) {
+            int i = (int) (ratingList.size() * Math.random());
+            bestMove = ratingList.get(i);
+        }
+
+        return new MoveDTO(bestMove.getCellFrom().generatePoint(), bestMove.getPointTo());
     }
 
     @Autowired

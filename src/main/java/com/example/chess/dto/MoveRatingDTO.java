@@ -1,14 +1,10 @@
 package com.example.chess.dto;
 
 import com.example.chess.enums.PieceType;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 public class MoveRatingDTO {
 
@@ -16,6 +12,13 @@ public class MoveRatingDTO {
     private PointDTO pointTo;
     private PieceType attackedPiece;
 
+    private int rating;
+
+    public MoveRatingDTO(CellDTO cellFrom, PointDTO pointTo, PieceType attackedPiece) {
+        this.cellFrom = cellFrom;
+        this.pointTo = pointTo;
+        this.attackedPiece = attackedPiece;
+    }
 
     public PieceType getPieceFrom() {
         return cellFrom.getPieceType();
