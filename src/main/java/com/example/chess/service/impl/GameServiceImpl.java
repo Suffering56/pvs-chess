@@ -1,10 +1,7 @@
 package com.example.chess.service.impl;
 
 import com.example.chess.aspects.Profile;
-import com.example.chess.dto.ArrangementDTO;
-import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.MoveDTO;
-import com.example.chess.dto.PointDTO;
+import com.example.chess.dto.*;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
@@ -17,8 +14,7 @@ import com.example.chess.repository.HistoryRepository;
 import com.example.chess.repository.PieceRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.MoveService;
-import com.example.chess.utils.ChessUtils;
+import com.example.chess.service.support.MoveHelper;
 import com.example.chess.utils.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
@@ -43,8 +39,7 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final HistoryRepository historyRepository;
     private final PieceRepository pieceRepository;
-    private final Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory;
-    private final Function<Game, Function<List<List<CellDTO>>, BotService>> botServiceFactory;
+    private final Function<Game, Function<CellsMatrix, BotService>> botServiceFactory;
     private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
     @Value("${dev.move.mirror.enable}")
@@ -53,12 +48,10 @@ public class GameServiceImpl implements GameService {
     private Long botMoveDelay;
 
     public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, PieceRepository pieceRepository,
-                           Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory,
-                           Function<Game, Function<List<List<CellDTO>>, BotService>> botServiceFactory) {
+                           Function<Game, Function<CellsMatrix, BotService>> botServiceFactory) {
         this.gameRepository = gameRepository;
         this.historyRepository = historyRepository;
         this.pieceRepository = pieceRepository;
-        this.moveServiceFactory = moveServiceFactory;
         this.botServiceFactory = botServiceFactory;
     }
 
@@ -83,9 +76,9 @@ public class GameServiceImpl implements GameService {
     @Override
     public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
         Game game = findAndCheckGame(gameId);
-        List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
+        CellsMatrix matrix = getCellsMatrixByGame(game, game.getPosition());
 
-        return moveServiceFactory.apply(game).apply(cellsMatrix).getAvailableMoves(point);
+        return new MoveHelper(game, matrix).getAvailableMoves(point);
     }
 
     @Override
@@ -102,11 +95,11 @@ public class GameServiceImpl implements GameService {
             beforeMoveHistory = findHistoryByGameIdAndPosition(gameId, game.getPosition());
         }
 
-        List<List<CellDTO>> cellsMatrix = ChessUtils.createCellsMatrixByHistory(beforeMoveHistory);
+        CellsMatrix matrix = CellsMatrix.createByHistory(beforeMoveHistory, newPosition, null);
 
         //move piece
-        Piece transformationPiece = getPawnTransformationPiece(cellsMatrix, move);
-        MoveResult moveResult = ChessUtils.executeMove(cellsMatrix, move, transformationPiece);
+        Piece transformationPiece = getPawnTransformationPiece(matrix, move);
+        MoveResult moveResult = matrix.executeMove(move, transformationPiece);
         Piece pieceFrom = moveResult.getPieceFrom();
         Side sideFrom = pieceFrom.getSide();
 
@@ -115,7 +108,7 @@ public class GameServiceImpl implements GameService {
 
         if (pieceFrom.getType() == PieceType.KING) {
             //do castling (only the ROOK moves)
-            checkAndExecuteCastling(cellsMatrix, move);
+            checkAndExecuteCastling(matrix, move);
 
             game.disableShortCasting(sideFrom);
             game.disableLongCasting(sideFrom);
@@ -141,16 +134,16 @@ public class GameServiceImpl implements GameService {
                     //так это взятие на проходе (не могла же пешка покинуть свою вертикаль и при этом ничего не срубив)
 
                     //рубим пешку
-                    CellDTO enemyPawnCell = ChessUtils.getCell(cellsMatrix, move.getFrom().getRowIndex(), move.getTo().getColumnIndex());
+                    CellDTO enemyPawnCell = matrix.getCell(move.getFrom().getRowIndex(), move.getTo().getColumnIndex());
                     enemyPawnCell.setPiece(null);
                 }
             }
         }
 
-        List<History> afterMoveHistory = createHistoryByCellsMatrix(cellsMatrix, gameId, newPosition);
+        List<History> afterMoveHistory = matrix.generateHistory(gameId, newPosition);
         game.setPosition(newPosition);
 
-        boolean isEnemyKingUnderAttack = moveServiceFactory.apply(game).apply(cellsMatrix).isEnemyKingUnderAttack(sideFrom);
+        boolean isEnemyKingUnderAttack = new MoveHelper(game, matrix).isEnemyKingUnderAttack(sideFrom);
         if (isEnemyKingUnderAttack) {
             game.setUnderCheckSide(sideFrom.reverse());
         }
@@ -160,10 +153,10 @@ public class GameServiceImpl implements GameService {
         historyRepository.saveAll(afterMoveHistory);
         gameRepository.save(game);
 
-        return new ArrangementDTO(newPosition, cellsMatrix, game.getUnderCheckSide());
+        return matrix.generateArrangement(); //TODO: underCheckSide
     }
 
-    private void checkAndExecuteCastling(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+    private void checkAndExecuteCastling(CellsMatrix matrix, MoveDTO move) {
         int diff = move.getFrom().getColumnIndex() - move.getTo().getColumnIndex();
 
         if (Math.abs(diff) == 2) {    //is castling
@@ -180,52 +173,34 @@ public class GameServiceImpl implements GameService {
             }
 
             //move ROOK
-            ChessUtils.executeMove(cellsMatrix, new MoveDTO(rookFrom, rookTo));
+            matrix.executeMove(new MoveDTO(rookFrom, rookTo));
         }
     }
 
-    private Piece getPawnTransformationPiece(List<List<CellDTO>> cellsMatrix, MoveDTO move) {
+    private Piece getPawnTransformationPiece(CellsMatrix cellsMatrix, MoveDTO move) {
         if (move.getPieceType() == null) {
             return null;
         }
 
-        CellDTO cellFrom = ChessUtils.getCell(cellsMatrix, move.getFrom());
+        CellDTO cellFrom = cellsMatrix.getCell(move.getFrom());
         return findPieceBySideAndType(cellFrom.getPieceSide(), move.getPieceType());
     }
 
     @Override
-    public ArrangementDTO getArrangementByPosition(Game game, int position) throws HistoryNotFoundException {
-        ArrangementDTO result = new ArrangementDTO();
-
-        if (position > 0) {
-            result.setCellsMatrix(createCellsMatrixByGameIdAndPosition(game.getId(), position));
-        } else {
-            result.setCellsMatrix(createStartCellsMatrix(game.getId()));
-        }
-
-        result.setPosition(position);
-        result.setUnderCheckSide(game.getUnderCheckSide());
-
-        return result;
+    public ArrangementDTO createArrangementByGame(Game game, int position) throws HistoryNotFoundException {
+        return getCellsMatrixByGame(game, position).generateArrangement();
     }
 
-    @Override
-    public ArrangementDTO getArrangementByPosition(long gameId, int position) throws HistoryNotFoundException, GameNotFoundException {
-        Game game = findAndCheckGame(gameId);
-        return getArrangementByPosition(game, position);
-    }
+    private CellsMatrix getCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException {
+        List<History> historyList;
 
-    private List<List<CellDTO>> createCellsMatrixByGame(Game game) throws HistoryNotFoundException {
-        return createCellsMatrixByGameIdAndPosition(game.getId(), game.getPosition());
-    }
-
-    private List<List<CellDTO>> createCellsMatrixByGameIdAndPosition(long gameId, int position) throws HistoryNotFoundException {
         if (position == 0) {
-            return createStartCellsMatrix(gameId);
+            historyList = createStartHistory(game.getId());
+        } else {
+            historyList = findHistoryByGameIdAndPosition(game.getId(), position);
         }
 
-        List<History> historyList = findHistoryByGameIdAndPosition(gameId, position);
-        return ChessUtils.createCellsMatrixByHistory(historyList);
+        return CellsMatrix.createByHistory(historyList, position, game.getUnderCheckSide());
     }
 
     private List<History> findHistoryByGameIdAndPosition(long gameId, int position) throws HistoryNotFoundException {
@@ -234,14 +209,6 @@ public class GameServiceImpl implements GameService {
             throw new HistoryNotFoundException();
         }
         return historyList;
-    }
-
-    private List<History> createHistoryByCellsMatrix(List<List<CellDTO>> cellsMatrix, Long gameId, int position) {
-        return cellsMatrix.stream()
-                .flatMap(List::stream)                        //convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
-                .filter(cell -> cell.getPiece() != null)
-                .map(cell -> History.createByCell(cell, gameId, position))
-                .collect(Collectors.toList());
     }
 
     private List<History> createStartHistory(long gameId) {
@@ -294,10 +261,6 @@ public class GameServiceImpl implements GameService {
         }
 
         return historyList;
-    }
-
-    private List<List<CellDTO>> createStartCellsMatrix(long gameId) {
-        return ChessUtils.createCellsMatrixByHistory(createStartHistory(gameId));
     }
 
     private Piece findPieceBySideAndType(Side side, PieceType type) {
@@ -354,7 +317,7 @@ public class GameServiceImpl implements GameService {
     @Override
     public void applyBotMove(Game game) {
         executeInSecondaryThread(() -> {
-            List<List<CellDTO>> cellsMatrix = createCellsMatrixByGame(game);
+            CellsMatrix cellsMatrix = getCellsMatrixByGame(game, game.getPosition());
             BotService botServiceImpl = botServiceFactory.apply(game).apply(cellsMatrix);
             MoveDTO moveDTO = botServiceImpl.generateBotMove();
             applyMove(game, moveDTO);

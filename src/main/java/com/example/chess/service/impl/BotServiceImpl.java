@@ -1,18 +1,13 @@
 package com.example.chess.service.impl;
 
 import com.example.chess.aspects.Profile;
-import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.MoveDTO;
-import com.example.chess.dto.MoveRatingDTO;
-import com.example.chess.dto.PointDTO;
+import com.example.chess.dto.*;
 import com.example.chess.entity.Game;
-import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
-import com.example.chess.service.MoveService;
+import com.example.chess.service.support.MoveHelper;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -27,24 +22,23 @@ import java.util.stream.Collectors;
 public class BotServiceImpl implements BotService {
 
     private Game game;
-    private List<List<CellDTO>> cellsMatrix;
-    private Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory;
+    private CellsMatrix matrix;
 
     @Override
     @Profile
     public MoveDTO generateBotMove() {
-        MoveService moveServiceImpl = moveServiceFactory.apply(game).apply(cellsMatrix);
+        MoveHelper moveHelper = new MoveHelper(game, matrix);
         Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
-        Map<CellDTO, Set<PointDTO>> movesMap = moveServiceImpl
+        Map<CellDTO, Set<PointDTO>> movesMap = matrix
                 .filteredPiecesStream(sideFrom, PieceType.values())
-                .collect(Collectors.toMap(Function.identity(), cellFrom -> moveServiceImpl.getAvailableMoves(cellFrom.generatePoint())));
+                .collect(Collectors.toMap(Function.identity(), cellFrom -> moveHelper.getAvailableMoves(cellFrom.generatePoint())));
 
         List<MoveRatingDTO> ratingList = new ArrayList<>();
         for (CellDTO cellFrom : movesMap.keySet()) {
             Set<PointDTO> moves = movesMap.get(cellFrom);
             for (PointDTO pointTo : moves) {
-                CellDTO attackedCell = cellsMatrix.get(pointTo.getRowIndex()).get(pointTo.getColumnIndex());
+                CellDTO attackedCell = matrix.getCell(pointTo);
                 MoveRatingDTO moveRatingDTO = new MoveRatingDTO(cellFrom, pointTo, attackedCell.getPieceType());
                 ratingList.add(moveRatingDTO);
             }
@@ -74,18 +68,13 @@ public class BotServiceImpl implements BotService {
         return new MoveDTO(bestMove.getCellFrom().generatePoint(), bestMove.getPointTo());
     }
 
-    @Autowired
-    public void setMoveServiceFactory(Function<Game, Function<List<List<CellDTO>>, MoveService>> moveServiceFactory) {
-        this.moveServiceFactory = moveServiceFactory;
-    }
-
     @Override
     public void setGame(Game game) {
         this.game = game;
     }
 
     @Override
-    public void setCellsMatrix(List<List<CellDTO>> cellsMatrix) {
-        this.cellsMatrix = cellsMatrix;
+    public void setCellsMatrix(CellsMatrix matrix) {
+        this.matrix = matrix;
     }
 }

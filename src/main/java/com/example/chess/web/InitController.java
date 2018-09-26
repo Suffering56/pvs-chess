@@ -1,6 +1,7 @@
 package com.example.chess.web;
 
 import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.dto.CellsMatrix;
 import com.example.chess.dto.ModeDTO;
 import com.example.chess.dto.SideDTO;
 import com.example.chess.entity.Game;
@@ -8,7 +9,6 @@ import com.example.chess.entity.GameFeatures;
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.GameService;
 import com.example.chess.utils.CustomResponse;
@@ -125,7 +125,7 @@ public class InitController {
                                                    @PathVariable("position") int position) throws Exception {
 
         Game game = gameService.findAndCheckGame(gameId);
-        ArrangementDTO result = gameService.getArrangementByPosition(gameId, position);
+        ArrangementDTO result = gameService.createArrangementByGame(game, position);
 
         if (game.getMode() == GameMode.AI) {
             if (gameService.isMirrorEnabled()) {

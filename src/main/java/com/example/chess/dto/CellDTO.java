@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -14,64 +15,70 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 @Setter
 @NoArgsConstructor
 @ToString
+@Log4j2
 public class CellDTO {
 
-	private Piece piece;
+    private Piece piece;
 
-	protected Integer rowIndex;
-	protected Integer columnIndex;
+    protected Integer rowIndex;
+    protected Integer columnIndex;
 
-	private boolean available;
-	private boolean selected;
+    private boolean available;
+    private boolean selected;
 
-	public CellDTO(Integer rowIndex, Integer columnIndex) {
-		this.rowIndex = rowIndex;
-		this.columnIndex = columnIndex;
-	}
+    public CellDTO(Integer rowIndex, Integer columnIndex) {
+        this.rowIndex = rowIndex;
+        this.columnIndex = columnIndex;
+    }
 
-	public Side getPieceSide() {
-		if (getPiece() == null) {
-			return null;
-		}
-		return getPiece().getSide();
-	}
+    public Side getPieceSide() {
+        if (getPiece() == null) {
+            return null;
+        }
+        return getPiece().getSide();
+    }
 
-	public PieceType getPieceType() {
-		if (getPiece() == null) {
-			return null;
-		}
-		return getPiece().getType();
-	}
+    public PieceType getPieceType() {
+        if (getPiece() == null) {
+            return null;
+        }
+        return getPiece().getType();
+    }
 
-	public PointDTO generatePoint() {
-		return new PointDTO(rowIndex, columnIndex);
-	}
+    public PointDTO generatePoint() {
+        return new PointDTO(rowIndex, columnIndex);
+    }
 
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
 
-		if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) return false;
 
-		CellDTO cellDTO = (CellDTO) o;
+        CellDTO cellDTO = (CellDTO) o;
 
-		return new EqualsBuilder()
-				.append(available, cellDTO.available)
-				.append(selected, cellDTO.selected)
-				.append(piece, cellDTO.piece)
-				.append(rowIndex, cellDTO.rowIndex)
-				.append(columnIndex, cellDTO.columnIndex)
-				.isEquals();
-	}
+        return new EqualsBuilder()
+                .append(available, cellDTO.available)
+                .append(selected, cellDTO.selected)
+                .append(piece, cellDTO.piece)
+                .append(rowIndex, cellDTO.rowIndex)
+                .append(columnIndex, cellDTO.columnIndex)
+                .isEquals();
+    }
 
-	@Override
-	public int hashCode() {
-		return new HashCodeBuilder(17, 37)
-				.append(piece)
-				.append(rowIndex)
-				.append(columnIndex)
-				.append(available)
-				.append(selected)
-				.toHashCode();
-	}
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(piece)
+                .append(rowIndex)
+                .append(columnIndex)
+                .append(available)
+                .append(selected)
+                .toHashCode();
+    }
+
+    public void print() {
+        log.debug("cell[{},{}]: side = {}, piece = {}", rowIndex, columnIndex,
+                piece.getSide(), piece.getType());
+    }
 }
