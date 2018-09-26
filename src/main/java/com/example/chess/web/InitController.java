@@ -129,7 +129,7 @@ public class InitController {
         Game game = gameService.findAndCheckGame(gameId);
         ArrangementDTO result = gameService.createArrangementByGame(game, position);
 
-        if (game.getMode() == GameMode.AI && game.getSelectedSide() == Side.BLACK) {
+        if (game.getMode() == GameMode.AI && game.getPlayerSide() == Side.BLACK) {
             botService.applyBotMove(game);
         }
         return result;

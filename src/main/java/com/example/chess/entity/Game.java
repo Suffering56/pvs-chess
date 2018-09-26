@@ -17,102 +17,105 @@ import java.util.Map;
 @ToString
 public class Game {
 
-	@Id
-	@GenericGenerator(name = "game_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "game_id_seq"))
-	@GeneratedValue(generator = "game_id_seq")
-	private Long id;
+    @Id
+    @GenericGenerator(name = "game_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "game_id_seq"))
+    @GeneratedValue(generator = "game_id_seq")
+    private Long id;
 
-	@ColumnDefault("0")
-	@Column(nullable = false)
-	private Integer position = 0;
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private Integer position = 0;
 
-	@Enumerated(EnumType.STRING)
-	private GameMode mode;
+    @Enumerated(EnumType.STRING)
+    private GameMode mode;
 
-	@OneToMany(mappedBy = "game", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-	@MapKey(name = "side")
-	private Map<Side, GameFeatures> featuresMap;
+    @OneToMany(mappedBy = "game", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @MapKey(name = "side")
+    private Map<Side, GameFeatures> featuresMap;
 
-	@Transient
-	public void disableShortCasting(Side side) {
-		featuresMap.get(side).setShortCastlingAvailable(false);
-	}
+    @Transient
+    public void disableShortCasting(Side side) {
+        featuresMap.get(side).setShortCastlingAvailable(false);
+    }
 
-	@Transient
-	public void disableLongCasting(Side side) {
-		featuresMap.get(side).setLongCastlingAvailable(false);
-	}
+    @Transient
+    public void disableLongCasting(Side side) {
+        featuresMap.get(side).setLongCastlingAvailable(false);
+    }
 
-	@Transient
-	public boolean isShortCastlingAvailable(Side side) {
-		return featuresMap.get(side).getShortCastlingAvailable();
-	}
+    @Transient
+    public boolean isShortCastlingAvailable(Side side) {
+        return featuresMap.get(side).getShortCastlingAvailable();
+    }
 
-	@Transient
-	public boolean isLongCastlingAvailable(Side side) {
-		return featuresMap.get(side).getLongCastlingAvailable();
-	}
+    @Transient
+    public boolean isLongCastlingAvailable(Side side) {
+        return featuresMap.get(side).getLongCastlingAvailable();
+    }
 
-	@Transient
-	public Integer getPawnLongMoveColumnIndex(Side side) {
-		return featuresMap.get(side).getPawnLongMoveColumnIndex();
-	}
+    @Transient
+    public Integer getPawnLongMoveColumnIndex(Side side) {
+        return featuresMap.get(side).getPawnLongMoveColumnIndex();
+    }
 
-	@Transient
-	public void setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
-		featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
-	}
+    @Transient
+    public void setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
+        featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
+    }
 
-	@Transient
-	public GameFeatures getSideFeatures(Side side) {
-		return featuresMap.get(side);
-	}
+    @Transient
+    public GameFeatures getSideFeatures(Side side) {
+        return featuresMap.get(side);
+    }
 
-	@Transient
-	public Side getUnderCheckSide() {
-		for (GameFeatures features : featuresMap.values()) {
-			if (features.getIsUnderCheck()) {
-				return features.getSide();
-			}
-		}
-		return null;
-	}
+    @Transient
+    public Side getUnderCheckSide() {
+        for (GameFeatures features : featuresMap.values()) {
+            if (features.getIsUnderCheck()) {
+                return features.getSide();
+            }
+        }
+        return null;
+    }
 
-	@Transient
-	public void setUnderCheckSide(Side side) {
-		if (side != null) {
-			featuresMap.get(side).setIsUnderCheck(true);
-			featuresMap.get(side.reverse()).setIsUnderCheck(false);
-		} else {
-			getWhiteFeatures().setIsUnderCheck(false);
-			getBlackFeatures().setIsUnderCheck(false);
-		}
-	}
+    @Transient
+    public void setUnderCheckSide(Side side) {
+        if (side != null) {
+            featuresMap.get(side).setIsUnderCheck(true);
+            featuresMap.get(side.reverse()).setIsUnderCheck(false);
+        } else {
+            getWhiteFeatures().setIsUnderCheck(false);
+            getBlackFeatures().setIsUnderCheck(false);
+        }
+    }
 
-	@Transient
-	public GameFeatures getWhiteFeatures() {
-		return featuresMap.get(Side.WHITE);
-	}
+    @Transient
+    public GameFeatures getWhiteFeatures() {
+        return featuresMap.get(Side.WHITE);
+    }
 
-	@Transient
-	public GameFeatures getBlackFeatures() {
-		return featuresMap.get(Side.BLACK);
-	}
+    @Transient
+    public GameFeatures getBlackFeatures() {
+        return featuresMap.get(Side.BLACK);
+    }
 
-	@Transient
-	public Side getSelectedSide() {
-		if (getMode() != GameMode.AI) {
-			throw new RuntimeException("Game mode is not AI!");
-		}
+    /**
+     * Only works in AI mode
+     */
+    @Transient
+    public Side getPlayerSide() {
+        if (getMode() != GameMode.AI) {
+            throw new RuntimeException("Game mode is not AI!");
+        }
 
-		Side selectedSide = null;
-		if (getWhiteFeatures().getSessionId() != null && getBlackFeatures().getSessionId() == null) {
-			selectedSide = Side.WHITE;
-		}
-		if (getBlackFeatures().getSessionId() != null && getWhiteFeatures().getSessionId() == null) {
-			selectedSide = Side.BLACK;
-		}
+        Side selectedSide = null;
+        if (getWhiteFeatures().getSessionId() != null && getBlackFeatures().getSessionId() == null) {
+            selectedSide = Side.WHITE;
+        }
+        if (getBlackFeatures().getSessionId() != null && getWhiteFeatures().getSessionId() == null) {
+            selectedSide = Side.BLACK;
+        }
 
-		return selectedSide;
-	}
+        return selectedSide;
+    }
 }

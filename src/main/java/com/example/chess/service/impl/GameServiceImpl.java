@@ -126,7 +126,8 @@ public class GameServiceImpl implements GameService {
         List<History> afterMoveHistory = matrix.generateHistory(gameId, newPosition);
         game.setPosition(newPosition);
 
-        boolean isEnemyKingUnderAttack = new MoveHelper(game, matrix).isEnemyKingUnderAttack(sideFrom);
+        MoveHelper moveHelper = new MoveHelper(game, matrix);
+        boolean isEnemyKingUnderAttack = moveHelper.isEnemyKingUnderAttack(sideFrom);
         if (isEnemyKingUnderAttack) {
             game.setUnderCheckSide(sideFrom.reverse());
         }
@@ -149,7 +150,8 @@ public class GameServiceImpl implements GameService {
         Game game = findAndCheckGame(gameId);
         CellsMatrix matrix = getCellsMatrixByGame(game, game.getPosition());
 
-        return new MoveHelper(game, matrix).getAvailableMoves(point);
+        MoveHelper moveHelper = new MoveHelper(game, matrix);
+        return moveHelper.getAvailableMoves(point);
     }
 
     private void checkAndExecuteCastling(CellsMatrix matrix, MoveDTO move) {

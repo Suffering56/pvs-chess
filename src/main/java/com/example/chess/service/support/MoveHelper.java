@@ -34,12 +34,6 @@ public class MoveHelper {
         this.matrix = matrix;
     }
 
-    public boolean isEnemyKingUnderAttack(Side attackingSide) {
-        PointDTO enemyKingPoint = findKingPoint(attackingSide.reverse());
-        Set<PointDTO> enemyMoves = getPiecesMoves(attackingSide, PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
-        return enemyMoves.contains(enemyKingPoint);
-    }
-
     public Set<PointDTO> getAvailableMoves(PointDTO pointFrom) {
         CellDTO originalCell = matrix.getCell(pointFrom);
         this.originalPiece = originalCell.getPiece();
@@ -62,7 +56,13 @@ public class MoveHelper {
         return moves;
     }
 
-    public Set<PointDTO> getPiecesMoves(Side side, PieceType... pieceTypes) {
+    public boolean isEnemyKingUnderAttack(Side attackingSide) {
+        PointDTO enemyKingPoint = findKingPoint(attackingSide.reverse());
+        Set<PointDTO> enemyMoves = getPiecesMoves(attackingSide, PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
+        return enemyMoves.contains(enemyKingPoint);
+    }
+
+    private Set<PointDTO> getPiecesMoves(Side side, PieceType... pieceTypes) {
         return matrix
                 .filteredPiecesStream(side, pieceTypes)
                 .map(this::getAvailableMovesForCell)
