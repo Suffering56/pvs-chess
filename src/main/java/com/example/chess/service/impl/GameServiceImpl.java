@@ -12,20 +12,18 @@ import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
 import com.example.chess.repository.PieceRepository;
-import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
+import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
 import com.example.chess.utils.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -39,20 +37,13 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final HistoryRepository historyRepository;
     private final PieceRepository pieceRepository;
-    private final Function<Game, Function<CellsMatrix, BotService>> botServiceFactory;
     private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
-    @Value("${dev.move.mirror.enable}")
-    private Boolean mirrorEnabled;
-    @Value("${app.game.bots.move-delay}")
-    private Long botMoveDelay;
 
-    public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, PieceRepository pieceRepository,
-                           Function<Game, Function<CellsMatrix, BotService>> botServiceFactory) {
+    public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, PieceRepository pieceRepository) {
         this.gameRepository = gameRepository;
         this.historyRepository = historyRepository;
         this.pieceRepository = pieceRepository;
-        this.botServiceFactory = botServiceFactory;
     }
 
     @PostConstruct
@@ -69,16 +60,8 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public Game findAndCheckGame(long gameId) throws GameNotFoundException {
-        return gameRepository.findById(gameId).orElseThrow(GameNotFoundException::new);
-    }
-
-    @Override
-    public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
-        Game game = findAndCheckGame(gameId);
-        CellsMatrix matrix = getCellsMatrixByGame(game, game.getPosition());
-
-        return new MoveHelper(game, matrix).getAvailableMoves(point);
+    public ArrangementDTO createArrangementByGame(Game game, int position) throws HistoryNotFoundException {
+        return getCellsMatrixByGame(game, position).generateArrangement(game.getUnderCheckSide());
     }
 
     @Override
@@ -95,7 +78,7 @@ public class GameServiceImpl implements GameService {
             beforeMoveHistory = findHistoryByGameIdAndPosition(gameId, game.getPosition());
         }
 
-        CellsMatrix matrix = CellsMatrix.createByHistory(beforeMoveHistory, newPosition, null);
+        CellsMatrix matrix = CellsMatrix.createByHistory(beforeMoveHistory, newPosition);
 
         //move piece
         Piece transformationPiece = getPawnTransformationPiece(matrix, move);
@@ -153,7 +136,20 @@ public class GameServiceImpl implements GameService {
         historyRepository.saveAll(afterMoveHistory);
         gameRepository.save(game);
 
-        return matrix.generateArrangement(); //TODO: underCheckSide
+        return matrix.generateArrangement(game.getUnderCheckSide());
+    }
+
+    @Override
+    public Game findAndCheckGame(long gameId) throws GameNotFoundException {
+        return gameRepository.findById(gameId).orElseThrow(GameNotFoundException::new);
+    }
+
+    @Override
+    public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
+        Game game = findAndCheckGame(gameId);
+        CellsMatrix matrix = getCellsMatrixByGame(game, game.getPosition());
+
+        return new MoveHelper(game, matrix).getAvailableMoves(point);
     }
 
     private void checkAndExecuteCastling(CellsMatrix matrix, MoveDTO move) {
@@ -187,11 +183,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public ArrangementDTO createArrangementByGame(Game game, int position) throws HistoryNotFoundException {
-        return getCellsMatrixByGame(game, position).generateArrangement();
-    }
-
-    private CellsMatrix getCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException {
+    public CellsMatrix getCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException {
         List<History> historyList;
 
         if (position == 0) {
@@ -200,7 +192,7 @@ public class GameServiceImpl implements GameService {
             historyList = findHistoryByGameIdAndPosition(game.getId(), position);
         }
 
-        return CellsMatrix.createByHistory(historyList, position, game.getUnderCheckSide());
+        return CellsMatrix.createByHistory(historyList, position);
     }
 
     private List<History> findHistoryByGameIdAndPosition(long gameId, int position) throws HistoryNotFoundException {
@@ -265,66 +257,5 @@ public class GameServiceImpl implements GameService {
 
     private Piece findPieceBySideAndType(Side side, PieceType type) {
         return piecesBySideAndTypeMap.get(side).get(type);
-    }
-
-    @Override
-    public void applyMirrorMove(Game game, MoveDTO dto) {
-        executeInSecondaryThread(() -> {
-            Thread.sleep(botMoveDelay);
-            MoveDTO mirrorMoveDTO = dto.getMirror();
-            applyMove(game, mirrorMoveDTO);
-        });
-    }
-
-    @Override
-    public void applyFirstBotMove(Game game) {
-        Side selectedSide = null;
-        if (game.getWhiteFeatures().getSessionId() != null && game.getBlackFeatures().getSessionId() == null) {
-            selectedSide = Side.WHITE;
-        }
-        if (game.getBlackFeatures().getSessionId() != null && game.getWhiteFeatures().getSessionId() == null) {
-            selectedSide = Side.BLACK;
-        }
-
-        if (selectedSide == Side.BLACK) {
-            executeInSecondaryThread(() -> {
-                Thread.sleep(botMoveDelay);
-                MoveDTO moveDTO = new MoveDTO();
-                moveDTO.setFrom(new PointDTO(1, PieceType.KING.getStartColumnIndex()));
-                moveDTO.setTo(new PointDTO(3, PieceType.KING.getStartColumnIndex()));
-                applyMove(game, moveDTO);
-            });
-        }
-    }
-
-    private void executeInSecondaryThread(Callback callback) {
-        new Thread(() -> {
-            try {
-                callback.call();
-            } catch (InterruptedException | GameNotFoundException | HistoryNotFoundException e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    public boolean isMirrorEnabled() {
-        if (mirrorEnabled == null) {
-            return false;
-        }
-        return mirrorEnabled;
-    }
-
-    @Override
-    public void applyBotMove(Game game) {
-        executeInSecondaryThread(() -> {
-            CellsMatrix cellsMatrix = getCellsMatrixByGame(game, game.getPosition());
-            BotService botServiceImpl = botServiceFactory.apply(game).apply(cellsMatrix);
-            MoveDTO moveDTO = botServiceImpl.generateBotMove();
-            applyMove(game, moveDTO);
-        });
-    }
-
-    private interface Callback {
-        void call() throws InterruptedException, GameNotFoundException, HistoryNotFoundException;
     }
 }

@@ -6,8 +6,13 @@ import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
+import com.example.chess.service.GameService;
+import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
+import com.example.chess.service.support.MoveRating;
+import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,12 +26,25 @@ import java.util.stream.Collectors;
 @Log4j2
 public class BotServiceImpl implements BotService {
 
-    private Game game;
-    private CellsMatrix matrix;
+    private final GameService gameService;
+    @Value("${app.game.bot.move-delay}")
+    private Long botMoveDelay;
+
+    public BotServiceImpl(GameService gameService) {
+        this.gameService = gameService;
+    }
 
     @Override
     @Profile
-    public MoveDTO generateBotMove() {
+    public void applyBotMove(Game game) {
+        CommonUtils.executeInSecondaryThread(() -> {
+            CellsMatrix cellsMatrix = gameService.getCellsMatrixByGame(game, game.getPosition());
+            MoveDTO moveDTO = findBestMove(game, cellsMatrix);
+            gameService.applyMove(game, moveDTO);
+        });
+    }
+
+    private MoveDTO findBestMove(Game game, CellsMatrix matrix) {
         MoveHelper moveHelper = new MoveHelper(game, matrix);
         Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
@@ -34,13 +52,13 @@ public class BotServiceImpl implements BotService {
                 .filteredPiecesStream(sideFrom, PieceType.values())
                 .collect(Collectors.toMap(Function.identity(), cellFrom -> moveHelper.getAvailableMoves(cellFrom.generatePoint())));
 
-        List<MoveRatingDTO> ratingList = new ArrayList<>();
+        List<MoveRating> ratingList = new ArrayList<>();
         for (CellDTO cellFrom : movesMap.keySet()) {
             Set<PointDTO> moves = movesMap.get(cellFrom);
             for (PointDTO pointTo : moves) {
                 CellDTO attackedCell = matrix.getCell(pointTo);
-                MoveRatingDTO moveRatingDTO = new MoveRatingDTO(cellFrom, pointTo, attackedCell.getPieceType());
-                ratingList.add(moveRatingDTO);
+                MoveRating moveRating = new MoveRating(cellFrom, pointTo, attackedCell.getPieceType());
+                ratingList.add(moveRating);
             }
         }
 
@@ -48,33 +66,28 @@ public class BotServiceImpl implements BotService {
             throw new RuntimeException("Game is end!");
         }
 
-        MoveRatingDTO bestMove = null;
+        MoveRating maxRating = null;
         int maxValue = 0;
-        for (MoveRatingDTO ratingDTO : ratingList) {
+        for (MoveRating ratingDTO : ratingList) {
             PieceType attackedPiece = ratingDTO.getAttackedPiece();
             if (attackedPiece != null) {
                 if (attackedPiece.getValue() > maxValue) {
                     maxValue = attackedPiece.getValue();
-                    bestMove = ratingDTO;
+                    maxRating = ratingDTO;
                 }
             }
         }
 
-        if (bestMove == null) {
+        if (maxRating == null) {
             int i = (int) (ratingList.size() * Math.random());
-            bestMove = ratingList.get(i);
+            maxRating = ratingList.get(i);
         }
 
-        return new MoveDTO(bestMove.getCellFrom().generatePoint(), bestMove.getPointTo());
-    }
+        MoveDTO bestMove = new MoveDTO(maxRating.getCellFrom().generatePoint(), maxRating.getPointTo());
+        if (maxRating.getPieceFrom() == PieceType.PAWN && (bestMove.getTo().getRowIndex() == 0 || bestMove.getTo().getRowIndex() == 7)) {
+            bestMove.setPieceType(PieceType.QUEEN);
+        }
 
-    @Override
-    public void setGame(Game game) {
-        this.game = game;
-    }
-
-    @Override
-    public void setCellsMatrix(CellsMatrix matrix) {
-        this.matrix = matrix;
+        return bestMove;
     }
 }

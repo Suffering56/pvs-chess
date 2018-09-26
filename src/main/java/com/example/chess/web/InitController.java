@@ -1,7 +1,6 @@
 package com.example.chess.web;
 
 import com.example.chess.dto.ArrangementDTO;
-import com.example.chess.dto.CellsMatrix;
 import com.example.chess.dto.ModeDTO;
 import com.example.chess.dto.SideDTO;
 import com.example.chess.entity.Game;
@@ -10,6 +9,7 @@ import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.repository.GameRepository;
+import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import com.example.chess.utils.CustomResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +26,13 @@ public class InitController {
 
     private final GameService gameService;
     private final GameRepository gameRepository;
+    private final BotService botService;
 
     @Autowired
-    public InitController(GameService gameService, GameRepository gameRepository) {
+    public InitController(GameService gameService, GameRepository gameRepository, BotService botService) {
         this.gameService = gameService;
         this.gameRepository = gameRepository;
+        this.botService = botService;
     }
 
     @GetMapping
@@ -127,10 +129,8 @@ public class InitController {
         Game game = gameService.findAndCheckGame(gameId);
         ArrangementDTO result = gameService.createArrangementByGame(game, position);
 
-        if (game.getMode() == GameMode.AI) {
-            if (gameService.isMirrorEnabled()) {
-                gameService.applyFirstBotMove(game);
-            }
+        if (game.getMode() == GameMode.AI && game.getSelectedSide() == Side.BLACK) {
+            botService.applyBotMove(game);
         }
         return result;
     }

@@ -1,7 +1,6 @@
 package com.example.chess.service.support;
 
 import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.CellsMatrix;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;

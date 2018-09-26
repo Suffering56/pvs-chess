@@ -1,7 +1,7 @@
 package com.example.chess.service;
 
 import com.example.chess.dto.ArrangementDTO;
-import com.example.chess.dto.CellsMatrix;
+import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
@@ -12,19 +12,14 @@ import java.util.Set;
 
 public interface GameService {
 
-    ArrangementDTO createArrangementByGame(Game game, int position) throws HistoryNotFoundException;
+    Game findAndCheckGame(long gameId) throws GameNotFoundException;
 
-	Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
+    ArrangementDTO createArrangementByGame(Game game, int position) throws HistoryNotFoundException;
 
     ArrangementDTO applyMove(Game gameId, MoveDTO dto) throws HistoryNotFoundException, GameNotFoundException;
 
-	Game findAndCheckGame(long gameId) throws GameNotFoundException;
+    Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
 
-	void applyMirrorMove(Game gameId, MoveDTO dto);
 
-	void applyFirstBotMove(Game game) throws HistoryNotFoundException;
-
-	boolean isMirrorEnabled();
-
-	void applyBotMove(Game game) throws HistoryNotFoundException;
+    CellsMatrix getCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException;
 }

@@ -19,14 +19,4 @@ public class MoveDTO {
 		this.from = from;
 		this.to = to;
 	}
-
-	@JsonIgnore
-	public MoveDTO getMirror() {
-		MoveDTO mirror = new MoveDTO();
-
-		mirror.setPieceType(pieceType);
-		mirror.setFrom(from.getMirror());
-		mirror.setTo(to.getMirror());
-		return mirror;
-	}
 }

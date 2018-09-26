@@ -1,13 +1,15 @@
-package com.example.chess.dto;
+package com.example.chess.service.support;
 
+import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.utils.MoveResult;
 import com.google.common.base.Preconditions;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
@@ -44,8 +46,8 @@ public class CellsMatrix implements Iterable<List<CellDTO>> {
         }
     }
 
-    public static CellsMatrix createByHistory(List<History> historyList, int position, Side underCheckSide) {
-        CellsMatrix instance = new CellsMatrix(position, underCheckSide);
+    public static CellsMatrix createByHistory(List<History> historyList, int position) {
+        CellsMatrix instance = new CellsMatrix(position, null);
 
         for (History item : historyList) {
             CellDTO cell = instance.getCell(item);
@@ -147,7 +149,7 @@ public class CellsMatrix implements Iterable<List<CellDTO>> {
         return cellsMatrix.spliterator();
     }
 
-    public ArrangementDTO generateArrangement() {
+    public ArrangementDTO generateArrangement(Side underCheckSide) {
         return new ArrangementDTO(position, cellsMatrix, underCheckSide);
     }
 }

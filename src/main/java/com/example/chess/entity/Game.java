@@ -98,4 +98,21 @@ public class Game {
 	public GameFeatures getBlackFeatures() {
 		return featuresMap.get(Side.BLACK);
 	}
+
+	@Transient
+	public Side getSelectedSide() {
+		if (getMode() != GameMode.AI) {
+			throw new RuntimeException("Game mode is not AI!");
+		}
+
+		Side selectedSide = null;
+		if (getWhiteFeatures().getSessionId() != null && getBlackFeatures().getSessionId() == null) {
+			selectedSide = Side.WHITE;
+		}
+		if (getBlackFeatures().getSessionId() != null && getWhiteFeatures().getSessionId() == null) {
+			selectedSide = Side.BLACK;
+		}
+
+		return selectedSide;
+	}
 }

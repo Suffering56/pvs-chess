@@ -1,6 +1,5 @@
 package com.example.chess.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import java.util.Objects;
@@ -43,13 +42,5 @@ public class PointDTO {
 	@Override
 	public int hashCode() {
 		return Objects.hash(rowIndex, columnIndex);
-	}
-
-	@JsonIgnore
-	public PointDTO getMirror() {
-		PointDTO mirror = new PointDTO();
-		mirror.setRowIndex(7 - rowIndex);
-		mirror.setColumnIndex(columnIndex);
-		return mirror;
 	}
 }
