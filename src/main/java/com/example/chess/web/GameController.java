@@ -33,7 +33,7 @@ public class GameController {
                                            @RequestParam int rowIndex,
                                            @RequestParam int columnIndex) throws HistoryNotFoundException, GameNotFoundException {
 
-        return gameService.getAvailableMoves(gameId, new PointDTO(rowIndex, columnIndex));
+        return gameService.getAvailableMoves(gameId, PointDTO.valueOf(rowIndex, columnIndex));
     }
 
     @PostMapping("/{gameId}/move")

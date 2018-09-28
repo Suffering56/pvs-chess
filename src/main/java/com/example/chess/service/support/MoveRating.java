@@ -7,22 +7,25 @@ import lombok.*;
 
 @Getter
 @Setter
-@NoArgsConstructor
 public class MoveRating {
 
     private CellDTO cellFrom;
-    private PointDTO pointTo;
+    private PointDTO to;
     private PieceType attackedPiece;
 
     private int rating;
 
-    public MoveRating(CellDTO cellFrom, PointDTO pointTo, PieceType attackedPiece) {
+    public MoveRating(CellDTO cellFrom, PointDTO to, PieceType attackedPiece) {
         this.cellFrom = cellFrom;
-        this.pointTo = pointTo;
+        this.to = to;
         this.attackedPiece = attackedPiece;
     }
 
     public PieceType getPieceFrom() {
         return cellFrom.getPieceType();
+    }
+
+    public PointDTO getFrom() {
+        return cellFrom.getPoint();
     }
 }

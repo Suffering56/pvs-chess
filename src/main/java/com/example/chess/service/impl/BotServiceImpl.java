@@ -38,7 +38,7 @@ public class BotServiceImpl implements BotService {
     @Profile
     public void applyBotMove(Game game) {
         CommonUtils.executeInSecondaryThread(() -> {
-            CellsMatrix cellsMatrix = gameService.getCellsMatrixByGame(game, game.getPosition());
+            CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
             MoveDTO moveDTO = findBestMove(game, cellsMatrix);
             gameService.applyMove(game, moveDTO);
         });
@@ -50,7 +50,7 @@ public class BotServiceImpl implements BotService {
 
         Map<CellDTO, Set<PointDTO>> movesMap = matrix
                 .filteredPiecesStream(sideFrom, PieceType.values())
-                .collect(Collectors.toMap(Function.identity(), cellFrom -> moveHelper.getAvailableMoves(cellFrom.generatePoint())));
+                .collect(Collectors.toMap(Function.identity(), cellFrom -> moveHelper.getAvailableMoves(cellFrom.getPoint())));
 
         List<MoveRating> ratingList = new ArrayList<>();
         for (CellDTO cellFrom : movesMap.keySet()) {
@@ -83,11 +83,11 @@ public class BotServiceImpl implements BotService {
             maxRating = ratingList.get(i);
         }
 
-        MoveDTO bestMove = new MoveDTO(maxRating.getCellFrom().generatePoint(), maxRating.getPointTo());
-        if (maxRating.getPieceFrom() == PieceType.PAWN && (bestMove.getTo().getRowIndex() == 0 || bestMove.getTo().getRowIndex() == 7)) {
-            bestMove.setPieceType(PieceType.QUEEN);
+        PieceType promotionPieceType = null;
+        if (maxRating.getPieceFrom() == PieceType.PAWN && (maxRating.getTo().getRowIndex() == 0 || maxRating.getTo().getRowIndex() == 7)) {
+            promotionPieceType = PieceType.QUEEN;
         }
 
-        return bestMove;
+        return MoveDTO.valueOf(maxRating.getFrom(), maxRating.getTo(), promotionPieceType);
     }
 }

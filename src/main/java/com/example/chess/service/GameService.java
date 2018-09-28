@@ -21,5 +21,5 @@ public interface GameService {
     Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException, HistoryNotFoundException;
 
 
-    CellsMatrix getCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException;
+    CellsMatrix createCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException;
 }

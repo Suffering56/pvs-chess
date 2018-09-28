@@ -10,28 +10,30 @@ import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.utils.MoveResult;
 import com.google.common.base.Preconditions;
-import lombok.extern.log4j.Log4j2;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.example.chess.ChessConstants.BOARD_SIZE;
+import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
+import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 
-//TODO: make me immutable
-@SuppressWarnings("ALL")
-@Log4j2
-public class CellsMatrix implements Iterable<List<CellDTO>> {
+@SuppressWarnings({"WeakerAccess", "unused"})
+public final class CellsMatrix implements Iterable<List<CellDTO>> {
 
-    private List<List<CellDTO>> cellsMatrix;
-    private int position;
-    private Side underCheckSide;
+    @Getter
+    private final int position;
+    private final List<List<CellDTO>> cellsMatrix;
 
-    private CellsMatrix(int position, Side underCheckSide) {
+    private CellsMatrix(int position, Function<Integer, Function<Integer, Piece>> cellGenerator) {
         this.position = position;
-        this.underCheckSide = underCheckSide;
         this.cellsMatrix = new ArrayList<>(BOARD_SIZE);
 
         //1-8
@@ -40,21 +42,12 @@ public class CellsMatrix implements Iterable<List<CellDTO>> {
 
             //A-H
             for (int columnIndex = 0; columnIndex < BOARD_SIZE; columnIndex++) {
-                rowCells.add(new CellDTO(rowIndex, columnIndex));
+                Piece piece = cellGenerator.apply(rowIndex).apply(columnIndex);
+                CellDTO cell = CellDTO.valueOf(rowIndex, columnIndex, piece);
+                rowCells.add(cell);
             }
             cellsMatrix.add(rowCells);
         }
-    }
-
-    public static CellsMatrix createByHistory(List<History> historyList, int position) {
-        CellsMatrix instance = new CellsMatrix(position, null);
-
-        for (History item : historyList) {
-            CellDTO cell = instance.getCell(item);
-            cell.setPiece(item.getPiece());
-        }
-
-        return instance;
     }
 
     public CellDTO getCell(int rowIndex, int columnIndex) {
@@ -70,68 +63,154 @@ public class CellsMatrix implements Iterable<List<CellDTO>> {
         return getCell(historyItem.getRowIndex(), historyItem.getColumnIndex());
     }
 
-    public static void checkPoint(int rowIndex, int columnIndex) {
+    private void checkPoint(int rowIndex, int columnIndex) {
         Preconditions.checkElementIndex(rowIndex, BOARD_SIZE, "Out of board point");
         Preconditions.checkElementIndex(columnIndex, BOARD_SIZE, "Out of board point");
     }
 
-    public MoveResult executeMove(MoveDTO move) {
-        return executeMove(move, null);
-    }
-
+    /**
+     * Обычный ход
+     *
+     * @return MoveResult (contains new matrix with updated state)
+     * description:
+     * - Перемещаем фигуру из положения #from(X.Y) в положение #to(X.Y).
+     * - Убираем фигуру из #from.
+     * - В #to ставим ту фигуру, которой ходим (кроме случаев превращения пешки)
+     * <p>
+     * Условие: это не рокировка и не взятие на проходе.
+     */
     public MoveResult executeMove(MoveDTO move, Piece pieceFromPawn) {
         CellDTO cellFrom = getCell(move.getFrom());
         CellDTO cellTo = getCell(move.getTo());
 
-        Piece pieceFrom = cellFrom.getPiece();
-        Piece pieceTo = cellTo.getPiece();
-
-        if (pieceFromPawn == null) {
-            cellTo.setPiece(cellFrom.getPiece());
-        } else {
-            cellTo.setPiece(pieceFromPawn);
+        Piece pieceTo = cellFrom.getPiece();
+        if (pieceFromPawn != null) {
+            pieceTo = pieceFromPawn;
         }
-        cellFrom.setPiece(null);
 
-        return new MoveResult(cellFrom, cellTo, pieceFrom, pieceTo);
+        CellsMatrix newMatrix = CellsMatrix
+                .builder(this, position + 1)
+                //move any piece
+                .setPiece(cellTo.getPoint(), pieceTo)
+                .cutDownPiece(cellFrom.getPoint())
+                .build();
+
+        return new MoveResult(this, newMatrix);
     }
 
+    /**
+     * Рокировка
+     * Условие: король передвинулся на две клетки
+     */
+    public MoveResult executeCastling(MoveDTO move) {
+        CellDTO kingCellFrom = getCell(move.getFrom());
+        CellDTO kingCellTo = getCell(move.getTo());
 
-    public List<History> generateHistory(Long gameId, int position) {
-        return cellsMatrix.stream()
-                .flatMap(List::stream)                        //convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
-                .filter(cell -> cell.getPiece() != null)
-                .map(cell -> History.createByCell(cell, gameId, position))
-                .collect(Collectors.toList());
+        int rookRowIndex = move.getFrom().getRowIndex();
+        Integer kingColumnIndex = move.getFrom().getColumnIndex();
+
+        CellDTO rookCellFrom;
+        int rookColumnIndexTo;
+
+        if (move.isShortCastling()) {
+            rookCellFrom = getCell(rookRowIndex, ROOK_SHORT_COLUMN_INDEX);
+            rookColumnIndexTo = kingColumnIndex - 1;
+        } else {
+            rookCellFrom = getCell(rookRowIndex, ROOK_LONG_COLUMN_INDEX);
+            rookColumnIndexTo = kingColumnIndex + 1;
+        }
+
+        CellsMatrix newMatrix = CellsMatrix
+                .builder(this, position + 1)
+                //move king
+                .setPiece(kingCellTo.getPoint(), kingCellFrom.getPiece())
+                .cutDownPiece(kingCellFrom.getPoint())
+                //move rook
+                .setPiece(rookRowIndex, rookColumnIndexTo, rookCellFrom.getPiece())
+                .cutDownPiece(rookCellFrom.getPoint())
+                .build();
+
+        return new MoveResult(this, newMatrix);
     }
 
-    public Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
-        return allPiecesStream()
-                .filter(containsPieces(side, pieceTypes));
+    /**
+     * Взятие на проходе
+     * Условие: пешка покинула свою вертикаль, но при этом ничего не срубила
+     */
+    public MoveResult executeEnPassant(MoveDTO move) {
+        CellDTO cellFrom = getCell(move.getFrom());
+        CellDTO cellTo = getCell(move.getTo());
+
+        CellsMatrix newMatrix = CellsMatrix
+                .builder(this, position + 1)
+                //move pawn
+                .setPiece(cellTo.getPoint(), cellFrom.getPiece())
+                .cutDownPiece(cellFrom.getPoint())
+                //cut down enemy pawn
+                .cutDownPiece(move.getFrom().getRowIndex(), move.getTo().getColumnIndex())
+                .build();
+
+        return new MoveResult(this, newMatrix);
     }
 
-    public Stream<CellDTO> allPiecesStream() {
-        return cellsMatrix.stream()
-                .flatMap(List::stream);
+    public ArrangementDTO generateArrangement(Side underCheckSide) {
+        return new ArrangementDTO(position, cellsMatrix, underCheckSide);
     }
 
-    public Set<PointDTO> findPiecesCoords(Side side, PieceType... pieceTypes) {
-        return filteredPiecesStream(side, pieceTypes)
-                .map(CellDTO::generatePoint)
-                .collect(Collectors.toSet());
+    public static Builder builder(List<History> historyList, int position) {
+        return CellsMatrix.ofHistory(historyList, position).new Builder();
     }
 
-    private Predicate<CellDTO> containsPieces(Side side, PieceType[] pieceTypes) {
-        return cell -> cell.getPieceSide() == side && Arrays.stream(pieceTypes).anyMatch(type -> type == cell.getPieceType());
+    public static Builder builder(CellsMatrix prevMatrix, int position) {
+        return CellsMatrix.ofOtherMatrix(prevMatrix, position).new Builder();
     }
 
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public class Builder {
 
-    public Stream<List<CellDTO>> stream() {
-        return cellsMatrix.stream();
+        public Builder setPiece(int rowIndex, int columnIndex, Piece piece) {
+            CellDTO cell = getCell(rowIndex, columnIndex);
+            CellsMatrix.this.cellsMatrix.get(rowIndex).set(columnIndex, cell.switchPiece(piece));
+            return this;
+        }
+
+        public Builder setPiece(PointDTO point, Piece piece) {
+            return setPiece(point.getRowIndex(), point.getColumnIndex(), piece);
+        }
+
+        public Builder cutDownPiece(int rowIndex, int columnIndex) {
+            return setPiece(rowIndex, columnIndex, null);
+        }
+
+        public Builder cutDownPiece(PointDTO point) {
+            return setPiece(point, null);
+        }
+
+        public CellsMatrix build() {
+            return CellsMatrix.this;
+        }
     }
 
-    public void print() {
-        cellsMatrix.forEach(row -> row.forEach(CellDTO::print));
+    private static CellsMatrix ofHistory(List<History> historyList, int position) {
+        Map<Integer, Map<Integer, Piece>> historyMap = historyList
+                .stream()
+                .collect(Collectors.groupingBy(History::getRowIndex,
+                        Collectors.toMap(History::getColumnIndex, History::getPiece)));
+
+        return new CellsMatrix(position, rowIndex -> columnIndex -> {
+            Map<Integer, Piece> subMap = historyMap.get(rowIndex);
+            if (subMap != null) {
+                return subMap.get(columnIndex);
+            }
+            return null;
+        });
+    }
+
+    private static CellsMatrix ofOtherMatrix(CellsMatrix prevMatrix, int position) {
+        return new CellsMatrix(position, rowIndex -> columnIndex -> {
+            CellDTO cell = prevMatrix.getCell(rowIndex, columnIndex);
+            return cell.getPiece();
+        });
     }
 
     @Override
@@ -149,7 +228,36 @@ public class CellsMatrix implements Iterable<List<CellDTO>> {
         return cellsMatrix.spliterator();
     }
 
-    public ArrangementDTO generateArrangement(Side underCheckSide) {
-        return new ArrangementDTO(position, cellsMatrix, underCheckSide);
+    //TODO: стримы поидее не должны нарушать иммутабельность класса
+    public Stream<List<CellDTO>> stream() {
+        return cellsMatrix.stream();
+    }
+
+    public List<History> generateHistory(Long gameId, int position) {
+        return cellsMatrix.stream()
+                .flatMap(List::stream)                        //convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
+                .filter(cell -> cell.getPiece() != null)
+                .map(cell -> History.ofCell(cell, gameId, position))
+                .collect(Collectors.toList());
+    }
+
+    public Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
+        return allPiecesStream()
+                .filter(containsPieces(side, pieceTypes));
+    }
+
+    public Stream<CellDTO> allPiecesStream() {
+        return cellsMatrix.stream()
+                .flatMap(List::stream);
+    }
+
+    public Set<PointDTO> findPiecesCoords(Side side, PieceType... pieceTypes) {
+        return filteredPiecesStream(side, pieceTypes)
+                .map(CellDTO::getPoint)
+                .collect(Collectors.toSet());
+    }
+
+    private Predicate<CellDTO> containsPieces(Side side, PieceType[] pieceTypes) {
+        return cell -> cell.getPieceSide() == side && Arrays.stream(pieceTypes).anyMatch(type -> type == cell.getPieceType());
     }
 }

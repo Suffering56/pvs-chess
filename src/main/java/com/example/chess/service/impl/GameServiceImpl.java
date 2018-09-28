@@ -61,83 +61,63 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public ArrangementDTO createArrangementByGame(Game game, int position) throws HistoryNotFoundException {
-        return getCellsMatrixByGame(game, position).generateArrangement(game.getUnderCheckSide());
+        return createCellsMatrixByGame(game, position).generateArrangement(game.getUnderCheckSide());
     }
 
+    @Profile
     @Override
     @Transactional
-    @Profile
     public ArrangementDTO applyMove(Game game, MoveDTO move) throws HistoryNotFoundException {
-        Long gameId = game.getId();
-        int newPosition = game.getPosition() + 1;
+        CellsMatrix prevMatrix = createCellsMatrixByGame(game, game.getPosition());
 
-        List<History> beforeMoveHistory;
-        if (game.getPosition() == 0) {
-            beforeMoveHistory = createStartHistory(gameId);
-        } else {
-            beforeMoveHistory = findHistoryByGameIdAndPosition(gameId, game.getPosition());
-        }
-
-        CellsMatrix matrix = CellsMatrix.createByHistory(beforeMoveHistory, newPosition);
-
-        //move piece
-        Piece transformationPiece = getPawnTransformationPiece(matrix, move);
-        MoveResult moveResult = matrix.executeMove(move, transformationPiece);
-        Piece pieceFrom = moveResult.getPieceFrom();
+        Piece pieceFrom = prevMatrix.getCell(move.getFrom()).getPiece();
+        Piece pieceTo = prevMatrix.getCell(move.getTo()).getPiece();
         Side sideFrom = pieceFrom.getSide();
 
         game.setPawnLongMoveColumnIndex(sideFrom, null);
         game.setUnderCheckSide(null);
 
-        if (pieceFrom.getType() == PieceType.KING) {
-            //do castling (only the ROOK moves)
-            checkAndExecuteCastling(matrix, move);
+        MoveResult moveResult;
 
-            game.disableShortCasting(sideFrom);
-            game.disableLongCasting(sideFrom);
-
-        } else if (pieceFrom.getType() == PieceType.ROOK) {
-
-            if (game.isShortCastlingAvailable(sideFrom) && move.getFrom().getColumnIndex() == ROOK_SHORT_COLUMN_INDEX) {
-                game.disableShortCasting(sideFrom);
-
-            } else if (game.isLongCastlingAvailable(sideFrom) && move.getFrom().getColumnIndex() == ROOK_LONG_COLUMN_INDEX) {
-                game.disableLongCasting(sideFrom);
-            }
-        } else if (pieceFrom.getType() == PieceType.PAWN) {
-            int diff = move.getFrom().getRowIndex() - move.getTo().getRowIndex();
-
-            if (Math.abs(diff) == 2) {//is long move
-                game.setPawnLongMoveColumnIndex(sideFrom, move.getFrom().getColumnIndex());
-            }
-
-            if (!Objects.equals(move.getFrom().getColumnIndex(), move.getTo().getColumnIndex())) {
-
-                if (moveResult.getPieceTo() == null) {
-                    //так это взятие на проходе (не могла же пешка покинуть свою вертикаль и при этом ничего не срубив)
-
-                    //рубим пешку
-                    CellDTO enemyPawnCell = matrix.getCell(move.getFrom().getRowIndex(), move.getTo().getColumnIndex());
-                    enemyPawnCell.setPiece(null);
-                }
-            }
+        if (pieceFrom.getType() == PieceType.KING && move.isCastling()) {
+            moveResult = prevMatrix.executeCastling(move);                                      //castling
+        } else if (pieceFrom.getType() == PieceType.PAWN && move.isEnPassant(pieceTo)) {
+            moveResult = prevMatrix.executeEnPassant(move);                                     //en passant
+        } else {
+            moveResult = prevMatrix.executeMove(move, getPromotionPiece(prevMatrix, move));     //simple move
         }
 
-        List<History> afterMoveHistory = matrix.generateHistory(gameId, newPosition);
-        game.setPosition(newPosition);
+        switch (pieceFrom.getType()) {
+            case KING:
+                game.disableCasting(sideFrom);
+                break;
+            case ROOK:
+                int rookColumnIndex = move.getFrom().getColumnIndex();
+                game.disableCasting(sideFrom, rookColumnIndex);
+                break;
+            case PAWN:
+                if (move.isLongPawnMove()) {
+                    //it needs for handling of the en-passant
+                    game.setPawnLongMoveColumnIndex(sideFrom, move.getFrom().getColumnIndex());
+                }
+                break;
+        }
 
-        MoveHelper moveHelper = new MoveHelper(game, matrix);
-        boolean isEnemyKingUnderAttack = moveHelper.isEnemyKingUnderAttack(sideFrom);
-        if (isEnemyKingUnderAttack) {
+        CellsMatrix newMatrix = moveResult.getNewMatrix();
+        List<History> newHistory = newMatrix.generateHistory(game.getId(), newMatrix.getPosition());
+        game.setPosition(newMatrix.getPosition());
+
+        MoveHelper moveHelper = new MoveHelper(game, prevMatrix);
+        if (moveHelper.isEnemyKingUnderAttack(sideFrom)) {  //TODO: refactor it
             game.setUnderCheckSide(sideFrom.reverse());
         }
 
         game.getSideFeatures(sideFrom).setLastVisitDate(LocalDateTime.now());
 
-        historyRepository.saveAll(afterMoveHistory);
+        historyRepository.saveAll(newHistory);
         gameRepository.save(game);
 
-        return matrix.generateArrangement(game.getUnderCheckSide());
+        return newMatrix.generateArrangement(game.getUnderCheckSide());
     }
 
     @Override
@@ -148,53 +128,33 @@ public class GameServiceImpl implements GameService {
     @Override
     public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
         Game game = findAndCheckGame(gameId);
-        CellsMatrix matrix = getCellsMatrixByGame(game, game.getPosition());
+        CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
 
         MoveHelper moveHelper = new MoveHelper(game, matrix);
         return moveHelper.getAvailableMoves(point);
     }
 
-    private void checkAndExecuteCastling(CellsMatrix matrix, MoveDTO move) {
-        int diff = move.getFrom().getColumnIndex() - move.getTo().getColumnIndex();
-
-        if (Math.abs(diff) == 2) {    //is castling
-            Integer kingFromColumnIndex = move.getFrom().getColumnIndex();
-
-            //short
-            PointDTO rookFrom = new PointDTO(move.getFrom().getRowIndex(), ROOK_SHORT_COLUMN_INDEX);
-            PointDTO rookTo = new PointDTO(move.getFrom().getRowIndex(), kingFromColumnIndex - 1);
-
-            //long
-            if (diff < 0) {
-                rookFrom.setColumnIndex(ROOK_LONG_COLUMN_INDEX);
-                rookTo.setColumnIndex(kingFromColumnIndex + 1);
-            }
-
-            //move ROOK
-            matrix.executeMove(new MoveDTO(rookFrom, rookTo));
-        }
+    @Override
+    public CellsMatrix createCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException {
+        List<History> historyList = getHistoryByGame(game, position);
+        return CellsMatrix.builder(historyList, position).build();
     }
 
-    private Piece getPawnTransformationPiece(CellsMatrix cellsMatrix, MoveDTO move) {
-        if (move.getPieceType() == null) {
+    private Piece getPromotionPiece(CellsMatrix matrix, MoveDTO move) {
+        if (move.getPromotionPieceType() == null) {
             return null;
         }
 
-        CellDTO cellFrom = cellsMatrix.getCell(move.getFrom());
-        return findPieceBySideAndType(cellFrom.getPieceSide(), move.getPieceType());
+        CellDTO cellFrom = matrix.getCell(move.getFrom());
+        return findPieceBySideAndType(cellFrom.getPieceSide(), move.getPromotionPieceType());
     }
 
-    @Override
-    public CellsMatrix getCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException {
-        List<History> historyList;
-
+    private List<History> getHistoryByGame(Game game, int position) throws HistoryNotFoundException {
         if (position == 0) {
-            historyList = createStartHistory(game.getId());
-        } else {
-            historyList = findHistoryByGameIdAndPosition(game.getId(), position);
+            return createStartHistory(game.getId());
         }
 
-        return CellsMatrix.createByHistory(historyList, position);
+        return findHistoryByGameIdAndPosition(game.getId(), position);
     }
 
     private List<History> findHistoryByGameIdAndPosition(long gameId, int position) throws HistoryNotFoundException {
@@ -240,13 +200,14 @@ public class GameServiceImpl implements GameService {
                 if (side != null) {
                     Piece piece = findPieceBySideAndType(side, pieceType);
 
-                    History item = new History();
-                    item.setGameId(gameId);
-                    item.setPosition(0);
-                    item.setPieceId(piece.getId());
-                    item.setPiece(piece);
-                    item.setRowIndex(rowIndex);
-                    item.setColumnIndex(columnIndex);
+                    History item = History.builder()
+                            .gameId(gameId)
+                            .position(0)
+                            .piece(piece)
+                            .pieceId(piece.getId())
+                            .rowIndex(rowIndex)
+                            .columnIndex(columnIndex)
+                            .build();
 
                     historyList.add(item);
                 }

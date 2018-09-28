@@ -3,32 +3,31 @@ package com.example.chess.dto;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
-import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+/**
+ * Immutable
+ */
 @Getter
-@Setter
-@NoArgsConstructor
 @ToString
-@Log4j2
-public class CellDTO {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public final class CellDTO {
 
-    private Piece piece;
+    private final Integer rowIndex;
+    private final Integer columnIndex;
+    private final Piece piece;
 
-    protected Integer rowIndex;
-    protected Integer columnIndex;
+    public static CellDTO valueOf(Integer rowIndex, Integer columnIndex, Piece piece) {
+        return new CellDTO(rowIndex, columnIndex, piece);
+    }
 
-    private boolean available;
-    private boolean selected;
-
-    public CellDTO(Integer rowIndex, Integer columnIndex) {
-        this.rowIndex = rowIndex;
-        this.columnIndex = columnIndex;
+    public CellDTO switchPiece(Piece piece) {
+        return new CellDTO(rowIndex, columnIndex, piece);
     }
 
     public Side getPieceSide() {
@@ -45,8 +44,8 @@ public class CellDTO {
         return getPiece().getType();
     }
 
-    public PointDTO generatePoint() {
-        return new PointDTO(rowIndex, columnIndex);
+    public PointDTO getPoint() {
+        return PointDTO.valueOf(rowIndex, columnIndex);
     }
 
     @Override
@@ -58,8 +57,6 @@ public class CellDTO {
         CellDTO cellDTO = (CellDTO) o;
 
         return new EqualsBuilder()
-                .append(available, cellDTO.available)
-                .append(selected, cellDTO.selected)
                 .append(piece, cellDTO.piece)
                 .append(rowIndex, cellDTO.rowIndex)
                 .append(columnIndex, cellDTO.columnIndex)
@@ -72,13 +69,6 @@ public class CellDTO {
                 .append(piece)
                 .append(rowIndex)
                 .append(columnIndex)
-                .append(available)
-                .append(selected)
                 .toHashCode();
-    }
-
-    public void print() {
-        log.debug("cell[{},{}]: side = {}, piece = {}", rowIndex, columnIndex,
-                piece.getSide(), piece.getType());
     }
 }

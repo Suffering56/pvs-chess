@@ -1,19 +1,17 @@
 package com.example.chess.entity;
 
 import com.example.chess.dto.CellDTO;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
-import lombok.extern.log4j.Log4j2;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 
 @Entity
 @Getter
-@Setter
+@Builder
 @ToString
-@Log4j2
 public class History {
 
     @Id
@@ -40,20 +38,15 @@ public class History {
     @Column(nullable = false)
     private Integer columnIndex;
 
-    public static History createByCell(CellDTO cell, Long gameId, Integer position) {
-        History result = new History();
-
-        result.gameId = gameId;
-        result.position = position;
-        result.pieceId = cell.getPiece().getId();
-        result.rowIndex = cell.getRowIndex();
-        result.columnIndex = cell.getColumnIndex();
-
-        return result;
-    }
-
-    public void print() {
-        log.debug("history[{},{}]: side = {}, piece = {}", rowIndex, columnIndex,
-                piece.getSide(), piece.getType());
+    @Transient
+    public static History ofCell(CellDTO cell, Long gameId, Integer position) {
+        return History.builder()
+                .gameId(gameId)
+                .position(position)
+                .rowIndex(cell.getRowIndex())
+                .columnIndex(cell.getColumnIndex())
+                .piece(cell.getPiece())
+                .pieceId(cell.getPiece().getId())
+                .build();
     }
 }

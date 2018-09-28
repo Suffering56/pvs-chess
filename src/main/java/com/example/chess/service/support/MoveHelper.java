@@ -62,6 +62,9 @@ public class MoveHelper {
         return enemyMoves.contains(enemyKingPoint);
     }
 
+
+
+
     private Set<PointDTO> getPiecesMoves(Side side, PieceType... pieceTypes) {
         return matrix
                 .filteredPiecesStream(side, pieceTypes)
@@ -148,7 +151,7 @@ public class MoveHelper {
                 if (activeCell.getRowIndex() == 3 || activeCell.getRowIndex() == 4) {        //и это творится на нужной горизонтали
                     //значит можно делать взятие на проходе
                     //проверять ничего не нужно, эта ячейка 100% пуста (не могла же пешка перепрыгнуть фигуру)
-                    moves.add(new PointDTO(activeCell.getRowIndex() + getPawnMoveVector(activeSelfSide), enemyLongMoveColumnIndex));
+                    moves.add(PointDTO.valueOf(activeCell.getRowIndex() + getPawnMoveVector(activeSelfSide), enemyLongMoveColumnIndex));
                 }
             }
         }
@@ -182,7 +185,7 @@ public class MoveHelper {
     private void checkAndAddKnightMove(Set<PointDTO> moves, int rowOffset, int columnOffset) {
         CellDTO cell = getCell(activeCell.getRowIndex() + rowOffset, activeCell.getColumnIndex() + columnOffset);
         if (cell != null && cell.getPieceSide() != activeSelfSide) {
-            moves.add(cell.generatePoint());
+            moves.add(cell.getPoint());
         }
     }
 
@@ -256,7 +259,7 @@ public class MoveHelper {
 
         return pointTo -> {
             //имитируем ход
-            MoveResult moveResult = matrix.executeMove(new MoveDTO(originalCell.generatePoint(), pointTo));
+            MoveResult moveResult = matrix.executeMove(MoveDTO.valueOf(originalCell.getPoint(), pointTo, null), null);
 
             //для всех дальнобойных фигур собираем все доступные ходы врага на следующий ход
             Set<PointDTO> rayPieceMoves = getPiecesMoves(originalEnemySide, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
@@ -311,7 +314,7 @@ public class MoveHelper {
                 .filter(castlingPoint -> {
                     int castlingVector = (castlingPoint.getColumnIndex() - pointFrom.getColumnIndex()) / 2;             //определяем вектор рокировки
                     int crossColumnIndex = pointFrom.getColumnIndex() + castlingVector;                                 //прибавляем к позиции короля
-                    PointDTO crossPoint = new PointDTO(pointFrom.getRowIndex(), crossColumnIndex);                      //получаем пересекаемое при рокировке поле
+                    PointDTO crossPoint = PointDTO.valueOf(pointFrom.getRowIndex(), crossColumnIndex);                      //получаем пересекаемое при рокировке поле
 
                     //проверяем есть ли оно среди доступных ходов (если нет -> значит оно битое -> значит рокировка в эту сторону запрещена)
                     return !moves.contains(crossPoint);
@@ -326,8 +329,8 @@ public class MoveHelper {
 
         Set<PointDTO> pawnAttackMoves = new HashSet<>();
         enemyPawnCoords.forEach(point -> {
-            pawnAttackMoves.add(new PointDTO(point.getRowIndex() + vector, point.getColumnIndex() + 1));
-            pawnAttackMoves.add(new PointDTO(point.getRowIndex() + vector, point.getColumnIndex() - 1));
+            pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() + 1));
+            pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() - 1));
         });
 
         return pawnAttackMoves;
@@ -367,7 +370,7 @@ public class MoveHelper {
             return false;
         }
 
-        moves.add(cell.generatePoint());
+        moves.add(cell.getPoint());
         return cell.getPieceSide() != activeEnemySide;
     }
 
@@ -379,14 +382,14 @@ public class MoveHelper {
 
         if (isAttack) {
             if (cell.getPieceSide() == activeEnemySide) {
-                moves.add(cell.generatePoint());
+                moves.add(cell.getPoint());
             }
             return false;
         } else {
             if (cell.getPieceSide() == activeEnemySide) {
                 return false;
             } else {
-                moves.add(cell.generatePoint());
+                moves.add(cell.getPoint());
                 return true;
             }
         }
@@ -415,6 +418,6 @@ public class MoveHelper {
                 .filteredPiecesStream(side, PieceType.KING)
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("KING not found on board"))
-                .generatePoint();
+                .getPoint();
     }
 }

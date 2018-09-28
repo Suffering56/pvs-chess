@@ -81,11 +81,11 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
                 rowIndex: cell.rowIndex,
                 columnIndex: cell.columnIndex
             },
-            pieceType: null
+            promotionPieceType: null
         };
 
         if (selectedPieceType) {
-            moveDTO.pieceType = selectedPieceType;
+            moveDTO.promotionPieceType = selectedPieceType;
         }
 
         $http({

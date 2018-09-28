@@ -4,43 +4,56 @@ import lombok.*;
 
 import java.util.Objects;
 
+/**
+ * Immutable
+ */
 @Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @ToString
-public class PointDTO {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public final class PointDTO {
 
-	protected Integer rowIndex;
-	protected Integer columnIndex;
+    private final Integer rowIndex;
+    private final Integer columnIndex;
 
-	public boolean isNotBorderedBy(PointDTO other) {
-		if (equals(other)) {
-			throw new RuntimeException("isBorderedBy self???");
-		}
+    public static PointDTO valueOf(Integer rowIndex, Integer columnIndex) {
+        return new PointDTO(rowIndex, columnIndex);
+    }
 
-		int rowDiff = Math.abs(rowIndex - other.rowIndex);
-		int columnDiff = Math.abs(columnIndex - other.columnIndex);
-		int diff = rowDiff + columnDiff;
+    public PointDTO setRowIndex(Integer rowIndex) {
+        return new PointDTO(rowIndex, this.columnIndex);
+    }
 
-		if (diff == 1) {
-			return false;
-		} else {
-			return diff != 2 || rowDiff != columnDiff;
-		}
-	}
+    public PointDTO setColumnIndex(Integer columnIndex) {
+        return new PointDTO(this.rowIndex, columnIndex);
+    }
 
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-		PointDTO pointDTO = (PointDTO) o;
-		return Objects.equals(rowIndex, pointDTO.rowIndex) &&
-				Objects.equals(columnIndex, pointDTO.columnIndex);
-	}
+    public boolean isNotBorderedBy(PointDTO other) {
+        if (equals(other)) {
+            throw new RuntimeException("invoked: isNotBorderedBy(SELF!!!)");
+        }
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(rowIndex, columnIndex);
-	}
+        int rowDiff = Math.abs(rowIndex - other.rowIndex);
+        int columnDiff = Math.abs(columnIndex - other.columnIndex);
+        int diff = rowDiff + columnDiff;
+
+        if (diff == 1) {
+            return false;
+        } else {
+            return diff != 2 || rowDiff != columnDiff;
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PointDTO pointDTO = (PointDTO) o;
+        return Objects.equals(rowIndex, pointDTO.rowIndex) &&
+                Objects.equals(columnIndex, pointDTO.columnIndex);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(rowIndex, columnIndex);
+    }
 }

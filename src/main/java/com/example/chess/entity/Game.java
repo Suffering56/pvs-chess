@@ -2,6 +2,7 @@ package com.example.chess.entity;
 
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -10,6 +11,9 @@ import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 import java.util.Map;
+
+import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
+import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 
 @Entity
 @Getter
@@ -34,13 +38,28 @@ public class Game {
     private Map<Side, GameFeatures> featuresMap;
 
     @Transient
-    public void disableShortCasting(Side side) {
+    private void disableShortCasting(Side side) {
         featuresMap.get(side).setShortCastlingAvailable(false);
     }
 
     @Transient
-    public void disableLongCasting(Side side) {
+    private void disableLongCasting(Side side) {
         featuresMap.get(side).setLongCastlingAvailable(false);
+    }
+
+    @Transient
+    public void disableCasting(Side side) {
+        disableLongCasting(side);
+        disableShortCasting(side);
+    }
+
+    @Transient
+    public void disableCasting(Side side, int rookColumnIndex) {
+        if (rookColumnIndex == ROOK_SHORT_COLUMN_INDEX) {
+            disableShortCasting(side);
+        } else if (rookColumnIndex == ROOK_LONG_COLUMN_INDEX) {
+            disableLongCasting(side);
+        }
     }
 
     @Transient
@@ -103,6 +122,7 @@ public class Game {
      * Only works in AI mode
      */
     @Transient
+    @JsonIgnore
     public Side getPlayerSide() {
         if (getMode() != GameMode.AI) {
             throw new RuntimeException("Game mode is not AI!");
