@@ -15,7 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -26,7 +26,7 @@ import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
 import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 
 @SuppressWarnings({"WeakerAccess", "unused"})
-public final class CellsMatrix implements Iterable<List<CellDTO>> {
+public final class CellsMatrix {
 
     @Getter
     private final int position;
@@ -61,6 +61,10 @@ public final class CellsMatrix implements Iterable<List<CellDTO>> {
 
     public CellDTO getCell(History historyItem) {
         return getCell(historyItem.getRowIndex(), historyItem.getColumnIndex());
+    }
+
+    public boolean isEmptyCell(int rowIndex, int columnIndex) {
+        return getCell(rowIndex, columnIndex).isEmpty();
     }
 
     private void checkPoint(int rowIndex, int columnIndex) {
@@ -161,8 +165,30 @@ public final class CellsMatrix implements Iterable<List<CellDTO>> {
         return CellsMatrix.ofHistory(historyList, position).new Builder();
     }
 
+    private static CellsMatrix ofHistory(List<History> historyList, int position) {
+        Map<Integer, Map<Integer, Piece>> historyMap = historyList
+                .stream()
+                .collect(Collectors.groupingBy(History::getRowIndex,
+                        Collectors.toMap(History::getColumnIndex, History::getPiece)));
+
+        return new CellsMatrix(position, rowIndex -> columnIndex -> {
+            Map<Integer, Piece> subMap = historyMap.get(rowIndex);
+            if (subMap != null) {
+                return subMap.get(columnIndex);
+            }
+            return null;
+        });
+    }
+
     public static Builder builder(CellsMatrix prevMatrix, int position) {
         return CellsMatrix.ofOtherMatrix(prevMatrix, position).new Builder();
+    }
+
+    private static CellsMatrix ofOtherMatrix(CellsMatrix prevMatrix, int position) {
+        return new CellsMatrix(position, rowIndex -> columnIndex -> {
+            CellDTO cell = prevMatrix.getCell(rowIndex, columnIndex);
+            return cell.getPiece();
+        });
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -191,73 +217,303 @@ public final class CellsMatrix implements Iterable<List<CellDTO>> {
         }
     }
 
-    private static CellsMatrix ofHistory(List<History> historyList, int position) {
-        Map<Integer, Map<Integer, Piece>> historyMap = historyList
-                .stream()
-                .collect(Collectors.groupingBy(History::getRowIndex,
-                        Collectors.toMap(History::getColumnIndex, History::getPiece)));
-
-        return new CellsMatrix(position, rowIndex -> columnIndex -> {
-            Map<Integer, Piece> subMap = historyMap.get(rowIndex);
-            if (subMap != null) {
-                return subMap.get(columnIndex);
-            }
-            return null;
-        });
+    /**
+     * convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
+     */
+    public Stream<CellDTO> allPiecesStream() {
+        return cellsMatrix.stream().flatMap(List::stream);
     }
 
-    private static CellsMatrix ofOtherMatrix(CellsMatrix prevMatrix, int position) {
-        return new CellsMatrix(position, rowIndex -> columnIndex -> {
-            CellDTO cell = prevMatrix.getCell(rowIndex, columnIndex);
-            return cell.getPiece();
-        });
+    public Stream<CellDTO> somePiecesStream(Side side, PieceType... pieceTypes) {
+        return allPiecesStream()
+                .filter(containsPieces(side, pieceTypes));
     }
 
-    @Override
-    public Iterator<List<CellDTO>> iterator() {
-        return cellsMatrix.iterator();
-    }
-
-    @Override
-    public void forEach(Consumer<? super List<CellDTO>> action) {
-        cellsMatrix.forEach(action);
-    }
-
-    @Override
-    public Spliterator<List<CellDTO>> spliterator() {
-        return cellsMatrix.spliterator();
-    }
-
-    //TODO: стримы поидее не должны нарушать иммутабельность класса
-    public Stream<List<CellDTO>> stream() {
-        return cellsMatrix.stream();
+    private Predicate<CellDTO> containsPieces(Side side, PieceType[] pieceTypes) {
+        return cell -> cell.getSide() == side && Arrays.stream(pieceTypes).anyMatch(type -> type == cell.getPieceType());
     }
 
     public List<History> generateHistory(Long gameId, int position) {
-        return cellsMatrix.stream()
-                .flatMap(List::stream)                        //convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
+        return allPiecesStream()
                 .filter(cell -> cell.getPiece() != null)
                 .map(cell -> History.ofCell(cell, gameId, position))
                 .collect(Collectors.toList());
     }
 
-    public Stream<CellDTO> filteredPiecesStream(Side side, PieceType... pieceTypes) {
-        return allPiecesStream()
-                .filter(containsPieces(side, pieceTypes));
-    }
-
-    public Stream<CellDTO> allPiecesStream() {
-        return cellsMatrix.stream()
-                .flatMap(List::stream);
-    }
-
     public Set<PointDTO> findPiecesCoords(Side side, PieceType... pieceTypes) {
-        return filteredPiecesStream(side, pieceTypes)
+        return somePiecesStream(side, pieceTypes)
                 .map(CellDTO::getPoint)
                 .collect(Collectors.toSet());
     }
 
-    private Predicate<CellDTO> containsPieces(Side side, PieceType[] pieceTypes) {
-        return cell -> cell.getPieceSide() == side && Arrays.stream(pieceTypes).anyMatch(type -> type == cell.getPieceType());
+    public PointDTO findKingPoint(Side side) {
+        return somePiecesStream(side, PieceType.KING)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("KING not found on board"))
+                .getPoint();
     }
+
+//    public Set<PointDTO> getPiecesMoves(Side side, Function<CellDTO, Set<PointDTO>> availableMovesFinder, PieceType... pieceTypes) {
+//        return somePiecesStream(side, pieceTypes)
+//                .map(availableMovesFinder)
+//                .flatMap(Set::stream)
+//                .collect(Collectors.toSet());
+//    }
+
+
+//    private class MoveHelper {
+//
+////        private Set<PointDTO> getPiecesMoves(Game game, Side side, PieceType... pieceTypes) {
+////            return  somePiecesStream(side, pieceTypes)
+////                    .map(cellDTO -> getAvailableMovesForSingleCell(game, cellDTO))
+////                    .flatMap(Set::stream)
+////                    .collect(Collectors.toSet());
+////        }
+//
+//        private Set<PointDTO> getAvailableMovesForSingleCell(Game game, CellDTO moveableCell) {
+//            moveableCell.requireNotEmpty();
+//            InternalMoveHelper helper = new InternalMoveHelper(game, moveableCell);
+//            Set<PointDTO> moves;
+//
+//            //noinspection ConstantConditions
+//            switch (moveableCell.getPieceType()) {
+//                case PAWN: {
+//                    moves = helper.getMovesForPawn();
+//                    break;
+//                }
+//                case KNIGHT: {
+//                    moves = helper.getMovesForKnight();
+//                    break;
+//                }
+//                case BISHOP: {
+//                    moves = helper.getMovesForBishop();
+//                    break;
+//                }
+//                case ROOK: {
+//                    moves = helper.getMovesForRook();
+//                    break;
+//                }
+//                case QUEEN: {
+//                    moves = helper.getMovesForQueen();
+//                    break;
+//                }
+//                case KING: {
+//                    moves = helper.getMovesForKing();
+//                    break;
+//                }
+//                default:
+//                    moves = new HashSet<>();
+//            }
+//            return moves;
+//        }
+//
+//
+//        private class InternalMoveHelper {
+//
+//            private final Game game;
+//            private final CellDTO moveableCell;
+//
+//            public InternalMoveHelper(Game game, CellDTO moveableCell) {
+//                this.game = game;
+//                this.moveableCell = moveableCell;
+//            }
+//
+//            private Set<PointDTO> getMovesForPawn() {
+//                Set<PointDTO> moves = new HashSet<>();
+//
+//                int activeRow = moveableCell.getRowIndex();
+//                int activeColumn = moveableCell.getColumnIndex();
+//                Side allySide = moveableCell.getSide();
+//
+//                int vector = 1;
+//                if (allySide == Side.BLACK) {
+//                    vector = -1;
+//                }
+//
+//                boolean isFirstMove = false;
+//                if (activeRow == 1 || activeRow == 6) {
+//                    isFirstMove = true;
+//                }
+//
+//                @SuppressWarnings("PointlessArithmeticExpression")
+//                CellDTO cell = getCell(activeRow + 1 * vector, activeColumn);
+//                boolean isAdded = addPawnMove(moves, cell, allySide, false);
+//
+//                if (isFirstMove && isAdded) {
+//                    cell = getCell(activeRow + 2 * vector, activeColumn);
+//                    addPawnMove(moves, cell, allySide, false);
+//                }
+//
+//                //attack
+//                cell = getCell(activeRow + vector, activeColumn + 1);
+//                addPawnMove(moves, cell, allySide, true);
+//
+//                cell = getCell(activeRow + vector, activeColumn - 1);
+//                addPawnMove(moves, cell, allySide, true);
+//
+//                Integer enemyLongMoveColumnIndex = game.getPawnLongMoveColumnIndex(moveableCell.getEnemySide());
+//                if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
+//
+//                    if (Math.abs(enemyLongMoveColumnIndex - activeColumn) == 1) {    //и эта пешка рядом с выделенной (слева или справа)
+//
+//                        if (activeRow == 3 || activeRow == 4) {        //и это творится на нужной горизонтали
+//                            //значит можно делать взятие на проходе
+//                            //проверять ничего не нужно, эта ячейка 100% пуста (не могла же пешка перепрыгнуть фигуру)
+//                            //noinspection ConstantConditions
+//                            moves.add(PointDTO.valueOf(activeRow + allySide.getPawnMoveVector(), enemyLongMoveColumnIndex));
+//                        }
+//                    }
+//                }
+//
+//                return moves;
+//            }
+//
+//            private Set<PointDTO> getMovesForKnight() {
+//                Set<PointDTO> moves = new HashSet<>();
+//
+//                addKnightMove(moves, 1, 2);
+//                addKnightMove(moves, 2, 1);
+//                addKnightMove(moves, 1, -2);
+//                addKnightMove(moves, 2, -1);
+//                addKnightMove(moves, -1, 2);
+//                addKnightMove(moves, -2, 1);
+//                addKnightMove(moves, -1, -2);
+//                addKnightMove(moves, -2, -1);
+//
+//                return moves;
+//            }
+//
+//            private Set<PointDTO> getMovesForBishop() {
+//                Set<PointDTO> moves = new HashSet<>();
+//
+//                addAvailableMovesForRay(moves, 1, 1);
+//                addAvailableMovesForRay(moves, -1, 1);
+//                addAvailableMovesForRay(moves, 1, -1);
+//                addAvailableMovesForRay(moves, -1, -1);
+//
+//                return moves;
+//            }
+//
+//            private Set<PointDTO> getMovesForRook() {
+//                Set<PointDTO> moves = new HashSet<>();
+//
+//                addAvailableMovesForRay(moves, 1, 0);
+//                addAvailableMovesForRay(moves, -1, 0);
+//                addAvailableMovesForRay(moves, 0, 1);
+//                addAvailableMovesForRay(moves, 0, -1);
+//
+//                return moves;
+//            }
+//
+//            private Set<PointDTO> getMovesForQueen() {
+//                Set<PointDTO> moves = new HashSet<>();
+//
+//                moves.addAll(getMovesForRook());
+//                moves.addAll(getMovesForBishop());
+//
+//                return moves;
+//            }
+//
+//            private Set<PointDTO> getMovesForKing() {
+//                Set<PointDTO> moves = new HashSet<>();
+//
+//                addAvailableMovesForRay(moves, 1, 0, 1);
+//                addAvailableMovesForRay(moves, -1, 0, 1);
+//                addAvailableMovesForRay(moves, 0, 1, 1);
+//                addAvailableMovesForRay(moves, 0, -1, 1);
+//                addAvailableMovesForRay(moves, 1, 1, 1);
+//                addAvailableMovesForRay(moves, -1, 1, 1);
+//                addAvailableMovesForRay(moves, 1, -1, 1);
+//                addAvailableMovesForRay(moves, -1, -1, 1);
+//
+//                if (game.isShortCastlingAvailable(moveableCell.getSide())) {
+//                    if (isEmptyCellsByActiveRow(1, 2)) {
+//                        addMove(moves, getCell(moveableCell.getRowIndex(), moveableCell.getColumnIndex() - 2), moveableCell.getSide());
+//                    }
+//                }
+//                if (game.isLongCastlingAvailable(moveableCell.getSide())) {
+//                    if (isEmptyCellsByActiveRow(4, 5, 6)) {
+//                        addMove(moves, getCell(moveableCell.getRowIndex(), moveableCell.getColumnIndex() + 2), moveableCell.getSide());
+//                    }
+//                }
+//
+//                return moves.stream()
+//                        //фильровать здесь!!!
+//                        //если это делать там, где происходят остальные проверки на шах - попадем в бесконечную рекурсию
+//                        .filter(isNotAttackingByEnemyKing(moveableCell.getEnemySide()))
+//                        .collect(Collectors.toSet());
+//            }
+//
+//            private void addAvailableMovesForRay(Set<PointDTO> moves, int rowVector, int columnVector) {
+//                addAvailableMovesForRay(moves, rowVector, columnVector, 7);
+//            }
+//
+//            private void addAvailableMovesForRay(Set<PointDTO> moves, int rowVector, int columnVector, int rayLength) {
+//                for (int i = 1; i < rayLength + 1; i++) {
+//                    CellDTO cell = getCell(moveableCell.getRowIndex() + rowVector * i, moveableCell.getColumnIndex() + columnVector * i);
+//                    if (!addMove(moves, cell, moveableCell.getSide())) {
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            private boolean addMove(Set<PointDTO> moves, CellDTO cell, Side allySide) {
+//                if (cell == null || cell.getSide() == allySide) {
+//                    //IndexOutOfBounds
+//                    return false;
+//                }
+//
+//                moves.add(cell.getPoint());
+//                return cell.getSide() != allySide.reverse();
+//            }
+//
+//            private void addKnightMove(Set<PointDTO> moves, int rowOffset, int columnOffset) {
+//                CellDTO cell = getCell(moveableCell.getRowIndex() + rowOffset, moveableCell.getColumnIndex() + columnOffset);
+//                if (cell != null && cell.getSide() != moveableCell.getSide()) {
+//                    moves.add(cell.getPoint());
+//                }
+//            }
+//
+//            private boolean addPawnMove(Set<PointDTO> moves, CellDTO cell, Side allySide, boolean isAttack) {
+//                if (cell == null || cell.getSide() == allySide) {
+//                    //IndexOutOfBounds
+//                    return false;
+//                }
+//
+//                if (isAttack) {
+//                    if (cell.getSide() == allySide.reverse()) {
+//                        moves.add(cell.getPoint());
+//                    }
+//                    return false;
+//                } else {
+//                    if (cell.getSide() == allySide.reverse()) {
+//                        return false;
+//                    } else {
+//                        moves.add(cell.getPoint());
+//                        return true;
+//                    }
+//                }
+//            }
+//
+//            /**
+//             * Проверяет не встали ли мы королем под шах вражеского короля.
+//             */
+//            private Predicate<PointDTO> isNotAttackingByEnemyKing(Side enemySide) {
+//                PointDTO enemyKingPoint = findKingPoint(enemySide);
+//                return enemyKingPoint::isNotBorderedBy;  //или может подошли вплотную к вражескому королю?
+//            }
+//
+//            private boolean isEmptyCellsByActiveRow(int... columnIndexes) {
+//                for (int columnIndex : columnIndexes) {
+//                    if (!isEmptyCell(moveableCell.getRowIndex(), columnIndex)) {
+//                        return false;
+//                    }
+//                }
+//
+//                return true;
+//            }
+//        }
+//    }
+
+
 }

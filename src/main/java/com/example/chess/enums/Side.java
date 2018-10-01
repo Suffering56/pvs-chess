@@ -1,13 +1,21 @@
 package com.example.chess.enums;
 
-public enum Side {
-	WHITE, BLACK;
+import lombok.Getter;
 
-	public Side reverse() {
-		if (this == WHITE) {
-			return BLACK;
-		} else {
-			return WHITE;
-		}
-	}
+@Getter
+public enum Side {
+    WHITE(1), BLACK(-1);
+
+    private int pawnMoveVector;
+
+    Side(int pawnMoveVector) {
+        this.pawnMoveVector = pawnMoveVector;
+    }
+
+    public Side reverse() {
+        if (this == WHITE) {
+            return BLACK;
+        }
+        return WHITE;
+    }
 }

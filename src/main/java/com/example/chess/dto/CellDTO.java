@@ -3,12 +3,17 @@ package com.example.chess.dto;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+
+import java.util.Objects;
 
 /**
  * Immutable
@@ -22,40 +27,60 @@ public final class CellDTO {
     private final Integer columnIndex;
     private final Piece piece;
 
-    public static CellDTO valueOf(Integer rowIndex, Integer columnIndex, Piece piece) {
+    @JsonCreator
+    public static CellDTO valueOf(@JsonProperty("rowIndex") Integer rowIndex,
+                                  @JsonProperty("columnIndex") Integer columnIndex,
+                                  @JsonProperty("piece") Piece piece) {
         return new CellDTO(rowIndex, columnIndex, piece);
     }
 
+    @JsonIgnore
     public CellDTO switchPiece(Piece piece) {
         return new CellDTO(rowIndex, columnIndex, piece);
     }
 
-    public Side getPieceSide() {
-        if (getPiece() == null) {
-            return null;
-        }
-        return getPiece().getSide();
-    }
-
-    public PieceType getPieceType() {
-        if (getPiece() == null) {
-            return null;
-        }
-        return getPiece().getType();
-    }
-
+    @JsonIgnore
     public PointDTO getPoint() {
         return PointDTO.valueOf(rowIndex, columnIndex);
+    }
+
+    @JsonIgnore
+    public Side getSide() {
+        if (piece == null) {
+            return null;
+        }
+        return piece.getSide();
+    }
+
+    @JsonIgnore
+    public PieceType getPieceType() {
+        if (piece == null) {
+            return null;
+        }
+        return piece.getType();
+    }
+
+    @JsonIgnore
+    public Side getEnemySide() {
+        return piece.getSide().reverse();
+    }
+
+    @JsonIgnore
+    public boolean isEmpty() {
+        return piece == null;
+    }
+
+    @JsonIgnore
+    public void requireNotEmpty() throws NullPointerException {
+        Objects.requireNonNull(piece, "Cell is empty");
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-
         if (o == null || getClass() != o.getClass()) return false;
 
         CellDTO cellDTO = (CellDTO) o;
-
         return new EqualsBuilder()
                 .append(piece, cellDTO.piece)
                 .append(rowIndex, cellDTO.rowIndex)

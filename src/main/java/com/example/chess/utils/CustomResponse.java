@@ -10,6 +10,10 @@ public class CustomResponse extends ResponseEntity<String> {
 		super(body, status);
 	}
 
+	public static CustomResponse internalServerError(String body) {
+		return new CustomResponse(body, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
 	/**
 	 * fix the following error => XML Parsing Error: no root element found
 	 */

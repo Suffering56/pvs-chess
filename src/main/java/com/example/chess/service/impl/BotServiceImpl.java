@@ -45,12 +45,13 @@ public class BotServiceImpl implements BotService {
     }
 
     private MoveDTO findBestMove(Game game, CellsMatrix matrix) {
-        MoveHelper moveHelper = new MoveHelper(game, matrix);
+        MoveHelper moveHelper = MoveHelper.valueOf(game, matrix);
         Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
         Map<CellDTO, Set<PointDTO>> movesMap = matrix
-                .filteredPiecesStream(sideFrom, PieceType.values())
-                .collect(Collectors.toMap(Function.identity(), cellFrom -> moveHelper.getAvailableMoves(cellFrom.getPoint())));
+                .somePiecesStream(sideFrom, PieceType.values())
+                .collect(Collectors.toMap(Function.identity(),
+                        cellFrom -> moveHelper.getFilteredAvailableMoves(cellFrom.getPoint())));
 
         List<MoveRating> ratingList = new ArrayList<>();
         for (CellDTO cellFrom : movesMap.keySet()) {

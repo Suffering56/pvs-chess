@@ -107,9 +107,9 @@ public class GameServiceImpl implements GameService {
         List<History> newHistory = newMatrix.generateHistory(game.getId(), newMatrix.getPosition());
         game.setPosition(newMatrix.getPosition());
 
-        MoveHelper moveHelper = new MoveHelper(game, prevMatrix);
-        if (moveHelper.isEnemyKingUnderAttack(sideFrom)) {  //TODO: refactor it
-            game.setUnderCheckSide(sideFrom.reverse());
+        Side enemySide = sideFrom.reverse();
+        if (MoveHelper.valueOf(game, newMatrix).isKingUnderAttack(enemySide)) {
+            game.setUnderCheckSide(enemySide);
         }
 
         game.getSideFeatures(sideFrom).setLastVisitDate(LocalDateTime.now());
@@ -130,8 +130,7 @@ public class GameServiceImpl implements GameService {
         Game game = findAndCheckGame(gameId);
         CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
 
-        MoveHelper moveHelper = new MoveHelper(game, matrix);
-        return moveHelper.getAvailableMoves(point);
+        return MoveHelper.valueOf(game, matrix).getFilteredAvailableMoves(point);
     }
 
     @Override
@@ -146,7 +145,7 @@ public class GameServiceImpl implements GameService {
         }
 
         CellDTO cellFrom = matrix.getCell(move.getFrom());
-        return findPieceBySideAndType(cellFrom.getPieceSide(), move.getPromotionPieceType());
+        return findPieceBySideAndType(cellFrom.getSide(), move.getPromotionPieceType());
     }
 
     private List<History> getHistoryByGame(Game game, int position) throws HistoryNotFoundException {
