@@ -1,5 +1,8 @@
 package com.example.chess.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.util.Objects;
@@ -15,7 +18,8 @@ public final class PointDTO {
     private final Integer rowIndex;
     private final Integer columnIndex;
 
-    public static PointDTO valueOf(Integer rowIndex, Integer columnIndex) {
+    @JsonCreator
+    public static PointDTO valueOf(@JsonProperty Integer rowIndex, @JsonProperty Integer columnIndex) {
         return new PointDTO(rowIndex, columnIndex);
     }
 
@@ -27,6 +31,7 @@ public final class PointDTO {
         return new PointDTO(this.rowIndex, columnIndex);
     }
 
+    @JsonIgnore
     public boolean isNotBorderedBy(PointDTO other) {
         if (equals(other)) {
             throw new RuntimeException("invoked: isNotBorderedBy(SELF!!!)");

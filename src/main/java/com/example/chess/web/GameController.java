@@ -16,7 +16,6 @@ import java.util.Set;
 
 @RestController
 @RequestMapping("/api/game")
-//@Scope(WebApplicationContext.SCOPE_SESSION)
 public class GameController {
 
     private final GameService gameService;
@@ -41,7 +40,6 @@ public class GameController {
                                     @RequestBody MoveDTO dto) throws GameNotFoundException, HistoryNotFoundException {
 
         Game game = gameService.findAndCheckGame(gameId);
-
         ArrangementDTO arrangementDTO = gameService.applyMove(game, dto);
 
         if (game.getMode() == GameMode.AI) {

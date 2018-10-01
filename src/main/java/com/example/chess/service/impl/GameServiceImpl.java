@@ -15,6 +15,7 @@ import com.example.chess.repository.PieceRepository;
 import com.example.chess.service.GameService;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
+import com.example.chess.service.support.api.MoveHelperAPI;
 import com.example.chess.utils.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
@@ -108,7 +109,13 @@ public class GameServiceImpl implements GameService {
         game.setPosition(newMatrix.getPosition());
 
         Side enemySide = sideFrom.reverse();
-        if (MoveHelper.valueOf(game, newMatrix).isKingUnderAttack(enemySide)) {
+        MoveHelperAPI moveHelper = new MoveHelper(game, newMatrix);
+        if (moveHelper.isKingUnderAttack(enemySide)) {
+            /*
+                Если данный ход объявил шах вражескому королю, то нужно подсветить вражеского короля на доске.
+                А еще этот параметр (game.underCheckSide) используется при вычислении доступных ходов,
+                т.к. если король под атакой - то далеко не каждой фигурой можно будет ходить.
+             */
             game.setUnderCheckSide(enemySide);
         }
 
@@ -129,8 +136,9 @@ public class GameServiceImpl implements GameService {
     public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
         Game game = findAndCheckGame(gameId);
         CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
+        MoveHelperAPI moveHelper = new MoveHelper(game, matrix);
 
-        return MoveHelper.valueOf(game, matrix).getFilteredAvailableMoves(point);
+        return moveHelper.getFilteredAvailableMoves(point);
     }
 
     @Override

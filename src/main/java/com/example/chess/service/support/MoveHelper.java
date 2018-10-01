@@ -6,6 +6,7 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.service.support.api.MoveHelperAPI;
 import com.example.chess.utils.MoveResult;
 
 import java.util.HashSet;
@@ -13,26 +14,24 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class MoveHelper {
+public class MoveHelper implements MoveHelperAPI {
 
     private final Game game;
     private final CellsMatrix originalMatrix;
 
-    private MoveHelper(Game game, CellsMatrix originalMatrix) {
+    public MoveHelper(Game game, CellsMatrix originalMatrix) {
         this.game = game;
         this.originalMatrix = originalMatrix;
     }
 
-    public static MoveHelper valueOf(Game game, CellsMatrix originalMatrix) {
-        return new MoveHelper(game, originalMatrix);
-    }
-
+    @Override
     public Set<PointDTO> getFilteredAvailableMoves(PointDTO pointFrom) {
         CellDTO moveableCell = originalMatrix.getCell(pointFrom);
         Set<PointDTO> moves = getUnfilteredAvailableMoves(game, originalMatrix, moveableCell);
         return filterAvailableMoves(moves, moveableCell);
     }
 
+    @Override
     public boolean isKingUnderAttack(Side kingSide) {
         PointDTO kingPoint = originalMatrix.findKingPoint(kingSide);
         Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(game, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
@@ -46,6 +45,7 @@ public class MoveHelper {
                 .collect(Collectors.toSet());
 
 
+        //TODO: can optimize
         if (moveableCell.getPieceType() == PieceType.KING) {
             Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(moveableCell.getPoint(), moves);
             moves.removeAll(unavailableCastlingMoves);            //запрещаем рокировку если король пересекает битое поле
@@ -70,7 +70,8 @@ public class MoveHelper {
      * ведь если фигурой ходить нельзья, зачем для нее находить доступные ходы вообще, когда можно вернуть пустой set?
      */
     private Predicate<PointDTO> isKingNotAttackedByEnemy(CellDTO moveableCell) {
-        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());                                  //TODO: can optimize:
+        //TODO: can optimize
+        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());
 
         return pointTo -> {
             //имитируем ход
@@ -101,7 +102,8 @@ public class MoveHelper {
      */
     private Predicate<? super PointDTO> isKingNotAttackedByEnemyPawns(CellDTO moveableCell) {
         Side enemySide = moveableCell.getEnemySide();
-        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());                                  //TODO: can optimize:
+        //TODO: can optimize
+        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());
 
         if (moveableCell.getPieceType() == PieceType.KING) {
             //если ходим королем, то не даем ему пойти под шах от пешки
@@ -117,7 +119,8 @@ public class MoveHelper {
 
                     то... не даем фигурам ходить, кроме случая если она рубит пешку объявившую шах
                  */
-                return pointTo -> !findPawnAttackMoves(enemySide, pointTo).contains(allyKingPoint);                     //TODO: can optimize
+                //TODO: can optimize
+                return pointTo -> !findPawnAttackMoves(enemySide, pointTo).contains(allyKingPoint);
             } else {
                 /*
                     если король не под шахом то шаха от вражеской пешки быть не может

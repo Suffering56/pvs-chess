@@ -28,13 +28,10 @@ public final class CellDTO {
     private final Piece piece;
 
     @JsonCreator
-    public static CellDTO valueOf(@JsonProperty("rowIndex") Integer rowIndex,
-                                  @JsonProperty("columnIndex") Integer columnIndex,
-                                  @JsonProperty("piece") Piece piece) {
+    public static CellDTO valueOf(@JsonProperty Integer rowIndex, @JsonProperty Integer columnIndex, @JsonProperty Piece piece) {
         return new CellDTO(rowIndex, columnIndex, piece);
     }
 
-    @JsonIgnore
     public CellDTO switchPiece(Piece piece) {
         return new CellDTO(rowIndex, columnIndex, piece);
     }
@@ -70,7 +67,6 @@ public final class CellDTO {
         return piece == null;
     }
 
-    @JsonIgnore
     public void requireNotEmpty() throws NullPointerException {
         Objects.requireNonNull(piece, "Cell is empty");
     }

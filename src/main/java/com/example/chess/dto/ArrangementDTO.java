@@ -7,9 +7,9 @@ import java.util.List;
 
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
 public class ArrangementDTO {
 
 	private int position;

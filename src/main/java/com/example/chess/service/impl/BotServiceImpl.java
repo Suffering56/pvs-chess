@@ -10,6 +10,7 @@ import com.example.chess.service.GameService;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
 import com.example.chess.service.support.MoveRating;
+import com.example.chess.service.support.api.MoveHelperAPI;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,8 +35,8 @@ public class BotServiceImpl implements BotService {
         this.gameService = gameService;
     }
 
-    @Override
     @Profile
+    @Override
     public void applyBotMove(Game game) {
         CommonUtils.executeInSecondaryThread(() -> {
             CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
@@ -45,7 +46,7 @@ public class BotServiceImpl implements BotService {
     }
 
     private MoveDTO findBestMove(Game game, CellsMatrix matrix) {
-        MoveHelper moveHelper = MoveHelper.valueOf(game, matrix);
+        MoveHelperAPI moveHelper = new MoveHelper(game, matrix);
         Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
         Map<CellDTO, Set<PointDTO>> movesMap = matrix
