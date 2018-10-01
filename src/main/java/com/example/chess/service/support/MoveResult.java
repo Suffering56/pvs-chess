@@ -1,6 +1,5 @@
-package com.example.chess.utils;
+package com.example.chess.service.support;
 
-import com.example.chess.service.support.CellsMatrix;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

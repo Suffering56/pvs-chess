@@ -8,7 +8,6 @@ import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
-import com.example.chess.utils.MoveResult;
 import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;

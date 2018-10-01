@@ -16,7 +16,7 @@ import com.example.chess.service.GameService;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
 import com.example.chess.service.support.api.MoveHelperAPI;
-import com.example.chess.utils.MoveResult;
+import com.example.chess.service.support.MoveResult;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;

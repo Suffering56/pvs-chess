@@ -7,7 +7,7 @@ import lombok.*;
 
 @Getter
 @Setter
-public class MoveRating {
+public class MoveInfo {
 
     private CellDTO cellFrom;
     private PointDTO to;
@@ -15,7 +15,7 @@ public class MoveRating {
 
     private int rating;
 
-    public MoveRating(CellDTO cellFrom, PointDTO to, PieceType attackedPiece) {
+    public MoveInfo(CellDTO cellFrom, PointDTO to, PieceType attackedPiece) {
         this.cellFrom = cellFrom;
         this.to = to;
         this.attackedPiece = attackedPiece;

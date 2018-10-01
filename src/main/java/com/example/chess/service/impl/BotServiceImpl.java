@@ -7,9 +7,10 @@ import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
+import com.example.chess.service.support.BotMode;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
-import com.example.chess.service.support.MoveRating;
+import com.example.chess.service.support.MoveInfo;
 import com.example.chess.service.support.api.MoveHelperAPI;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
@@ -30,6 +31,8 @@ public class BotServiceImpl implements BotService {
     private final GameService gameService;
     @Value("${app.game.bot.move-delay}")
     private Long botMoveDelay;
+
+    private BotMode mode = BotMode.DEVELOP;
 
     public BotServiceImpl(GameService gameService) {
         this.gameService = gameService;
@@ -54,42 +57,68 @@ public class BotServiceImpl implements BotService {
                 .collect(Collectors.toMap(Function.identity(),
                         cellFrom -> moveHelper.getFilteredAvailableMoves(cellFrom.getPoint())));
 
-        List<MoveRating> ratingList = new ArrayList<>();
+        List<MoveInfo> infoList = new ArrayList<>();
         for (CellDTO cellFrom : movesMap.keySet()) {
             Set<PointDTO> moves = movesMap.get(cellFrom);
             for (PointDTO pointTo : moves) {
                 CellDTO attackedCell = matrix.getCell(pointTo);
-                MoveRating moveRating = new MoveRating(cellFrom, pointTo, attackedCell.getPieceType());
-                ratingList.add(moveRating);
+                MoveInfo moveInfo = new MoveInfo(cellFrom, pointTo, attackedCell.getPieceType());
+                infoList.add(moveInfo);
             }
         }
 
-        if (ratingList.isEmpty()) {
+        if (infoList.isEmpty()) {
             throw new RuntimeException("Game is end!");
         }
 
-        MoveRating maxRating = null;
+        //TODO: здесь можно применить... например стратегию(паттерн).
+        MoveInfo bestMove;
+        switch (mode) {
+            case GREEDY:
+                bestMove = getGreediestMove(infoList);
+                break;
+            case DEVELOP:
+                bestMove = getDevelopMove(infoList);
+                break;
+            case RANDOM:
+            default:
+                bestMove = getRandomMove(infoList);
+        }
+
+        PieceType promotionPieceType = null;
+        if (bestMove.getPieceFrom() == PieceType.PAWN && (bestMove.getTo().getRowIndex() == 0 || bestMove.getTo().getRowIndex() == 7)) {
+            promotionPieceType = PieceType.QUEEN;
+        }
+        return MoveDTO.valueOf(bestMove.getFrom(), bestMove.getTo(), promotionPieceType);
+    }
+
+    private MoveInfo getDevelopMove(List<MoveInfo> infoList) {
+        return getRandomMove(infoList);
+    }
+
+    private MoveInfo getGreediestMove(List<MoveInfo> infoList) {
+        MoveInfo bestMove = null;
         int maxValue = 0;
-        for (MoveRating ratingDTO : ratingList) {
+
+        for (MoveInfo ratingDTO : infoList) {
             PieceType attackedPiece = ratingDTO.getAttackedPiece();
             if (attackedPiece != null) {
                 if (attackedPiece.getValue() > maxValue) {
                     maxValue = attackedPiece.getValue();
-                    maxRating = ratingDTO;
+                    bestMove = ratingDTO;
                 }
             }
         }
 
-        if (maxRating == null) {
-            int i = (int) (ratingList.size() * Math.random());
-            maxRating = ratingList.get(i);
+        if (bestMove == null) {
+            return getRandomMove(infoList);
         }
 
-        PieceType promotionPieceType = null;
-        if (maxRating.getPieceFrom() == PieceType.PAWN && (maxRating.getTo().getRowIndex() == 0 || maxRating.getTo().getRowIndex() == 7)) {
-            promotionPieceType = PieceType.QUEEN;
-        }
+        return bestMove;
+    }
 
-        return MoveDTO.valueOf(maxRating.getFrom(), maxRating.getTo(), promotionPieceType);
+    private MoveInfo getRandomMove(List<MoveInfo> infoList) {
+        int i = (int) (infoList.size() * Math.random());
+        return infoList.get(i);
     }
 }

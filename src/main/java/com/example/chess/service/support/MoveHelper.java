@@ -7,7 +7,6 @@ import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.support.api.MoveHelperAPI;
-import com.example.chess.utils.MoveResult;
 
 import java.util.HashSet;
 import java.util.Set;
