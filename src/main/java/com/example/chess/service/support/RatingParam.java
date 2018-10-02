@@ -4,7 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum RatingParam {
-    EXCHANGE_DIFF, PIECE_RESCUE;
+    EXCHANGE_DIFF, ATTACK_DEFENSELESS_PIECE, PIECE_RESCUE;
 
     private final int factor;
 

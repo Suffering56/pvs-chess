@@ -1,6 +1,7 @@
 package com.example.chess.service.support;
 
 import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import lombok.*;
@@ -92,5 +93,10 @@ public class ExtendedMove {
 
     public void applyGreedyMode() {
         total = getPieceTo() != null ? getPieceTo().getValue() : 0;
+    }
+
+    public MoveDTO toMoveDTO() {
+        //TODO: promotionPieceType can be not null
+        return MoveDTO.valueOf(from.getPoint(), to.getPoint(), null);
     }
 }

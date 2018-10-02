@@ -45,13 +45,18 @@ public class MoveHelper implements MoveHelperAPI {
         return enemyMoves.contains(kingPoint);
     }
 
-    //TODO: complete it
+    private List<ExtendedMove> getAvailableDefensiveMoves() {
+        throw new UnsupportedOperationException();
+    }
+
     private List<ExtendedCell> getAttackers(PointDTO threatenedPoint) {
         CellDTO threatenedCell = originalMatrix.getCell(threatenedPoint);
 
-        return getExtendedCellStream(threatenedCell.getEnemySide())
+        List<ExtendedCell> collect = getExtendedCellStream(threatenedCell.getEnemySide())
                 .filter(moves -> !moves.isEmpty() && moves.getAvailablePoints().contains(threatenedPoint))
                 .collect(Collectors.toList());
+
+        throw new UnsupportedOperationException();
     }
 
     private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {

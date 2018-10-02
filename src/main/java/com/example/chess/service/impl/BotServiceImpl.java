@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @Log4j2
@@ -27,7 +26,7 @@ public class BotServiceImpl implements BotService {
     @Value("${app.game.bot.move-delay}")
     private Long botMoveDelay;
 
-    private BotMode mode = BotMode.GREEDY;
+    private BotMode mode = BotMode.DEVELOP;
 
     public BotServiceImpl(GameService gameService) {
         this.gameService = gameService;
@@ -49,7 +48,8 @@ public class BotServiceImpl implements BotService {
 
         List<ExtendedMove> allMovesList = moveHelper
                 .getExtendedMovesStream(botSide)
-                .peek(calculateRating(matrix))
+                .peek(calculateRating(game, matrix, botSide))
+                .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
         int maxTotal = allMovesList.stream()
@@ -68,13 +68,21 @@ public class BotServiceImpl implements BotService {
         if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
             promotionPieceType = PieceType.QUEEN;
         }
+
+        allMovesList.forEach(move -> log.info("\tmove[R:" + move.getTotal() + "]: " + CommonUtils.moveToString(move)));
+        log.info("------------------------------------------------");
+        log.info("allList.size = " + allMovesList.size());
+        log.info("topList.size = " + topMovesList.size());
+        log.info("resultMove: " + CommonUtils.moveToString(resultMove));
+        log.info("============================================");
+
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
-    private Consumer<? super ExtendedMove> calculateRating(CellsMatrix matrix) {
+    private Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix, Side botSide) {
         switch (mode) {
             case DEVELOP:
-                return updateRating(matrix);
+                return updateRating(game, matrix, botSide);
             case GREEDY:
                 return ExtendedMove::applyGreedyMode;
             case RANDOM:
@@ -85,11 +93,29 @@ public class BotServiceImpl implements BotService {
     }
 
 
-    private Consumer<? super ExtendedMove> updateRating(CellsMatrix matrix) {
+    private Consumer<? super ExtendedMove> updateRating(Game game, CellsMatrix matrix, Side botSide) {
         return move -> {
             move.setRating(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff());
-//            move
+            move.setRating(RatingParam.ATTACK_DEFENSELESS_PIECE, getAttackDefenselessPieceValue(game, matrix, botSide, move));
         };
+    }
+
+    private int getAttackDefenselessPieceValue(Game game, CellsMatrix matrix, Side botSide, ExtendedMove move) {
+        int value = 0;
+        if (move.isBloody()) {
+            //TODO: promotionPieceType can be not null
+            MoveResult moveResult = matrix.executeMove(move.toMoveDTO(), null);
+            MoveHelperAPI helper = new MoveHelper(game, moveResult.getNewMatrix());
+
+            long count = helper.getExtendedMovesStream(botSide.reverse())
+                    .filter(enemyMove -> enemyMove.getPointTo().equals(move.getPointTo()))
+                    .count();
+
+            if (count == 0) {
+                value = move.getValueFrom();
+            }
+        }
+        return value;
     }
 
     private ExtendedMove getRandomMove(List<ExtendedMove> movesList) {

@@ -65,7 +65,6 @@ public class GameServiceImpl implements GameService {
         return createCellsMatrixByGame(game, position).generateArrangement(game.getUnderCheckSide());
     }
 
-    @Profile
     @Override
     @Transactional
     public ArrangementDTO applyMove(Game game, MoveDTO move) throws HistoryNotFoundException {

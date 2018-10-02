@@ -1,7 +1,10 @@
 package com.example.chess.utils;
 
+import com.example.chess.dto.CellDTO;
+import com.example.chess.enums.PieceType;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.exceptions.HistoryNotFoundException;
+import com.example.chess.service.support.ExtendedMove;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.CharacterPredicates;
@@ -9,10 +12,7 @@ import org.apache.commons.text.RandomStringGenerator;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -71,5 +71,50 @@ public class CommonUtils {
 
     public interface Executor {
         void execute() throws InterruptedException, GameNotFoundException, HistoryNotFoundException;
+    }
+
+    private static Map<Integer, String> columnNamesMap = new HashMap<Integer, String>() {{
+        put(0, "h");
+        put(1, "g");
+        put(2, "f");
+        put(3, "e");
+        put(4, "d");
+        put(5, "c");
+        put(6, "b");
+        put(7, "a");
+    }};
+
+    private static Map<PieceType, String> pieceNamesMap = new HashMap<PieceType, String>() {{
+        put(PieceType.PAWN, "");
+        put(PieceType.KNIGHT, "N");
+        put(PieceType.BISHOP, "B");
+        put(PieceType.ROOK, "R");
+        put(PieceType.QUEEN, "Q");
+        put(PieceType.KING, "K");
+    }};
+
+    public static String moveToString(ExtendedMove move) {
+        CellDTO from = move.getFrom();
+        CellDTO to = move.getTo();
+
+        String result = "";
+        result += getPieceName(from.getPieceType()) + columnNamesMap.get(from.getColumnIndex()) + (from.getRowIndex() + 1);
+        result += "---";
+        result += columnNamesMap.get(to.getColumnIndex()) + (to.getRowIndex() + 1);
+
+        if (!to.isEmpty()) {
+            result = result.replace("---", "-x-");
+            result += "(" + getPieceName(to.getPieceType()) + ")";
+        }
+
+        return result;
+    }
+
+    private static String getPieceName(PieceType pieceType) {
+        String name = pieceNamesMap.get(pieceType);
+        if (name == null) {
+            name = "";
+        }
+        return name;
     }
 }
