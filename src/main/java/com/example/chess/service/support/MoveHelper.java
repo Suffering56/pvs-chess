@@ -9,9 +9,12 @@ import com.example.chess.enums.Side;
 import com.example.chess.service.support.api.MoveHelperAPI;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class MoveHelper implements MoveHelperAPI {
 
@@ -26,6 +29,11 @@ public class MoveHelper implements MoveHelperAPI {
     @Override
     public Set<PointDTO> getFilteredAvailableMoves(PointDTO pointFrom) {
         CellDTO moveableCell = originalMatrix.getCell(pointFrom);
+        return getFilteredAvailableMoves(moveableCell);
+    }
+
+    @Override
+    public Set<PointDTO> getFilteredAvailableMoves(CellDTO moveableCell) {
         Set<PointDTO> moves = getUnfilteredAvailableMoves(game, originalMatrix, moveableCell);
         return filterAvailableMoves(moves, moveableCell);
     }
@@ -35,6 +43,15 @@ public class MoveHelper implements MoveHelperAPI {
         PointDTO kingPoint = originalMatrix.findKingPoint(kingSide);
         Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(game, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
         return enemyMoves.contains(kingPoint);
+    }
+
+    //TODO: complete it
+    private List<ExtendedCell> getAttackers(PointDTO threatenedPoint) {
+        CellDTO threatenedCell = originalMatrix.getCell(threatenedPoint);
+
+        return getExtendedCellStream(threatenedCell.getEnemySide())
+                .filter(moves -> !moves.isEmpty() && moves.getAvailablePoints().contains(threatenedPoint))
+                .collect(Collectors.toList());
     }
 
     private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {
@@ -422,6 +439,26 @@ public class MoveHelper implements MoveHelperAPI {
         private PointDTO findKingPoint(Side side) {
             return matrix.findKingPoint(side);
         }
+    }
+
+
+    @Override
+    public Stream<ExtendedMove> getExtendedMovesStream(Side side) {
+        return getExtendedCellStream(side)
+                .flatMap(toExtendedMovesStream(originalMatrix));
+    }
+
+    private Stream<ExtendedCell> getExtendedCellStream(Side side) {
+        return originalMatrix
+                .allPiecesBySideStream(side)
+                .map(cellFrom -> {
+                    Set<PointDTO> availableMoves = getFilteredAvailableMoves(cellFrom);
+                    return new ExtendedCell(cellFrom, availableMoves);
+                });
+    }
+
+    private Function<ExtendedCell, Stream<? extends ExtendedMove>> toExtendedMovesStream(CellsMatrix matrix) {
+        return moves -> moves.getAvailablePoints().stream().map(pointTo -> new ExtendedMove(moves.getCellFrom(), matrix.getCell(pointTo)));
     }
 
 }

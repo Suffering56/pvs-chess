@@ -223,6 +223,11 @@ public final class CellsMatrix {
         return cellsMatrix.stream().flatMap(List::stream);
     }
 
+    public Stream<CellDTO> allPiecesBySideStream(Side side) {
+        return allPiecesStream()
+                .filter(containsSide(side));
+    }
+
     public Stream<CellDTO> somePiecesStream(Side side, PieceType... pieceTypes) {
         return allPiecesStream()
                 .filter(containsPieces(side, pieceTypes));
@@ -230,6 +235,10 @@ public final class CellsMatrix {
 
     private Predicate<CellDTO> containsPieces(Side side, PieceType[] pieceTypes) {
         return cell -> cell.getSide() == side && Arrays.stream(pieceTypes).anyMatch(type -> type == cell.getPieceType());
+    }
+
+    private Predicate<CellDTO> containsSide(Side side) {
+        return cell -> cell.getSide() == side;
     }
 
     public List<History> generateHistory(Long gameId, int position) {

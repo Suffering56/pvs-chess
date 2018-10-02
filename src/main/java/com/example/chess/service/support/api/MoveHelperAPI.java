@@ -1,9 +1,14 @@
 package com.example.chess.service.support.api;
 
+import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.Side;
+import com.example.chess.service.support.ExtendedCell;
+import com.example.chess.service.support.ExtendedMove;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public interface MoveHelperAPI {
 
@@ -12,6 +17,8 @@ public interface MoveHelperAPI {
      * Это уже ОТФИЛЬТРОВАННЫЕ ходы, т.е. они не могут нарушить целостность партии
      */
     Set<PointDTO> getFilteredAvailableMoves(PointDTO pointFrom);
+
+    Set<PointDTO> getFilteredAvailableMoves(CellDTO moveableCell);
 
     /**
      * Проверяет находится ли под шахом король в данный момент! Уже!!!
@@ -25,4 +32,6 @@ public interface MoveHelperAPI {
      * @param kingSide - сторона, чьего короля проверяем на стояние под шахом
      */
     boolean isKingUnderAttack(Side kingSide);
+
+    Stream<ExtendedMove> getExtendedMovesStream(Side side);
 }

@@ -7,22 +7,17 @@ import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.BotMode;
-import com.example.chess.service.support.CellsMatrix;
-import com.example.chess.service.support.MoveHelper;
-import com.example.chess.service.support.MoveInfo;
+import com.example.chess.service.support.*;
 import com.example.chess.service.support.api.MoveHelperAPI;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
+import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Log4j2
@@ -32,7 +27,7 @@ public class BotServiceImpl implements BotService {
     @Value("${app.game.bot.move-delay}")
     private Long botMoveDelay;
 
-    private BotMode mode = BotMode.DEVELOP;
+    private BotMode mode = BotMode.GREEDY;
 
     public BotServiceImpl(GameService gameService) {
         this.gameService = gameService;
@@ -50,75 +45,55 @@ public class BotServiceImpl implements BotService {
 
     private MoveDTO findBestMove(Game game, CellsMatrix matrix) {
         MoveHelperAPI moveHelper = new MoveHelper(game, matrix);
-        Side sideFrom = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
+        Side botSide = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
 
-        Map<CellDTO, Set<PointDTO>> movesMap = matrix
-                .somePiecesStream(sideFrom, PieceType.values())
-                .collect(Collectors.toMap(Function.identity(),
-                        cellFrom -> moveHelper.getFilteredAvailableMoves(cellFrom.getPoint())));
+        List<ExtendedMove> allMovesList = moveHelper
+                .getExtendedMovesStream(botSide)
+                .peek(calculateRating(matrix))
+                .collect(Collectors.toList());
 
-        List<MoveInfo> infoList = new ArrayList<>();
-        for (CellDTO cellFrom : movesMap.keySet()) {
-            Set<PointDTO> moves = movesMap.get(cellFrom);
-            for (PointDTO pointTo : moves) {
-                CellDTO attackedCell = matrix.getCell(pointTo);
-                MoveInfo moveInfo = new MoveInfo(cellFrom, pointTo, attackedCell.getPieceType());
-                infoList.add(moveInfo);
-            }
-        }
+        int maxTotal = allMovesList.stream()
+                .mapToInt(ExtendedMove::getTotal)
+                .max()
+                .orElseThrow(() -> new RuntimeException("Checkmate!!!"));
 
-        if (infoList.isEmpty()) {
-            throw new RuntimeException("Game is end!");
-        }
+        List<ExtendedMove> topMovesList = allMovesList.stream()
+                .filter(extendedMove -> extendedMove.getTotal() == maxTotal)
+                .collect(Collectors.toList());
 
-        //TODO: здесь можно применить... например стратегию(паттерн).
-        MoveInfo bestMove;
-        switch (mode) {
-            case GREEDY:
-                bestMove = getGreediestMove(infoList);
-                break;
-            case DEVELOP:
-                bestMove = getDevelopMove(infoList);
-                break;
-            case RANDOM:
-            default:
-                bestMove = getRandomMove(infoList);
-        }
+        ExtendedMove resultMove = getRandomMove(topMovesList);
+
 
         PieceType promotionPieceType = null;
-        if (bestMove.getPieceFrom() == PieceType.PAWN && (bestMove.getTo().getRowIndex() == 0 || bestMove.getTo().getRowIndex() == 7)) {
+        if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
             promotionPieceType = PieceType.QUEEN;
         }
-        return MoveDTO.valueOf(bestMove.getFrom(), bestMove.getTo(), promotionPieceType);
+        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
-    private MoveInfo getDevelopMove(List<MoveInfo> infoList) {
-        return getRandomMove(infoList);
-    }
-
-    private MoveInfo getGreediestMove(List<MoveInfo> infoList) {
-        MoveInfo bestMove = null;
-        int maxValue = 0;
-
-        for (MoveInfo ratingDTO : infoList) {
-            PieceType attackedPiece = ratingDTO.getAttackedPiece();
-            if (attackedPiece != null) {
-                if (attackedPiece.getValue() > maxValue) {
-                    maxValue = attackedPiece.getValue();
-                    bestMove = ratingDTO;
-                }
-            }
+    private Consumer<? super ExtendedMove> calculateRating(CellsMatrix matrix) {
+        switch (mode) {
+            case DEVELOP:
+                return updateRating(matrix);
+            case GREEDY:
+                return ExtendedMove::applyGreedyMode;
+            case RANDOM:
+            default:
+                return extendedMove -> {
+                };
         }
-
-        if (bestMove == null) {
-            return getRandomMove(infoList);
-        }
-
-        return bestMove;
     }
 
-    private MoveInfo getRandomMove(List<MoveInfo> infoList) {
-        int i = (int) (infoList.size() * Math.random());
-        return infoList.get(i);
+
+    private Consumer<? super ExtendedMove> updateRating(CellsMatrix matrix) {
+        return move -> {
+            move.setRating(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff());
+//            move
+        };
+    }
+
+    private ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
+        int i = (int) (movesList.size() * Math.random());
+        return movesList.get(i);
     }
 }
