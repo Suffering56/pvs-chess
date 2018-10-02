@@ -4,7 +4,30 @@ import lombok.Getter;
 
 @Getter
 public enum RatingParam {
-    EXCHANGE_DIFF, ATTACK_DEFENSELESS_PIECE, PIECE_RESCUE;
+    /**
+     * Учитывается разница при размене фигур. Данная проверка ничего не знает о том, сможет ли противник вообще
+     * срубить нашу фигуру после взятия. Т.е. мы просто сравниваем фигуры, участвующие в размене.
+     * Если срубленная фигура лучше рубящей - то разница будет положительной. Если хуже - отрицательной.
+     * Если ценность фигур равна - то разница будет равна нулю.
+     * <p>
+     * Формула: additionalRating = pieceTo.value - pieceFrom.value
+     */
+    EXCHANGE_DIFF,
+    /**
+     * Учитывается беззащитность атакуемой фигуры. Если фигура беззащитна, то добавляем в рейтинг стоимость атакуЮЩЕЙ
+     * фигуры. Таким образом в совокупности с EXCHANGE_DIFF рейтинг будет равен стоимости срубленной фигуры.
+     * <p>
+     * Формула: additionalRating = pieceFrom.value
+     * Формула (EXCHANGE_DIFF + ATTACK_DEFENSELESS_PIECE):
+     * additionalRating = (pieceTo.value - pieceFrom.value) + pieceFrom.value = pieceTo.value
+     */
+    ATTACK_DEFENSELESS_PIECE,
+    /**
+     * Не надо ставить фигуру под удар
+     * или
+     * Надо убрать фигуру под ударом
+     */
+    PIECE_RESCUE;
 
     private final int factor;
 

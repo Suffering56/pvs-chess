@@ -100,6 +100,8 @@ public class BotServiceImpl implements BotService {
         };
     }
 
+    //TODO: botSide не обязательно передавать. есть же newMatrix.getPosition()
+    //TODO: мне кажется примерно таким же способом можно реализовать
     private int getAttackDefenselessPieceValue(Game game, CellsMatrix matrix, Side botSide, ExtendedMove move) {
         int value = 0;
         if (move.isBloody()) {
