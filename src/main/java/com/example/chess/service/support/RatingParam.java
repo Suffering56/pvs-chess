@@ -12,7 +12,7 @@ public enum RatingParam {
      * <p>
      * Формула: additionalRating = pieceTo.value - pieceFrom.value
      */
-    EXCHANGE_DIFF,
+    EXCHANGE_DIFF(100),
     /**
      * Учитывается беззащитность атакуемой фигуры. Если фигура беззащитна, то добавляем в рейтинг стоимость атакуЮЩЕЙ
      * фигуры. Таким образом в совокупности с EXCHANGE_DIFF рейтинг будет равен стоимости срубленной фигуры.
@@ -21,13 +21,17 @@ public enum RatingParam {
      * Формула (EXCHANGE_DIFF + ATTACK_DEFENSELESS_PIECE):
      * additionalRating = (pieceTo.value - pieceFrom.value) + pieceFrom.value = pieceTo.value
      */
-    ATTACK_DEFENSELESS_PIECE,
+    ATTACK_DEFENSELESS_PIECE(100),
     /**
      * Не надо ставить фигуру под удар
      * или
      * Надо убрать фигуру под ударом
      */
-    PIECE_RESCUE;
+    PIECE_RESCUE,
+    /**
+     * Шах - это тоже хорошо
+     */
+    CHECK(30);
 
     private final int factor;
 

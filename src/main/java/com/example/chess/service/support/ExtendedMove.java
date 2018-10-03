@@ -71,16 +71,16 @@ public class ExtendedMove {
         return Objects.requireNonNull(to.getPieceType()).getValue();
     }
 
-    public int getExchangeDiff() {
+    public Integer getExchangeDiff() {
         if (isEmptyTo()) {
-            return 0;
+            return null;
         }
         return getValueTo() - getValueFrom();
     }
 
-    public void setRating(RatingParam param, int value) {
-        if (ratingMap.containsKey(param)) {
-            throw new RuntimeException("Param <" + param + "> already initialized");
+    public void updateRatingByParam(RatingParam param, Integer value) {
+        if (value == null || value == 0) {
+            return;
         }
 
         ratingMap.put(param, value);
