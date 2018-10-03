@@ -27,17 +27,13 @@ public enum RatingParam {
      * или
      * Надо убрать фигуру под ударом
      */
-    ALLY_PIECE_RESCUE,
+    ALLY_PIECE_RESCUE(100),
     /**
      * Шах - это тоже хорошо
      */
     CHECK(30);
 
     private final int factor;
-
-    RatingParam() {
-        this(1);
-    }
 
     RatingParam(int factor) {
         this.factor = factor;
