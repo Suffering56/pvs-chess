@@ -69,9 +69,7 @@ public class MoveHelper implements MoveHelperAPI {
 
     @Override
     public Stream<ExtendedMove> getAttackingMovesStream(Side side) {
-        return originalMatrix
-                .allPiecesBySideStream(side)
-                .flatMap(toExtendedMovesStream(this::getFilteredAvailableMoves))
+        return getAvailableExtendedMovesStream(side)
                 .filter(ExtendedMove::isBloody);
     }
 

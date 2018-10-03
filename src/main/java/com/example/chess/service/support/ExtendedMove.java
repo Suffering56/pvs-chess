@@ -51,16 +51,12 @@ public class ExtendedMove {
         return to.isEmpty();
     }
 
-    public boolean hasPieceFrom() {
-        return !isEmptyFrom();
-    }
-
-    public boolean hasPieceTo() {
+    public boolean isBloody() {
         return !isEmptyTo();
     }
 
-    public boolean isBloody() {
-        return hasPieceTo();
+    public boolean isNotBloody() {
+        return isEmptyTo();
     }
 
     public int getValueFrom() {
@@ -76,6 +72,10 @@ public class ExtendedMove {
             return null;
         }
         return getValueTo() - getValueFrom();
+    }
+
+    public void updateRatingByParam(RatingParam param) {
+        updateRatingByParam(param, 1);
     }
 
     public void updateRatingByParam(RatingParam param, Integer value) {

@@ -23,15 +23,28 @@ public enum RatingParam {
      */
     ATTACK_DEFENSELESS_PIECE(100),
     /**
-     * Не надо ставить фигуру под удар
-     * или
      * Надо убрать фигуру под ударом
+     * TODO: или же срубить атакующую
      */
-    ALLY_PIECE_RESCUE(100),
+    RESCUE(100),
+    /**
+     * Не надо ставить фигуру под удар
+     */
+    LOSS(-100),
     /**
      * Шах - это тоже хорошо
      */
-    CHECK(30);
+    CHECK(30),
+    /**
+     * А мат - еще лучше
+     */
+    CHECKMATE(100000);
+
+    //pawn promotion
+    //fork (вилка)
+    //pin (связка)
+    //sacrifice
+    //hidden check
 
     private final int factor;
 

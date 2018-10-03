@@ -93,27 +93,41 @@ public class BotServiceImpl implements BotService {
     }
 
     private Consumer<? super ExtendedMove> updateRating(Game game, CellsMatrix matrix) {
-        Side botSide = game.getActiveSide();
-        Side enemySide = botSide.reverse();
+        log.info("updateRating");
 
-        //key -> protectedCell, value = defensive moves
-        Map<CellDTO, List<ExtendedMove>> defensiveMap = new MoveHelper(game, matrix)
+        Side botSide = game.getActiveSide();
+        Side playerSide = botSide.reverse();
+        MoveHelper moveHelper = new MoveHelper(game, matrix);
+
+        //key -> cellTo, value = bot moves
+        Map<CellDTO, List<ExtendedMove>> allBotMovesMap = new MoveHelper(game, matrix)
+                .getAvailableExtendedMovesStream(botSide)
+                .collect(Collectors.groupingBy(ExtendedMove::getTo));
+
+        //key -> cellTo, value = player moves
+        Map<CellDTO, List<ExtendedMove>> passivePlayerMovesMap = moveHelper
+                .getAvailableExtendedMovesStream(playerSide)
+                .filter(ExtendedMove::isNotBloody)
+                .collect(Collectors.groupingBy(ExtendedMove::getTo));
+
+        //key -> protectedCell, value = defensive bot moves
+        Map<CellDTO, List<ExtendedMove>> defensiveBotMovesMap = moveHelper
                 .getDefensiveMovesStream(botSide)
                 .collect(Collectors.groupingBy(ExtendedMove::getTo));
 
         //key -> victimCell, value = attacking moves
-        Map<CellDTO, List<ExtendedMove>> attackingMap = new MoveHelper(game, matrix)
-                .getAttackingMovesStream(enemySide)
+        Map<CellDTO, List<ExtendedMove>> attackingPlayerMovesMap = moveHelper
+                .getAttackingMovesStream(playerSide)
                 .collect(Collectors.groupingBy(ExtendedMove::getTo));
 
-        printMap(defensiveMap, "protectedCell");
+        printMap(defensiveBotMovesMap, "protectedCell");
         log.info("\n\n");
-        printMap(attackingMap, "victimCell");
+        printMap(attackingPlayerMovesMap, "victimCell");
 
 
         Set<CellDTO> victimCells = new HashSet<>();
-        attackingMap.forEach((victimCell, attackingMoves) -> {
-            List<ExtendedMove> defensiveMoves = defensiveMap.get(victimCell);
+        attackingPlayerMovesMap.forEach((victimCell, attackingMoves) -> {
+            List<ExtendedMove> defensiveMoves = defensiveBotMovesMap.get(victimCell);
 
             int defensiveMovesCount = 0;
             if (defensiveMoves != null) {
@@ -125,21 +139,61 @@ public class BotServiceImpl implements BotService {
             }
         });
 
+
         return move -> {
             //TODO: promotionPieceType can be not null
             MoveResult moveResult = matrix.executeMove(move.toMoveDTO(), null);
             MoveHelperAPI nextMoveHelper = new MoveHelper(game, moveResult.getNewMatrix());
 
-
             move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff());
             move.updateRatingByParam(RatingParam.ATTACK_DEFENSELESS_PIECE, getAttackDefenselessPieceValue(nextMoveHelper, botSide, move));
 
-            if (nextMoveHelper.isKingUnderAttack(enemySide)) {
-                move.updateRatingByParam(RatingParam.CHECK, 1);
+            if (nextMoveHelper.isKingUnderAttack(playerSide)) {
+                move.updateRatingByParam(RatingParam.CHECK);
+
+                long availablePlayerMovesCount = nextMoveHelper.getAvailableExtendedMovesStream(playerSide).count();
+                if (availablePlayerMovesCount == 0) {
+                    move.updateRatingByParam(RatingParam.CHECKMATE);
+                }
             }
 
             if (victimCells.contains(move.getFrom())) {
-                move.updateRatingByParam(RatingParam.ALLY_PIECE_RESCUE, move.getValueFrom());
+                move.updateRatingByParam(RatingParam.RESCUE, move.getValueFrom());
+            }
+
+            List<ExtendedMove> passivePlayerMoves = passivePlayerMovesMap.get(move.getTo());
+            if (passivePlayerMoves != null) {
+                List<ExtendedMove> defensiveBotMoves = allBotMovesMap.get(move.getTo());
+
+                /*
+                TODO: суть в том, что defensiveBotMoves содержат в себе ходы пешек, которые на самом то деле вовсе ничего не защищают
+                TODO: а так же НЕ содержат атакующие ходы пешек, потому что на момент получения ходов, пешкам рубить было нечего
+                 */
+                defensiveBotMoves = defensiveBotMoves.stream()
+                        .filter(m -> {
+                            if (m.getPieceFrom() == PieceType.PAWN) {
+                                if (m.getFrom().getColumnIndex().equals(m.getTo().getColumnIndex())) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        }).collect(Collectors.toList());
+
+                log.info("\t\t\tdefensiveMovesFor: " + move.getTo());
+                for (ExtendedMove botMove : defensiveBotMoves) {
+                    log.info("\t\t\tdefensiveMove: " + CommonUtils.moveToString(botMove));
+                }
+                int defensiveMovesCount = defensiveBotMoves.size() - 1;
+
+                if (passivePlayerMoves.size() - defensiveMovesCount > 0) {
+                    move.updateRatingByParam(RatingParam.LOSS, move.getValueFrom());
+                } else {
+                    for (ExtendedMove passivePlayerMove : passivePlayerMoves) {
+                        if (passivePlayerMove.getValueFrom() < move.getValueFrom()) {
+                            move.updateRatingByParam(RatingParam.LOSS, move.getValueFrom());
+                        }
+                    }
+                }
             }
         };
     }
