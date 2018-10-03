@@ -3,13 +3,13 @@ package com.example.chess.dto;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.ToString;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -19,7 +19,6 @@ import java.util.Objects;
  * Immutable
  */
 @Getter
-@ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CellDTO {
 
@@ -91,5 +90,10 @@ public final class CellDTO {
                 .append(rowIndex)
                 .append(columnIndex)
                 .toHashCode();
+    }
+
+    @Override
+    public String toString() {
+        return getPoint() + ": " + CommonUtils.getPieceName(getPieceType(), true);
     }
 }

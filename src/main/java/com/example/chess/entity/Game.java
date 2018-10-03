@@ -138,4 +138,13 @@ public class Game {
 
         return selectedSide;
     }
+
+    /**
+     * @return side, which has next move (not paused)
+     */
+    @Transient
+    @JsonIgnore
+    public Side getActiveSide() {
+        return getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
+    }
 }

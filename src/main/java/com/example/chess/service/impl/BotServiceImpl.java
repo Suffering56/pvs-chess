@@ -43,12 +43,11 @@ public class BotServiceImpl implements BotService {
     }
 
     private MoveDTO findBestMove(Game game, CellsMatrix matrix) {
-        MoveHelperAPI moveHelper = new MoveHelper(game, matrix);
-        Side botSide = game.getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
+        Side botSide = game.getActiveSide();
 
-        List<ExtendedMove> allMovesList = moveHelper
-                .getExtendedMovesStream(botSide)
-                .peek(calculateRating(game, matrix, botSide))
+        List<ExtendedMove> allMovesList = new MoveHelper(game, matrix)
+                .getAvailableExtendedMovesStream(botSide)
+                .peek(calculateRating(game, matrix))
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
@@ -74,16 +73,16 @@ public class BotServiceImpl implements BotService {
         log.info("------------------------------------------------");
         log.info("allList.size = " + allMovesList.size());
         log.info("topList.size = " + topMovesList.size());
-        log.info("resultMove[" + (matrix.getPosition() + 1) +  "]: " + CommonUtils.moveToString(resultMove));
+        log.info("resultMove[" + (matrix.getPosition() + 1) + "]: " + CommonUtils.moveToString(resultMove));
 
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
-    private Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix, Side botSide) {
+    private Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix) {
         switch (mode) {
             case DEVELOP:
-                return updateRating(game, matrix, botSide);
+                return updateRating(game, matrix);
             case GREEDY:
                 return ExtendedMove::applyGreedyMode;
             case RANDOM:
@@ -93,18 +92,54 @@ public class BotServiceImpl implements BotService {
         }
     }
 
+    private Consumer<? super ExtendedMove> updateRating(Game game, CellsMatrix matrix) {
+        Side botSide = game.getActiveSide();
+        Side enemySide = botSide.reverse();
 
-    private Consumer<? super ExtendedMove> updateRating(Game game, CellsMatrix matrix, Side botSide) {
+        //key -> protectedCell, value = defensive moves
+        Map<CellDTO, List<ExtendedMove>> defensiveMap = new MoveHelper(game, matrix)
+                .getDefensiveMovesStream(botSide)
+                .collect(Collectors.groupingBy(ExtendedMove::getTo));
+
+        //key -> victimCell, value = attacking moves
+        Map<CellDTO, List<ExtendedMove>> attackingMap = new MoveHelper(game, matrix)
+                .getAttackingMovesStream(enemySide)
+                .collect(Collectors.groupingBy(ExtendedMove::getTo));
+
+        printMap(defensiveMap, "protectedCell");
+        log.info("\n\n");
+        printMap(attackingMap, "victimCell");
+
+
+        Set<CellDTO> victimCells = new HashSet<>();
+        attackingMap.forEach((victimCell, attackingMoves) -> {
+            List<ExtendedMove> defensiveMoves = defensiveMap.get(victimCell);
+
+            int defensiveMovesCount = 0;
+            if (defensiveMoves != null) {
+                defensiveMovesCount = defensiveMoves.size();
+            }
+
+            if (attackingMoves.size() - defensiveMovesCount > 0) {
+                victimCells.add(victimCell);
+            }
+        });
+
         return move -> {
             //TODO: promotionPieceType can be not null
             MoveResult moveResult = matrix.executeMove(move.toMoveDTO(), null);
-            MoveHelperAPI moveHelper = new MoveHelper(game, moveResult.getNewMatrix());
+            MoveHelperAPI nextMoveHelper = new MoveHelper(game, moveResult.getNewMatrix());
+
 
             move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff());
-            move.updateRatingByParam(RatingParam.ATTACK_DEFENSELESS_PIECE, getAttackDefenselessPieceValue(moveHelper, botSide, move));
+            move.updateRatingByParam(RatingParam.ATTACK_DEFENSELESS_PIECE, getAttackDefenselessPieceValue(nextMoveHelper, botSide, move));
 
-            if (moveHelper.isKingUnderAttack(botSide.reverse())) {
+            if (nextMoveHelper.isKingUnderAttack(enemySide)) {
                 move.updateRatingByParam(RatingParam.CHECK, 1);
+            }
+
+            if (victimCells.contains(move.getFrom())) {
+                move.updateRatingByParam(RatingParam.ALLY_PIECE_RESCUE, move.getValueFrom());
             }
         };
     }
@@ -113,7 +148,7 @@ public class BotServiceImpl implements BotService {
     //TODO: мне кажется примерно таким же способом можно реализовать
     private Integer getAttackDefenselessPieceValue(MoveHelperAPI moveHelper, Side botSide, ExtendedMove move) {
         if (move.isBloody()) {
-            long count = moveHelper.getExtendedMovesStream(botSide.reverse())
+            long count = moveHelper.getAvailableExtendedMovesStream(botSide.reverse())
                     .filter(enemyMove -> enemyMove.getPointTo().equals(move.getPointTo()))
                     .count();
 
@@ -127,5 +162,12 @@ public class BotServiceImpl implements BotService {
     private ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
         int i = (int) (movesList.size() * Math.random());
         return movesList.get(i);
+    }
+
+    private void printMap(Map<CellDTO, List<ExtendedMove>> map, String cellName) {
+        map.forEach((cell, extendedMoves) -> {
+            log.info(cellName + ": " + cell);
+            extendedMoves.forEach(move -> log.info(CommonUtils.moveToString(move)));
+        });
     }
 }

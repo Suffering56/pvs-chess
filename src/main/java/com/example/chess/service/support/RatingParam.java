@@ -27,7 +27,7 @@ public enum RatingParam {
      * или
      * Надо убрать фигуру под ударом
      */
-    PIECE_RESCUE,
+    ALLY_PIECE_RESCUE,
     /**
      * Шах - это тоже хорошо
      */

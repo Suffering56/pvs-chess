@@ -33,5 +33,9 @@ public interface MoveHelperAPI {
      */
     boolean isKingUnderAttack(Side kingSide);
 
-    Stream<ExtendedMove> getExtendedMovesStream(Side side);
+    Stream<ExtendedMove> getDefensiveMovesStream(Side side);
+
+    Stream<ExtendedMove> getAvailableExtendedMovesStream(Side side);
+
+    Stream<ExtendedMove> getAttackingMovesStream(Side side);
 }

@@ -1,5 +1,6 @@
 package com.example.chess.dto;
 
+import com.example.chess.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -11,7 +12,6 @@ import java.util.Objects;
  * Immutable
  */
 @Getter
-@ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PointDTO {
 
@@ -60,5 +60,10 @@ public final class PointDTO {
     @Override
     public int hashCode() {
         return Objects.hash(rowIndex, columnIndex);
+    }
+
+    @Override
+    public String toString() {
+        return CommonUtils.getColumnName(this) + (getRowIndex() + 1);
     }
 }

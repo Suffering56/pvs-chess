@@ -34,7 +34,7 @@ public class MoveHelper implements MoveHelperAPI {
 
     @Override
     public Set<PointDTO> getFilteredAvailableMoves(CellDTO moveableCell) {
-        Set<PointDTO> moves = getUnfilteredAvailableMoves(game, originalMatrix, moveableCell, false);
+        Set<PointDTO> moves = getUnfilteredMoves(game, originalMatrix, moveableCell, false);
         return filterAvailableMoves(moves, moveableCell);
     }
 
@@ -45,18 +45,34 @@ public class MoveHelper implements MoveHelperAPI {
         return enemyMoves.contains(kingPoint);
     }
 
-    private List<ExtendedMove> getAvailableDefensiveMoves() {
-        throw new UnsupportedOperationException();
+    @Override
+    public Stream<ExtendedMove> getAvailableExtendedMovesStream(Side side) {
+        return originalMatrix
+                .allPiecesBySideStream(side)
+                .flatMap(toExtendedMovesStream(this::getFilteredAvailableMoves));
     }
 
-    private List<ExtendedCell> getAttackers(PointDTO threatenedPoint) {
-        CellDTO threatenedCell = originalMatrix.getCell(threatenedPoint);
+    private Function<CellDTO, Stream<? extends ExtendedMove>> toExtendedMovesStream(Function<CellDTO, Set<PointDTO>> movesExtractor) {
+        return moveableCell -> {
+            Set<PointDTO> availableMoves = movesExtractor.apply(moveableCell);
+            return availableMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
+        };
+    }
 
-        List<ExtendedCell> collect = getExtendedCellStream(threatenedCell.getEnemySide())
-                .filter(moves -> !moves.isEmpty() && moves.getAvailablePoints().contains(threatenedPoint))
-                .collect(Collectors.toList());
+    @Override
+    public Stream<ExtendedMove> getDefensiveMovesStream(Side side) {
+        return originalMatrix
+                .allPiecesBySideStream(side)
+                .flatMap(toExtendedMovesStream(
+                        moveableCell -> getUnfilteredMoves(game, originalMatrix, moveableCell, true)));
+    }
 
-        throw new UnsupportedOperationException();
+    @Override
+    public Stream<ExtendedMove> getAttackingMovesStream(Side side) {
+        return originalMatrix
+                .allPiecesBySideStream(side)
+                .flatMap(toExtendedMovesStream(this::getFilteredAvailableMoves))
+                .filter(ExtendedMove::isBloody);
     }
 
     private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {
@@ -82,7 +98,7 @@ public class MoveHelper implements MoveHelperAPI {
     private Set<PointDTO> getUnfilteredPiecesMoves(Game game, CellsMatrix matrix, Side side, boolean isDefensive, PieceType... pieceTypes) {
         return matrix
                 .somePiecesStream(side, pieceTypes)
-                .map(moveableCell -> getUnfilteredAvailableMoves(game, matrix, moveableCell, isDefensive))
+                .map(moveableCell -> getUnfilteredMoves(game, matrix, moveableCell, isDefensive))
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
     }
@@ -189,7 +205,7 @@ public class MoveHelper implements MoveHelperAPI {
     }
 
 
-    private Set<PointDTO> getUnfilteredAvailableMoves(Game game, CellsMatrix matrix, CellDTO moveableCell, boolean isDefensive) {
+    private Set<PointDTO> getUnfilteredMoves(Game game, CellsMatrix matrix, CellDTO moveableCell, boolean isDefensive) {
         moveableCell.requireNotEmpty();
         InternalMoveHelper helper = new InternalMoveHelper(game, matrix, moveableCell, isDefensive);
         Set<PointDTO> moves;
@@ -483,25 +499,4 @@ public class MoveHelper implements MoveHelperAPI {
             return matrix.findKingPoint(side);
         }
     }
-
-
-    @Override
-    public Stream<ExtendedMove> getExtendedMovesStream(Side side) {
-        return getExtendedCellStream(side)
-                .flatMap(toExtendedMovesStream(originalMatrix));
-    }
-
-    private Stream<ExtendedCell> getExtendedCellStream(Side side) {
-        return originalMatrix
-                .allPiecesBySideStream(side)
-                .map(cellFrom -> {
-                    Set<PointDTO> availableMoves = getFilteredAvailableMoves(cellFrom);
-                    return new ExtendedCell(cellFrom, availableMoves);
-                });
-    }
-
-    private Function<ExtendedCell, Stream<? extends ExtendedMove>> toExtendedMovesStream(CellsMatrix matrix) {
-        return moves -> moves.getAvailablePoints().stream().map(pointTo -> new ExtendedMove(moves.getCellFrom(), matrix.getCell(pointTo)));
-    }
-
 }

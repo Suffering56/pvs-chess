@@ -1,6 +1,7 @@
 package com.example.chess.utils;
 
 import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.exceptions.HistoryNotFoundException;
@@ -98,23 +99,42 @@ public class CommonUtils {
         CellDTO to = move.getTo();
 
         String result = "";
-        result += getPieceName(from.getPieceType()) + columnNamesMap.get(from.getColumnIndex()) + (from.getRowIndex() + 1);
+        result += getPieceName(from.getPieceType(), false) + from.getPoint();
         result += "---";
-        result += columnNamesMap.get(to.getColumnIndex()) + (to.getRowIndex() + 1);
+        result += to.getPoint();
 
         if (!to.isEmpty()) {
             result = result.replace("---", "-x-");
-            result += "(" + getPieceName(to.getPieceType()) + ")";
+            result += "(" + getPieceName(to.getPieceType(), true) + ")";
         }
 
         return result;
     }
 
-    private static String getPieceName(PieceType pieceType) {
-        String name = pieceNamesMap.get(pieceType);
-        if (name == null) {
-            name = "";
+    public static String getPieceName(PieceType pieceType, boolean printPawnName) {
+        if (pieceType == null) {
+            return "";
         }
-        return name;
+        if (pieceType == PieceType.PAWN) {
+            if (printPawnName) {
+                return "P";
+            } else {
+                return "";
+            }
+        }
+
+        return pieceNamesMap.get(pieceType);
+    }
+
+    public static String getColumnName(int columnIndex) {
+        return columnNamesMap.get(columnIndex);
+    }
+
+    public static String getColumnName(PointDTO point) {
+        return getColumnName(point.getColumnIndex());
+    }
+
+    public static String getColumnName(CellDTO cell) {
+        return getColumnName(cell.getColumnIndex());
     }
 }
