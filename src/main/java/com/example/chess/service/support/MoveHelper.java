@@ -9,13 +9,13 @@ import com.example.chess.enums.Side;
 import com.example.chess.service.support.api.MoveHelperAPI;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("ConstantConditions")
 public class MoveHelper implements MoveHelperAPI {
 
     private final Game game;
@@ -46,17 +46,10 @@ public class MoveHelper implements MoveHelperAPI {
     }
 
     @Override
-    public Stream<ExtendedMove> getAvailableExtendedMovesStream(Side side) {
+    public Stream<ExtendedMove> getStandardMovesStream(Side side) {
         return originalMatrix
                 .allPiecesBySideStream(side)
                 .flatMap(toExtendedMovesStream(this::getFilteredAvailableMoves));
-    }
-
-    private Function<CellDTO, Stream<? extends ExtendedMove>> toExtendedMovesStream(Function<CellDTO, Set<PointDTO>> movesExtractor) {
-        return moveableCell -> {
-            Set<PointDTO> availableMoves = movesExtractor.apply(moveableCell);
-            return availableMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
-        };
     }
 
     @Override
@@ -67,10 +60,12 @@ public class MoveHelper implements MoveHelperAPI {
                         moveableCell -> getUnfilteredMoves(game, originalMatrix, moveableCell, true)));
     }
 
-    @Override
-    public Stream<ExtendedMove> getAttackingMovesStream(Side side) {
-        return getAvailableExtendedMovesStream(side)
-                .filter(ExtendedMove::isBloody);
+
+    private Function<CellDTO, Stream<? extends ExtendedMove>> toExtendedMovesStream(Function<CellDTO, Set<PointDTO>> movesExtractor) {
+        return moveableCell -> {
+            Set<PointDTO> availableMoves = movesExtractor.apply(moveableCell);
+            return availableMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
+        };
     }
 
     private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {
@@ -240,7 +235,7 @@ public class MoveHelper implements MoveHelperAPI {
         return moves;
     }
 
-    @SuppressWarnings({"ConstantConditions", "PointlessArithmeticExpression"})
+    @SuppressWarnings({"PointlessArithmeticExpression"})
     private class InternalMoveHelper {
 
         private final Game game;
@@ -496,5 +491,41 @@ public class MoveHelper implements MoveHelperAPI {
         private PointDTO findKingPoint(Side side) {
             return matrix.findKingPoint(side);
         }
+
+    }
+
+    @Override
+    public Stream<ExtendedMove> getPossibleMovesStream(Side side) {
+        return Stream.concat(
+                getStandardMovesStream(side).filter(excludePawnMoves()),
+                getAllPawnsDiagonalMovesStream(side)
+        );
+    }
+
+    private Stream<ExtendedMove> getAllPawnsDiagonalMovesStream(Side side) {
+        return originalMatrix
+                .somePiecesStream(side, PieceType.PAWN)
+                .flatMap(toExtendedMovesStream(this::getPawnDiagonalMoves));
+    }
+
+    private Set<PointDTO> getPawnDiagonalMoves(CellDTO pawnCell) {
+        pawnCell.requireNotEmpty();
+
+        Set<PointDTO> moves = new HashSet<>();
+        int vector = pawnCell.getSide().getPawnMoveVector();
+
+        if (pawnCell.getColumnIndex() < 7) {
+            moves.add(PointDTO.valueOf(pawnCell.getRowIndex() + vector, pawnCell.getColumnIndex() + 1));
+        }
+
+        if (pawnCell.getColumnIndex() > 0) {
+            moves.add(PointDTO.valueOf(pawnCell.getRowIndex() + vector, pawnCell.getColumnIndex() - 1));
+        }
+
+        return moves;
+    }
+
+    private Predicate<ExtendedMove> excludePawnMoves() {
+        return move -> move.getPieceFrom() != PieceType.PAWN;
     }
 }

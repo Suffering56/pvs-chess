@@ -62,6 +62,11 @@ public final class CellDTO {
     }
 
     @JsonIgnore
+    public int getValue() {
+        return piece.getType().getValue();
+    }
+
+    @JsonIgnore
     public boolean isEmpty() {
         return piece == null;
     }

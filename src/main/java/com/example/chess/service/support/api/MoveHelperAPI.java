@@ -35,7 +35,7 @@ public interface MoveHelperAPI {
 
     Stream<ExtendedMove> getDefensiveMovesStream(Side side);
 
-    Stream<ExtendedMove> getAvailableExtendedMovesStream(Side side);
+    Stream<ExtendedMove> getStandardMovesStream(Side side);
 
-    Stream<ExtendedMove> getAttackingMovesStream(Side side);
+    Stream<ExtendedMove> getPossibleMovesStream(Side side);
 }

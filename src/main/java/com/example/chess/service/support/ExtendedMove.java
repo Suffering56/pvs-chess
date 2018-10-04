@@ -51,11 +51,11 @@ public class ExtendedMove {
         return to.isEmpty();
     }
 
-    public boolean isBloody() {
+    public boolean isHarmful() {
         return !isEmptyTo();
     }
 
-    public boolean isNotBloody() {
+    public boolean isHarmless() {
         return isEmptyTo();
     }
 
@@ -98,5 +98,9 @@ public class ExtendedMove {
     public MoveDTO toMoveDTO() {
         //TODO: promotionPieceType can be not null
         return MoveDTO.valueOf(from.getPoint(), to.getPoint(), null);
+    }
+
+    public boolean isVertical() {
+        return from.getColumnIndex().equals(to.getColumnIndex());
     }
 }

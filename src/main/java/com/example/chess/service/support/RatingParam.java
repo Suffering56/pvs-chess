@@ -18,19 +18,19 @@ public enum RatingParam {
      * фигуры. Таким образом в совокупности с EXCHANGE_DIFF рейтинг будет равен стоимости срубленной фигуры.
      * <p>
      * Формула: additionalRating = pieceFrom.value
-     * Формула (EXCHANGE_DIFF + ATTACK_DEFENSELESS_PIECE):
+     * Формула (EXCHANGE_DIFF + ATTACK_TO_DEFENSELESS_PLAYER_PIECE):
      * additionalRating = (pieceTo.value - pieceFrom.value) + pieceFrom.value = pieceTo.value
      */
-    ATTACK_DEFENSELESS_PIECE(100),
+    ATTACK_TO_DEFENSELESS_PLAYER_PIECE(100),
     /**
      * Надо убрать фигуру под ударом
      * TODO: или же срубить атакующую
      */
-    RESCUE(100),
+    SAVE_BOT_PIECE(100),
     /**
      * Не надо ставить фигуру под удар
      */
-    LOSS(-100),
+    USELESS_VICTIM(-100),
     /**
      * Шах - это тоже хорошо
      */

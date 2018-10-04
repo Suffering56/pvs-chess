@@ -1,5 +1,6 @@
 package com.example.chess.web;
 
+import com.example.chess.App;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
@@ -10,6 +11,7 @@ import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -22,7 +24,7 @@ public class GameController {
     private final BotService botService;
 
     @Autowired
-    public GameController(GameService gameService, BotService botService) {
+    public GameController(GameService gameService, @Qualifier(App.DEFAULT_BOT_MODE) BotService botService) {
         this.gameService = gameService;
         this.botService = botService;
     }

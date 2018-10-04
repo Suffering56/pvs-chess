@@ -137,4 +137,9 @@ public class CommonUtils {
     public static String getColumnName(CellDTO cell) {
         return getColumnName(cell.getColumnIndex());
     }
+
+    public static boolean fakeTrue() {
+        String s = "00000";
+        return s.contains("0");
+    }
 }

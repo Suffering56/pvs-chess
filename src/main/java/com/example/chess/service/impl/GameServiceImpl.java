@@ -1,7 +1,9 @@
 package com.example.chess.service.impl;
 
-import com.example.chess.aspects.Profile;
-import com.example.chess.dto.*;
+import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
@@ -15,8 +17,8 @@ import com.example.chess.repository.PieceRepository;
 import com.example.chess.service.GameService;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
-import com.example.chess.service.support.api.MoveHelperAPI;
 import com.example.chess.service.support.MoveResult;
+import com.example.chess.service.support.api.MoveHelperAPI;
 import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -24,11 +26,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static com.example.chess.ChessConstants.*;
+import static com.example.chess.ChessConstants.BOARD_SIZE;
 import static java.util.function.Function.identity;
 
 @Log4j2
