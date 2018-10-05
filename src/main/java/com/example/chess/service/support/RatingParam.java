@@ -4,6 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum RatingParam {
+    SAFE_CELL(RatingParam.MATERIAL_FACTOR),
+    UNSAFE_CELL_DIFF_LVL_1(RatingParam.MATERIAL_FACTOR),
+    UNSAFE_CELL_DIFF_LVL_2(RatingParam.MATERIAL_FACTOR),
     /**
      * Учитывается разница при размене фигур. Данная проверка ничего не знает о том, сможет ли противник вообще
      * срубить нашу фигуру после взятия. Т.е. мы просто сравниваем фигуры, участвующие в размене.
@@ -46,6 +49,7 @@ public enum RatingParam {
     //sacrifice
     //hidden check
 
+    private static final int MATERIAL_FACTOR = 100;
     private final int factor;
 
     RatingParam(int factor) {

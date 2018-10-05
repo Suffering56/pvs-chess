@@ -71,24 +71,13 @@ public class BotServiceImplMedium extends AbstractBotService {
                     .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
                     .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
 
+            List<ExtendedMove> playerNextStandardMoves = playerNextStandardMovesMap.get(move.getPointTo());
+            playerNextStandardMoves = playerNextStandardMoves != null ? playerNextStandardMoves : new ArrayList<>();
 
-            if (move.isHarmful()) {
-                List<ExtendedMove> playerNextStandardMoves = playerNextStandardMovesMap.get(move.getPointTo());
-                List<ExtendedMove> botNextDefensiveMoves = botNextDefensiveMovesMap.get(move.getPointTo());
-                botNextDefensiveMoves = botNextDefensiveMoves != null ? botNextDefensiveMoves : new ArrayList<>();
+            List<ExtendedMove> botNextDefensiveMoves = botNextDefensiveMovesMap.get(move.getPointTo());
+            botNextDefensiveMoves = botNextDefensiveMoves != null ? botNextDefensiveMoves : new ArrayList<>();
 
-                if (playerNextStandardMoves == null) {
-                    /*
-                     * Если мы атакуем незащищенную фигуру противника, то это хороший ход.
-                     * А незащищенная она потому, что после того как мы ее срубили -
-                     * данную клетку не может атаковать ни одна фигура игрока
-                     */
-                    move.updateRatingByParam(RatingParam.ATTACK_TO_DEFENSELESS_PLAYER_PIECE, move.getValueTo());
-                } else {
-                    updateRatingByExchangeDiff(move, playerNextStandardMoves, botNextDefensiveMoves);
-                }
-            }
-
+            updateRatingByMaterial(move, playerNextStandardMoves, botNextDefensiveMoves);
 
             /*
              * Здесь должны быть отрицательные рейтинги.
@@ -106,63 +95,56 @@ public class BotServiceImplMedium extends AbstractBotService {
         };
     }
 
-    private void updateRatingByExchangeDiff(ExtendedMove move, List<ExtendedMove> playerNextStandardMoves, List<ExtendedMove> botNextDefensiveMoves) {
-        /*
-         * Мы попали в этот блок, а значит что фигура (бота) срубившая фигуру игрока,
-         * находится под атакой как минимум одной фигуры противника (игрока)
-         */
-        int botNextDefensiveMovesCount = botNextDefensiveMoves.size();
-        int playerNextStandardMovesCount = playerNextStandardMoves.size();
 
-        int exchangeDiff = move.getExchangeDiff();
+    /**
+     * Dictionary:
+     * БЕЗОПАСНАЯ клетка - клетка(move.getPointTo), которую противник(игрок) не сможет никак атаковать, если на нее встать выполнив текущий move
+     * НЕБЕЗОПАСНАЯ клетка - клетка(move.getPointTo), которая будет находиться под атакой, если на нее встать выполнив текущий move
+     */
+    private void updateRatingByMaterial(ExtendedMove move, List<ExtendedMove> playerNextStandardMoves, List<ExtendedMove> botNextDefensiveMoves) {
 
-        if (exchangeDiff > 0) {
+        if (playerNextStandardMoves.isEmpty()) {
             /*
-             * Если мы срубили фигуру игрока более дешевой фигурой - то это тоже хороший ход.
-             * И в данном случае можно уже дальше ничего не просчитывать.
+             * БЕЗОПАСНАЯ КЛЕТКА
+             * Если мы атакуем незащищенную фигуру противника, то это дает нам материальное преимущество
              */
-            move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, exchangeDiff);
+            move.updateRatingByParam(RatingParam.SAFE_CELL, move.getValueTo(0));                 //0+
         } else {
+            /*
+             * Мы попали в этот блок, потому что встали на НЕБЕЗОПАСНУЮ КЛЕТКУ
+             */
 
-            //Стоимость фигуры игрока, которую мы УЖЕ срубили
-            int playerExpenses = move.getValueTo();
-            //Стоимость фигуры бота, которая УЖЕ срубила фигуру игрока - при размене она 100% будет срублена
-            int botExpenses = move.getValueFrom();
-
-            //TODO: поидее здесь надо анализировать размен поэтапно, а не делать его до конца
-            int countDiff = playerNextStandardMovesCount - botNextDefensiveMovesCount;
-            if (countDiff > 0) {
-                /*
-                 * Мы попали в этот блок, а это значит, что мы срубили фигуру, которая ХОРОШО защищена.
-                 * Т.е. если будем меняться до конца - игрок победит.
-                 */
-                //+стоимость фигур игрока, которые будут потеряны при дальнейшем размене (самая дорогая фигура останется жива)
-                playerExpenses += getMovesSum(playerNextStandardMoves, ExtendedMove::getValueFrom, countDiff);
-                //+стоимость фигур бота, которые будут потеряны при дальнейшем размене
-                botExpenses += getMovesSum(botNextDefensiveMoves, ExtendedMove::getValueFrom);
+            int exchangeDiff = move.getExchangeDiff();
+            if (exchangeDiff > 0) {
+                move.updateRatingByParam(RatingParam.UNSAFE_CELL_DIFF_LVL_1, exchangeDiff);                 //-0+
             } else {
-                /*
-                 * Мы попали в этот блок, а это значит, что мы срубили фигуру, которая ПЛОХО защищена.
-                 * Т.е. если будем меняться до конца - мы победим (бот то есть)
-                 */
-                //+стоимость фигур игрока, которые будут потеряны при дальнейшем размен
-                playerExpenses += getMovesSum(playerNextStandardMoves, ExtendedMove::getValueFrom);
-                //+стоимость фигур бота, которые будут потеряны при дальнейшем размене (самая дорогая фигура останется жива)
-                botExpenses += getMovesSum(botNextDefensiveMoves, ExtendedMove::getValueFrom, Math.abs(countDiff) + 1);
-            }
+                //если самая дешевая фигура игрока которой он может срубить нашу
+                //дороже чем та которой я уже срубил + еще одна, которой могу срубить (тоже самая дешевая)
+                //то надо брать
 
-            int diff = playerExpenses - botExpenses;
-            if (diff > 0) {
-                /*
-                 * Если мы здесь - значит размен нам (боту) выгоден в любом случае - значит это хороший ход.
-                 */
-                move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, move.getValueTo());
+                //TODO: fixme!
+                int cheaperBotAttackerValue = getMovesMin(botNextDefensiveMoves, ExtendedMove::getValueFrom);
+                int cheaperPlayerDefenderValue = getMovesMin(playerNextStandardMoves, ExtendedMove::getValueFrom);
+
+                int diff = (move.getValueTo(0) + cheaperPlayerDefenderValue) - (move.getValueFrom(0) + cheaperBotAttackerValue);
+
+                if (diff > 0) {
+                    move.updateRatingByParam(RatingParam.UNSAFE_CELL_DIFF_LVL_2, diff);                     //-0+
+                } else {
+                    move.updateRatingByParam(RatingParam.UNSAFE_CELL_DIFF_LVL_1, exchangeDiff);             //-0+
+                }
             }
         }
     }
 
+    private int getMovesMin(List<ExtendedMove> moves, ToIntFunction<? super ExtendedMove> valueExtractor) {
+        return moves.stream()
+                .mapToInt(valueExtractor)
+                .min().orElse(0);
+    }
+
     /**
-     * @param moves список, для которого будет подсчитана сумма. Внимание! Список должен быть отсортирован!
+     * @param moves                 список, для которого будет подсчитана сумма. Внимание! Список должен быть отсортирован!
      * @param excludedElementsCount количество элементов с конца списка, для которых сумма не будет подсчитана
      */
     private int getMovesSum(List<ExtendedMove> moves, ToIntFunction<? super ExtendedMove> valueExtractor, int excludedElementsCount) {
