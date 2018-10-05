@@ -67,9 +67,9 @@ public class ExtendedMove {
         return Objects.requireNonNull(to.getPieceType()).getValue();
     }
 
-    public Integer getExchangeDiff() {
+    public int getExchangeDiff() {
         if (isEmptyTo()) {
-            return null;
+            return 0;
         }
         return getValueTo() - getValueFrom();
     }

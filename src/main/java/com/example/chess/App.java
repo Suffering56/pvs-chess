@@ -12,7 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class App implements CommandLineRunner {
 
     //TODO: i think, i can use @Conditional instead @Qualifier
-    public static final String DEFAULT_BOT_MODE = BotMode.EASY;
+    public static final String DEFAULT_BOT_MODE = BotMode.MEDIUM;
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
