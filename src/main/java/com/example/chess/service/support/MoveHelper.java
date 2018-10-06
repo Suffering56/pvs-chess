@@ -27,13 +27,13 @@ public class MoveHelper implements MoveHelperAPI {
     }
 
     @Override
-    public Set<PointDTO> getFilteredAvailableMoves(PointDTO pointFrom) {
+    public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
         CellDTO moveableCell = originalMatrix.getCell(pointFrom);
-        return getFilteredAvailableMoves(moveableCell);
+        return getFilteredAvailablePoints(moveableCell);
     }
 
     @Override
-    public Set<PointDTO> getFilteredAvailableMoves(CellDTO moveableCell) {
+    public Set<PointDTO> getFilteredAvailablePoints(CellDTO moveableCell) {
         Set<PointDTO> moves = getUnfilteredMoves(game, originalMatrix, moveableCell, false);
         return filterAvailableMoves(moves, moveableCell);
     }
@@ -49,7 +49,7 @@ public class MoveHelper implements MoveHelperAPI {
     public Stream<ExtendedMove> getStandardMovesStream(Side side) {
         return originalMatrix
                 .allPiecesBySideStream(side)
-                .flatMap(toExtendedMovesStream(this::getFilteredAvailableMoves));
+                .flatMap(toExtendedMovesStream(this::getFilteredAvailablePoints));
     }
 
     @Override

@@ -16,9 +16,9 @@ public interface MoveHelperAPI {
      * Находит все доступные ходы для фигуры, стоящей в точке pointFrom.
      * Это уже ОТФИЛЬТРОВАННЫЕ ходы, т.е. они не могут нарушить целостность партии
      */
-    Set<PointDTO> getFilteredAvailableMoves(PointDTO pointFrom);
+    Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom);
 
-    Set<PointDTO> getFilteredAvailableMoves(CellDTO moveableCell);
+    Set<PointDTO> getFilteredAvailablePoints(CellDTO moveableCell);
 
     /**
      * Проверяет находится ли под шахом король в данный момент! Уже!!!

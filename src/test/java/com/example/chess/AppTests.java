@@ -57,6 +57,11 @@ public class AppTests {
                 .mapToInt(Person::getAge)
                 .sum();
         System.out.println("sum = " + sum);
+
+        Person youngestPerson = personList.stream()
+                .reduce((p1, p2) -> p1.getAge() <= p2.getAge() ? p1 : p2).orElse(null);
+
+        System.out.println("youngestPerson = " + youngestPerson);
     }
 
     private class Person {

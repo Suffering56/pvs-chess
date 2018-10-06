@@ -142,7 +142,7 @@ public class GameServiceImpl implements GameService {
         CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
         MoveHelperAPI moveHelper = new MoveHelper(game, matrix);
 
-        return moveHelper.getFilteredAvailableMoves(point);
+        return moveHelper.getFilteredAvailablePoints(point);
     }
 
     @Override

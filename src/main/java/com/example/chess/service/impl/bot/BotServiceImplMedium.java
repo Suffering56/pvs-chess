@@ -5,16 +5,13 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
 import com.example.chess.service.support.*;
-import com.example.chess.service.support.api.MoveHelperAPI;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.ToIntFunction;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Service
 @Log4j2
@@ -54,30 +51,31 @@ public class BotServiceImplMedium extends AbstractBotService {
 
     @Override
     protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix) {
-        Side botSide = game.getActiveSide();
-        Side playerSide = botSide.reverse();
+//        Side botSide = game.getActiveSide();
+//        Side playerSide = botSide.reverse();
 
 
-        return move -> {
-            MoveResult moveResult = matrix.executeMove(move.toMoveDTO(), null);
+        return analyzedMove -> {
+            MoveResult moveResult = matrix.executeMove(analyzedMove.toMoveDTO(), null);
             CellsMatrix nextMatrix = moveResult.getNewMatrix();
-            MoveHelperAPI nextMoveHelper = new MoveHelper(game, nextMatrix);
+//            MoveHelperAPI nextMoveHelper = new MoveHelper(game, nextMatrix);
 
-            Map<PointDTO, List<ExtendedMove>> playerNextStandardMovesMap = nextMoveHelper.getStandardMovesStream(playerSide)
-                    .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
-                    .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
+//            Map<PointDTO, List<ExtendedMove>> playerNextStandardMovesMap = nextMoveHelper.getStandardMovesStream(playerSide)
+//                    .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
+//                    .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
 
-            Map<PointDTO, List<ExtendedMove>> botNextDefensiveMovesMap = nextMoveHelper.getDefensiveMovesStream(botSide)
-                    .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
-                    .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
+//            Map<PointDTO, List<ExtendedMove>> botNextDefensiveMovesMap = nextMoveHelper.getDefensiveMovesStream(botSide)
+//                    .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
+//                    .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
 
-            List<ExtendedMove> playerNextStandardMoves = playerNextStandardMovesMap.get(move.getPointTo());
-            playerNextStandardMoves = playerNextStandardMoves != null ? playerNextStandardMoves : new ArrayList<>();
+//            List<ExtendedMove> playerNextStandardMoves = playerNextStandardMovesMap.get(move.getPointTo());
+//            playerNextStandardMoves = playerNextStandardMoves != null ? playerNextStandardMoves : new ArrayList<>();
 
-            List<ExtendedMove> botNextDefensiveMoves = botNextDefensiveMovesMap.get(move.getPointTo());
-            botNextDefensiveMoves = botNextDefensiveMoves != null ? botNextDefensiveMoves : new ArrayList<>();
+//            List<ExtendedMove> botNextDefensiveMoves = botNextDefensiveMovesMap.get(move.getPointTo());
+//            botNextDefensiveMoves = botNextDefensiveMoves != null ? botNextDefensiveMoves : new ArrayList<>();
 
-            updateRatingByMaterial(move, playerNextStandardMoves, botNextDefensiveMoves);
+            Pair<RatingParam, Integer> materialResult = updateRatingByMaterial(analyzedMove, nextMatrix, game);
+            analyzedMove.updateRatingByParam(materialResult.getFirst(), materialResult.getSecond());
 
             /*
              * Здесь должны быть отрицательные рейтинги.
@@ -95,130 +93,228 @@ public class BotServiceImplMedium extends AbstractBotService {
         };
     }
 
+    @SuppressWarnings("DanglingJavadoc")
+    private Pair<RatingParam, Integer> updateRatingByMaterial(ExtendedMove analyzedMove, CellsMatrix newMatrix, Game game) {
+        Side botSide = game.getActiveSide();
+        Side playerSide = botSide.reverse();
 
-    /**
-     * Dictionary:
-     * БЕЗОПАСНАЯ клетка - клетка(move.getPointTo), которую противник(игрок) не сможет никак атаковать, если на нее встать выполнив текущий move
-     * НЕБЕЗОПАСНАЯ клетка - клетка(move.getPointTo), которая будет находиться под атакой, если на нее встать выполнив текущий move
-     */
-    private void updateRatingByMaterial(ExtendedMove move, List<ExtendedMove> playerNextStandardMoves, List<ExtendedMove> botNextDefensiveMoves) {
+        int targetCellValue = analyzedMove.getValueTo(0);                                                     //player
+        PointDTO targetPoint = analyzedMove.getPointTo();                                                               //точка куда ходит move (здесь же происходит рубилово)
 
-        if (playerNextStandardMoves.isEmpty()) {
-            /*
-             * БЕЗОПАСНАЯ КЛЕТКА
-             * Если мы атакуем незащищенную фигуру противника, то это дает нам материальное преимущество
+
+        int diff = targetCellValue;
+        List<Integer> diffList = new ArrayList<>();
+        diffList.add(diff);
+
+        ExtendedMove minPlayerMove = getMinMove(game, newMatrix, targetPoint, playerSide);
+        CellsMatrix beforePlayerMoveMatrix = newMatrix;
+
+        /*
+         * Позиция на доске = matrix(n).
+         * n = 1/3/5/7/9 - это позиция на доске, образовавшаяся после выполнения хода игрока (следующим должен ходить бот)
+         * n = 0/2/4/6/8 - это позиция на доске, образовавшаяся после выполнения хода бота (следующим должен ходить игрок)
+         *
+         * matrix(n=0) - это позиция на доске, образовавшаяся после выполнения analyzedMove
+         */
+        while (true) {
+            if (minPlayerMove == null) break;
+            /**
+             * EXECUTE PLAYER MOVE
              */
-            move.updateRatingByParam(RatingParam.SAFE_CELL, move.getValueTo(0));                 //0+
-        } else {
-            /*
-             * Мы попали в этот блок, потому что встали на НЕБЕЗОПАСНУЮ КЛЕТКУ
-             */
+            CellsMatrix beforeBotMoveMatrix = beforePlayerMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
+            ExtendedMove minBotMove = getMinMove(game, beforeBotMoveMatrix, targetPoint, botSide);
 
-            int exchangeDiff = move.getExchangeDiff();
-            if (exchangeDiff > 0) {
-                move.updateRatingByParam(RatingParam.UNSAFE_CELL_DIFF_LVL_1, exchangeDiff);                 //-0+
+            diff -= minPlayerMove.getValueTo();
+            diffList.add(diff);
+
+            if (minBotMove == null) break;
+            /**
+             * EXECUTE BOT MOVE
+             */
+            beforePlayerMoveMatrix = beforeBotMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
+            minPlayerMove = getMinMove(game, beforePlayerMoveMatrix, targetPoint, playerSide);
+
+            diff += minBotMove.getValueTo();
+            diffList.add(diff);
+        }
+
+
+        int movesCount = diffList.size();
+
+        if (movesCount == 1) {  //1) bot -> X
+            if (targetCellValue == 0) {
+                return Pair.of(RatingParam.MATERIAL_MOVE_TO_DEFENSELESS, diffList.get(0));                              //diffList.get(0) == targetCellValue == 0  == пустая клетка (бот ничего не срубил)
             } else {
-                //если самая дешевая фигура игрока которой он может срубить нашу
-                //дороже чем та которой я уже срубил + еще одна, которой могу срубить (тоже самая дешевая)
-                //то надо брать
-
-                //TODO: fixme!
-                int cheaperBotAttackerValue = getMovesMin(botNextDefensiveMoves, ExtendedMove::getValueFrom);
-                int cheaperPlayerDefenderValue = getMovesMin(playerNextStandardMoves, ExtendedMove::getValueFrom);
-
-                int diff = (move.getValueTo(0) + cheaperPlayerDefenderValue) - (move.getValueFrom(0) + cheaperBotAttackerValue);
-
-                if (diff > 0) {
-                    move.updateRatingByParam(RatingParam.UNSAFE_CELL_DIFF_LVL_2, diff);                     //-0+
-                } else {
-                    move.updateRatingByParam(RatingParam.UNSAFE_CELL_DIFF_LVL_1, exchangeDiff);             //-0+
-                }
+                return Pair.of(RatingParam.MATERIAL_ATTACK_TO_DEFENSELESS, diffList.get(0));                            //diffList.get(0) == targetCellValue == срубленная фигура
             }
         }
+        if (movesCount == 2) {  //1) bot -> X 2) player -> X
+            if (targetCellValue == 0) {
+                return Pair.of(RatingParam.MATERIAL_SIMPLE_FEED, diffList.get(1));                                      //diffList.get(1) == analyzedMove.getValueFrom() == minPlayerMove.getValueTo()  == отданная фигура
+            } else {
+                return Pair.of(RatingParam.MATERIAL_SIMPLE_EXCHANGE, diffList.get(1));                                  //diffList.get(1) == targetCellValue - analyzedMove.getValueFrom() == срубленная фигура - отданная
+            }
+        }
+
+        boolean isLastWordForBot = true;        //последнее слово за ботом
+        if (movesCount % 2 != 0) {
+            isLastWordForBot = false;           //последнее слово за игроком
+        }
+
+        for (int n = 2; n < movesCount; n++) {
+
+        }
+
+        return null;
     }
 
-    private int getMovesMin(List<ExtendedMove> moves, ToIntFunction<? super ExtendedMove> valueExtractor) {
-        return moves.stream()
-                .mapToInt(valueExtractor)
-                .min().orElse(0);
+    //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
+    //TODO: а еще про game подумай (longPawn, under check)
+    private ExtendedMove getMinMove(Game game, CellsMatrix matrix, PointDTO targetPoint, Side side) {
+        return new MoveHelper(game, matrix)
+                .getStandardMovesStream(side)
+                .filter(nextMove -> nextMove.getPointTo().equals(targetPoint))
+                .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
+                .orElse(null);
     }
 
-    /**
-     * @param moves                 список, для которого будет подсчитана сумма. Внимание! Список должен быть отсортирован!
-     * @param excludedElementsCount количество элементов с конца списка, для которых сумма не будет подсчитана
-     */
-    private int getMovesSum(List<ExtendedMove> moves, ToIntFunction<? super ExtendedMove> valueExtractor, int excludedElementsCount) {
-        Objects.requireNonNull(moves);
-
-        return IntStream.range(0, moves.size())
-                .filter(i -> i < moves.size() - excludedElementsCount)  //самые дорогие элементы отфильтровываем
-                .mapToObj(moves::get)
-                .mapToInt(valueExtractor)
-                .sum();
-    }
+    //игрок должен отвечать - если diff после хода бота положительный
+    //НО игрок должен остановиться на ходу n:
+    // - если после текущего хода (n)
+    // - бот сделает ход (n+1),
+    // - потом игрок сделает ход(n+2)
+    // => и если в этот момент diff(n+2) > diff (n)
 
 
-    private int getMovesSum(List<ExtendedMove> moves, ToIntFunction<? super ExtendedMove> valueExtractor) {
-        Objects.requireNonNull(moves);
-
-        return moves.stream()
-                .mapToInt(valueExtractor)
-                .sum();
-    }
+    //bDiff - diff после хода бота
+    //pDiff - diff после хода игрока
 
 
-    //    private void updateRatingByExchangeDiff(ExtendedMove move, List<ExtendedMove> playerNextStandardMoves, List<ExtendedMove> botNextDefensiveMoves) {
+    //1)    бот делает ход (move - который мы оцениваем) = рубит фигуру
+    //      старт цикла
+    //2)    игрок отвечает (рубит фигуру бота наиболее дешевой)                                         //если наиболее дешевых ходов несколько - не имеет значения какая фигура срубит первой. невозможна ситуация, когда может случайно открыться шах и тд
+    //diff update
+    //3)    бот отвечает
+    //diff update
+
+    //бот ДОЛЖЕН остановиться тогда, когда на текущем ходу (n) когда bDiff(n) < bDiff(n + 2)            //фиксируем текущий diff
+    //бот МОЖЕТ остановиться тогда, когда на текущем ходу (n) когда bDiff(n)  ==  bDiff(n + 2)          //фиксируем текущий diff
+
+    //игрок ДОЛЖЕН остановиться тогда, когда на текущем ходу (n) если     bDiff(n + 1) > bDiff(n - 1)   //фиксируем diff (n-1)
+    //игрок МОЖЕТ остановиться тогда, когда bDiff(n + 1)  ==  bDiff(n - 1)                              //фиксируем diff (n-1)
+
+
+    //3)    теперь в цикле делаем по-очереди ходы.
+    //      после каждой итерации делаем замер
+    //3.1)  первым ходит бот
+    //3.2)  затем игрок
+    //
+
+
+//    @SuppressWarnings("DanglingJavadoc")
+//    private Pair<RatingParam, Integer> updateRatingByMaterial(ExtendedMove analyzedMove, CellsMatrix newMatrix, Game game) {
+//        Side botSide = game.getActiveSide();
+//        Side playerSide = botSide.reverse();
+//
+//        int targetCellValue = analyzedMove.getValueTo(0);                                                     //player
+//        PointDTO targetPoint = analyzedMove.getPointTo();                                                               //точка куда ходит move (здесь же происходит рубилово)
+//
+//
+//        int currentDiff = targetCellValue;
+//        List<Integer> diffList = new ArrayList<>();
+//        diffList.add(currentDiff);
+//
+//        ExtendedMove minPlayerMove = getMinMove(game, newMatrix, targetPoint, playerSide);
+//        CellsMatrix beforePlayerMoveMatrix = newMatrix;
+//
 //        /*
-//         * Мы попали в этот блок, а значит что фигура (бота) срубившая фигуру игрока,
-//         * находится под атакой как минимум одной фигуры противника (игрока)
+//         * Позиция на доске = matrix(n).
+//         * n = 1/3/5/7/9 - это позиция на доске, образовавшаяся после выполнения хода игрока (следующим должен ходить бот)
+//         * n = 0/2/4/6/8 - это позиция на доске, образовавшаяся после выполнения хода бота (следующим должен ходить игрок)
+//         *
+//         * matrix(n=0) - это позиция на доске, образовавшаяся после выполнения analyzedMove
 //         */
-//        int botNextDefensiveMovesCount = botNextDefensiveMoves.size();
-//        int playerNextStandardMovesCount = playerNextStandardMoves.size();
+//        int n = 0;
+//        while (true) {
+//            boolean isPlayerCanContinue = true;
 //
-//        int exchangeDiff = move.getExchangeDiff();
-//
-//        if (exchangeDiff > 0) {
-//            /*
-//             * Если мы срубили фигуру игрока более дешевой фигурой - то это тоже хороший ход.
-//             * И в данном случае можно уже дальше ничего не просчитывать.
-//             */
-//            move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, exchangeDiff);
-//        } else {
-//            int playerExpenses;
-//            int botExpenses;
-//
-//            if (playerNextStandardMovesCount > botNextDefensiveMovesCount) {
+//            if (currentDiff < 0) {
 //                /*
-//                 * Мы попали в этот блок, а это значит, что мы срубили фигуру, которая ХОРОШО защищена.
-//                 * Т.е. если будем меняться до конца - игрок победит.
+//                 * Бот срубил на одну фигуру больше, но при этом остался в минусе.  (TODO: MATERIAL_SIMPLE_FEED)
+//                 * Например: (5x1 => 1x5 => Xx5). diff = -4;
+//                 * Игрок может дальше ходить как угодно - он уже в плюсе.
+//                 * Значит дальнейший размен бессмысленен.
+//                 * Значит надо выходить из цикла и давать материальную оценку ходу.
+//                 *
+//                 * К этой ситуации привел предыдущий ход бота move(n-2)
+//                 * Если код заглянул в этот блок, значит n>=2
+//                 * Потому что diff не может быть отрицательным после первого хода бота
 //                 */
-//                playerExpenses =
-//                        move.getValueTo()                                                                       //стоимость фигуры игрока, которую мы УЖЕ срубили
-//                                + getMovesSum(playerNextStandardMoves, ExtendedMove::getValueFrom);  //стоимость фигур игрока, которые будут потеряны при дальнейшем размене (самая дорогая фигура останется жива)
-//                botExpenses =
-//                        move.getValueFrom()                                                                     //стоимость фигуры бота, которая УЖЕ срубила фигуру игрока - она будет срублена первой при размене
-//                                + getMovesSum(botNextDefensiveMoves, ExtendedMove::getValueFrom);                //стоимость фигур бота, которые будут потеряны при дальнейшем размене
+//
+//                if (n == 2) {
+//                    /*
+//                     * Если n-2==0, значит предыдущий ход(n-2) - это analyzedMove.
+//                     * TODO: pos: F
+//                     */
+//                    return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT, diffList.get(n - 1));               //TODO: fix result
+//                }
 //            } else {
-//                /*
-//                 * Мы попали в этот блок, а это значит, что мы срубили фигуру, которая ПЛОХО защищена.
-//                 * Т.е. если будем меняться до конца - мы победим (бот то есть)
-//                 */
-//                playerExpenses =
-//                        move.getValueTo()                                                                   //стоимость фигуры игрока, которую мы УЖЕ срубили
-//                                + getMovesSum(playerNextStandardMoves, ExtendedMove::getValueFrom);         //стоимость фигур игрока, которые будут потеряны при дальнейшем размен
-//                botExpenses =
-//                        move.getValueFrom()                                                                 //стоимость фигуры бота, которая УЖЕ срубила фигуру игрока - она будет срублена первой при размене
-//                                + getMovesSum(botNextDefensiveMoves, ExtendedMove::getValueFrom); //стоимость фигур бота, которые будут потеряны при дальнейшем размене (самая дорогая фигура останется жива)
-//
+//                if (currentDiff > 0) {
+//                    /*
+//                     * Бот срубил на одну фигуру больше и при этом остался в плюсе.
+//                     * Игрок должен продолжить размен, если конечно это не приведет к еще бОльшему ухудшению ситуации
+//                     */
+//                } else {  //diff = 0
+//                    //либо бот шагнул на пустую клетку - тут игрок может как атаковать, так и сделать любой другой ход(n == 2)
+//                    //либо произошел равноценный размен (3x3 -> Xx3)
+//                }
 //            }
 //
-//            int diff = playerExpenses - botExpenses;
-//            if (diff > 0) {
+//            if (n >= 2 && currentDiff - diffList.get(n - 2) < 0) {
 //                /*
-//                 * Размен нам (боту) выгоден - значит это хороший ход.
+//                 * Если diff изменился в худшую сторону, значит не нужно было продолжать размен.
+//                 * Значит предыдущий ход бота не нужно было делать
 //                 */
-//                move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, diff);
+//                return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT, diffList.get(n - 2));               //TODO: fix result
+//            }
+//
+//
+//            if (minPlayerMove != null && isPlayerCanContinue) {
+//                /**
+//                 * EXECUTE PLAYER MOVE
+//                 */
+//                CellsMatrix beforeBotMoveMatrix = beforePlayerMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
+//                ExtendedMove minBotMove = getMinMove(game, beforeBotMoveMatrix, targetPoint, botSide);
+//
+//                n++;
+//                currentDiff -= minPlayerMove.getValueTo();
+//                diffList.add(currentDiff);
+//
+//
+//                boolean isBotCanContinue = true;    //TODO
+//                if (minBotMove != null && isBotCanContinue) {   //нужно научить останавливаться
+//                    /**
+//                     * EXECUTE BOT MOVE
+//                     */
+//                    beforePlayerMoveMatrix = beforeBotMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
+//                    minPlayerMove = getMinMove(game, beforePlayerMoveMatrix, targetPoint, playerSide);
+//
+//                    n++;
+//                    currentDiff += minBotMove.getValueTo();
+//                    diffList.add(currentDiff);
+//                } else {
+//                    //TODO: pos: B - first  (1x1)
+//                    //TODO: pos: D - other  (2x2+)
+//                    return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_PLAYER, currentDiff);               //но с обеих сторон срубили равное количество фигур
+//
+//                }
+//            } else {
+//                //TODO: pos: E  1x0
+//                //TODO: pos: C  2x1
+//                return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT, currentDiff);                      //бот срубил на однфу фигуру больше
 //            }
 //        }
+//
 //    }
+
 }
