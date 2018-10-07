@@ -5,12 +5,14 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
 import com.example.chess.service.support.*;
+import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 @Service
@@ -51,28 +53,9 @@ public class BotServiceImplMedium extends AbstractBotService {
 
     @Override
     protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix) {
-//        Side botSide = game.getActiveSide();
-//        Side playerSide = botSide.reverse();
-
-
         return analyzedMove -> {
             MoveResult moveResult = matrix.executeMove(analyzedMove.toMoveDTO(), null);
             CellsMatrix nextMatrix = moveResult.getNewMatrix();
-//            MoveHelperAPI nextMoveHelper = new MoveHelper(game, nextMatrix);
-
-//            Map<PointDTO, List<ExtendedMove>> playerNextStandardMovesMap = nextMoveHelper.getStandardMovesStream(playerSide)
-//                    .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
-//                    .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
-
-//            Map<PointDTO, List<ExtendedMove>> botNextDefensiveMovesMap = nextMoveHelper.getDefensiveMovesStream(botSide)
-//                    .sorted(Comparator.comparingInt(ExtendedMove::getValueFrom))
-//                    .collect(Collectors.groupingBy(ExtendedMove::getPointTo));
-
-//            List<ExtendedMove> playerNextStandardMoves = playerNextStandardMovesMap.get(move.getPointTo());
-//            playerNextStandardMoves = playerNextStandardMoves != null ? playerNextStandardMoves : new ArrayList<>();
-
-//            List<ExtendedMove> botNextDefensiveMoves = botNextDefensiveMovesMap.get(move.getPointTo());
-//            botNextDefensiveMoves = botNextDefensiveMoves != null ? botNextDefensiveMoves : new ArrayList<>();
 
             Pair<RatingParam, Integer> materialResult = updateRatingByMaterial(analyzedMove, nextMatrix, game);
             analyzedMove.updateRatingByParam(materialResult.getFirst(), materialResult.getSecond());
@@ -102,20 +85,13 @@ public class BotServiceImplMedium extends AbstractBotService {
         PointDTO targetPoint = analyzedMove.getPointTo();                                                               //точка куда ходит move (здесь же происходит рубилово)
 
 
-        int diff = targetCellValue;
-        List<Integer> diffList = new ArrayList<>();
-        diffList.add(diff);
+        int exchangeValue = targetCellValue;
+        List<Integer> exchangeValues = new ArrayList<>();
+        exchangeValues.add(exchangeValue);
 
         ExtendedMove minPlayerMove = getMinMove(game, newMatrix, targetPoint, playerSide);
         CellsMatrix beforePlayerMoveMatrix = newMatrix;
 
-        /*
-         * Позиция на доске = matrix(n).
-         * n = 1/3/5/7/9 - это позиция на доске, образовавшаяся после выполнения хода игрока (следующим должен ходить бот)
-         * n = 0/2/4/6/8 - это позиция на доске, образовавшаяся после выполнения хода бота (следующим должен ходить игрок)
-         *
-         * matrix(n=0) - это позиция на доске, образовавшаяся после выполнения analyzedMove
-         */
         while (true) {
             if (minPlayerMove == null) break;
             /**
@@ -124,8 +100,8 @@ public class BotServiceImplMedium extends AbstractBotService {
             CellsMatrix beforeBotMoveMatrix = beforePlayerMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
             ExtendedMove minBotMove = getMinMove(game, beforeBotMoveMatrix, targetPoint, botSide);
 
-            diff -= minPlayerMove.getValueTo();
-            diffList.add(diff);
+            exchangeValue -= minPlayerMove.getValueTo();
+            exchangeValues.add(exchangeValue);
 
             if (minBotMove == null) break;
             /**
@@ -134,38 +110,111 @@ public class BotServiceImplMedium extends AbstractBotService {
             beforePlayerMoveMatrix = beforeBotMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
             minPlayerMove = getMinMove(game, beforePlayerMoveMatrix, targetPoint, playerSide);
 
-            diff += minBotMove.getValueTo();
-            diffList.add(diff);
+            exchangeValue += minBotMove.getValueTo();
+            exchangeValues.add(exchangeValue);
         }
 
 
-        int movesCount = diffList.size();
+        int movesCount = exchangeValues.size();
+        log.info("movesCount[" + CommonUtils.moveToString(analyzedMove) + "] = " + movesCount);
 
         if (movesCount == 1) {  //1) bot -> X
             if (targetCellValue == 0) {
-                return Pair.of(RatingParam.MATERIAL_MOVE_TO_DEFENSELESS, diffList.get(0));                              //diffList.get(0) == targetCellValue == 0  == пустая клетка (бот ничего не срубил)
+                return Pair.of(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));                                      //diffList.get(0) == targetCellValue == 0  == пустая клетка (бот ничего не срубил)
             } else {
-                return Pair.of(RatingParam.MATERIAL_ATTACK_TO_DEFENSELESS, diffList.get(0));                            //diffList.get(0) == targetCellValue == срубленная фигура
+                return Pair.of(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));                                   //diffList.get(0) == targetCellValue == срубленная фигура
             }
         }
         if (movesCount == 2) {  //1) bot -> X 2) player -> X
             if (targetCellValue == 0) {
-                return Pair.of(RatingParam.MATERIAL_SIMPLE_FEED, diffList.get(1));                                      //diffList.get(1) == analyzedMove.getValueFrom() == minPlayerMove.getValueTo()  == отданная фигура
+                return Pair.of(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));                                      //diffList.get(1) == analyzedMove.getValueFrom() == minPlayerMove.getValueTo()  == отданная фигура
             } else {
-                return Pair.of(RatingParam.MATERIAL_SIMPLE_EXCHANGE, diffList.get(1));                                  //diffList.get(1) == targetCellValue - analyzedMove.getValueFrom() == срубленная фигура - отданная
+                return Pair.of(RatingParam.MATERIAL_SIMPLE_EXCHANGE, exchangeValues.get(1));                                  //diffList.get(1) == targetCellValue - analyzedMove.getValueFrom() == срубленная фигура - отданная
+            }
+        }
+//        if (movesCount == 3) {
+//            return Pair.of(RatingParam.MATERIAL_SIMPLE_EXCHANGE, Math.min(exchangeValues.get(0), exchangeValues.get(2)));
+//        }
+
+        int totalMinB = exchangeValues.get(0);
+        int totalMaxP = exchangeValues.get(1);
+        for (int n = 0; n < movesCount; n++) {
+            Integer currentExchangeValue = exchangeValues.get(n);
+
+            if (n % 2 == 0) {   //bot move
+                totalMinB = Math.min(totalMinB, currentExchangeValue);
+            } else {            //player move
+                totalMaxP = Math.max(totalMaxP, currentExchangeValue);
             }
         }
 
-        boolean isLastWordForBot = true;        //последнее слово за ботом
-        if (movesCount % 2 != 0) {
-            isLastWordForBot = false;           //последнее слово за игроком
+        boolean botMovesLast = (movesCount - 1) % 2 == 0;
+        int lastMoveValue = exchangeValues.get(movesCount - 1);
+        if (botMovesLast) {
+            totalMaxP = Math.max(totalMaxP, lastMoveValue);
+        } else {    //playerMovesLast
+            totalMinB = Math.min(totalMinB, lastMoveValue);
         }
 
-        for (int n = 2; n < movesCount; n++) {
+        log.info("totalMaxP[" + CommonUtils.moveToString(analyzedMove) + "] = " + totalMaxP);
+        log.info("totalMinB[" + CommonUtils.moveToString(analyzedMove) + "] = " + totalMinB);
 
+        int minB = exchangeValues.get(0);
+        int maxP = exchangeValues.get(1);
+        for (int n = 0; n < movesCount; n++) {
+            Integer currentExchangeValue = exchangeValues.get(n);
+
+            boolean isLastMove = n == movesCount - 1;
+            if (isLastMove && botMovesLast) {
+                log.info("isLastMove && botMovesLast");
+                return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMinB, totalMaxP));
+            }
+
+            //movesCount[Na6-x-c7
+
+            if (n % 2 == 0) { //bot move
+                if (currentExchangeValue == totalMinB) {
+                    /* Stop by player:
+                     * Игрок прекращает размен, потому что добрался до наиболее выгодного момента =>
+                     * Когда БОТ сделал ход и после этого значение exchangeValue минимально:
+                     * exchangeValue == totalMinB
+                     *
+                     * Т.к. первым прекратил размен игрок,
+                     * Значит боту надо искать наиболее выгодный ход из тех что сделаны до этого хода
+                     * В диапазоне: 0 <= X < n
+                     */
+                    log.info("maxP[" + CommonUtils.moveToString(analyzedMove) + "] = " + maxP);
+                    log.info("minB[" + CommonUtils.moveToString(analyzedMove) + "] = " + minB);
+
+                    if (n == 0) {
+                        log.info("n == 0"); //TODO:
+                        return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, minB);
+                    }
+                    return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(minB, maxP));
+                }
+
+                minB = Math.min(minB, currentExchangeValue);
+            } else { //player move
+                maxP = Math.max(maxP, currentExchangeValue);
+
+                if (currentExchangeValue == totalMaxP) {
+                    /* Stop by bot:
+                     * Бот прекращает размен, потому что добрался до наиболее выгодного момента =>
+                     * Когда ИГРОК сделал ход и после этого значение exchangeValue максимально:
+                     * exchangeValue == totalMaxP
+                     *
+                     * Т.к. первым прекратил размен бот,
+                     * Значит бот надо искать наиболее выгодный ход из тех что сделаны до этого хода, ВКЛЮЧАЯ текущий
+                     * В диапазоне: 0 <= X <= n
+                     */
+                    log.info("maxP[" + CommonUtils.moveToString(analyzedMove) + "] = " + maxP);
+                    log.info("minB[" + CommonUtils.moveToString(analyzedMove) + "] = " + minB);
+                    return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(minB, maxP));
+                }
+            }
         }
 
-        return null;
+        throw new RuntimeException("WTF?");
     }
 
     //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
@@ -256,7 +305,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 //                     * Если n-2==0, значит предыдущий ход(n-2) - это analyzedMove.
 //                     * TODO: pos: F
 //                     */
-//                    return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT, diffList.get(n - 1));               //TODO: fix result
+//                    return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE_LAST_WORD_FOR_BOT, diffList.get(n - 1));               //TODO: fix result
 //                }
 //            } else {
 //                if (currentDiff > 0) {
@@ -275,7 +324,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 //                 * Если diff изменился в худшую сторону, значит не нужно было продолжать размен.
 //                 * Значит предыдущий ход бота не нужно было делать
 //                 */
-//                return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT, diffList.get(n - 2));               //TODO: fix result
+//                return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE_LAST_WORD_FOR_BOT, diffList.get(n - 2));               //TODO: fix result
 //            }
 //
 //
@@ -305,16 +354,50 @@ public class BotServiceImplMedium extends AbstractBotService {
 //                } else {
 //                    //TODO: pos: B - first  (1x1)
 //                    //TODO: pos: D - other  (2x2+)
-//                    return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_PLAYER, currentDiff);               //но с обеих сторон срубили равное количество фигур
+//                    return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE_LAST_WORD_FOR_PLAYER, currentDiff);               //но с обеих сторон срубили равное количество фигур
 //
 //                }
 //            } else {
 //                //TODO: pos: E  1x0
 //                //TODO: pos: C  2x1
-//                return Pair.of(RatingParam.MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT, currentDiff);                      //бот срубил на однфу фигуру больше
+//                return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE_LAST_WORD_FOR_BOT, currentDiff);                      //бот срубил на однфу фигуру больше
 //            }
 //        }
 //
 //    }
 
+
+//    /*
+//     * Позиция на доске = matrix(n).
+//     * matrix(n=0) - это позиция на доске, образовавшаяся после выполнения analyzedMove
+//     *
+//     * n == 0 - бот сделал ход      (analyzedMove)
+//     * n == 1 - игрок сделал ход
+//     * n == 2 - бот сделал ход
+//     * n == 3 - игрок делает ход...
+//     */
+//        for (int n = 3; n < movesCount; n++) {
+//        Side side = n % 2 == 0 ? botSide : playerSide;          //сторона, которая только что сделала свой ход (УЖЕ СДЕЛАЛА)
+//        boolean isPenultimateMove = n + 2 == movesCount;        //предпоследний ход
+//        boolean isLastMove = n + 2 == movesCount;               //последний ход
+//
+//        int currentExchangeValue = exchangeValues.get(n);
+//        int currentDiff = exchangeValues.get(n) - exchangeValues.get(n - 2);
+//
+//        if (botMovesLast) {
+//            int resultExchangeValue = maxExchangeValueAfterPlayerMove >= exchangeValues.get(n - 2) ? maxExchangeValueAfterPlayerMove : exchangeValues.get(n - 2);
+//            if (currentDiff > prevDiff) {
+//                return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, resultExchangeValue);
+//            }
+//        } else {    //playerMovesLast
+//            if (currentDiff < prevDiff) {
+//                return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, exchangeValues.get(n - 2));
+//            }
+//        }
+//
+//        prevDiff = currentDiff;
+//        if (side == playerSide && maxExchangeValueAfterPlayerMove < currentExchangeValue) {
+//            maxExchangeValueAfterPlayerMove = currentExchangeValue;
+//        }
+//    }
 }

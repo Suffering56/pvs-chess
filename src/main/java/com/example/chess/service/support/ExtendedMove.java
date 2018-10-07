@@ -93,9 +93,9 @@ public class ExtendedMove {
     }
 
     public void updateRatingByParam(RatingParam param, Integer value) {
-        if (value == null || value == 0) {
-            return;
-        }
+//        if (value == null || value == 0) {
+//            return;
+//        }
 
         ratingMap.put(param, value);
         total += value * param.getFactor();

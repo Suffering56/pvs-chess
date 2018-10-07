@@ -4,15 +4,13 @@ import lombok.Getter;
 
 @Getter
 public enum RatingParam {
-    MATERIAL_MOVE_TO_DEFENSELESS(RatingParam.MATERIAL_FACTOR),
-    MATERIAL_ATTACK_TO_DEFENSELESS(RatingParam.MATERIAL_FACTOR),
-    MATERIAL_SIMPLE_EXCHANGE(RatingParam.MATERIAL_FACTOR),
-    MATERIAL_EXCHANGE_LAST_WORD_FOR_BOT(RatingParam.MATERIAL_FACTOR),
-    MATERIAL_EXCHANGE_LAST_WORD_FOR_PLAYER(RatingParam.MATERIAL_FACTOR),
-    MATERIAL_SIMPLE_FEED(RatingParam.MATERIAL_FACTOR),
+    MATERIAL_SIMPLE_MOVE(RatingParam.MATERIAL_FACTOR),      //обычный ход
+    MATERIAL_SIMPLE_FREEBIE(RatingParam.MATERIAL_FACTOR),   //бот рубит фигуру нахаляву
+    MATERIAL_SIMPLE_FEED(RatingParam.MATERIAL_FACTOR),      //бот отдает фигуру просто так
+    MATERIAL_SIMPLE_EXCHANGE(RatingParam.MATERIAL_FACTOR),  //бот рубит фигуру, игрок рубит в ответ.
 
-    UNSAFE_CELL_DIFF_LVL_1(RatingParam.MATERIAL_FACTOR),
-    UNSAFE_CELL_DIFF_LVL_2(RatingParam.MATERIAL_FACTOR),
+    MATERIAL_DEEP_EXCHANGE(RatingParam.MATERIAL_FACTOR),    //если рубиться до конца
+
     /**
      * Учитывается разница при размене фигур. Данная проверка ничего не знает о том, сможет ли противник вообще
      * срубить нашу фигуру после взятия. Т.е. мы просто сравниваем фигуры, участвующие в размене.
