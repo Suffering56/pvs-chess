@@ -24,12 +24,14 @@ public abstract class AbstractBotService implements BotService {
     protected GameService gameService;
     protected Long botMoveDelay;
 
-    enum LoggerParam {
-        COMMON, MATERIAL;
+    protected enum LoggerParam {
+        COMMON, PRINT_SORTED_BOT_MOVES_LIST, PRINT_RESULT_MOVE, MATERIAL;
     }
 
     private Map<LoggerParam, Boolean> loggerSettings = new HashMap<LoggerParam, Boolean>() {{
         put(LoggerParam.COMMON, true);
+        put(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, true);
+        put(LoggerParam.PRINT_RESULT_MOVE, true);
         put(LoggerParam.MATERIAL, false);
     }};
 
@@ -70,24 +72,15 @@ public abstract class AbstractBotService implements BotService {
             promotionPieceType = PieceType.QUEEN;
         }
 
-        sortedBotMovesList.forEach(move -> {
-            logCommon("\tmove[R:" + move.getTotal() + "]: " + CommonUtils.moveToString(move));
-            move.getRatingMap().forEach((ratingParam, value) -> log.info("\t\tRP: " + ratingParam + "=>" + value));
-        });
-        logSingleSeparator(LoggerParam.COMMON);
+        enter(LoggerParam.COMMON, 50);
 
-        logEnter(LoggerParam.COMMON);
-        logCommon("sortedList.size = " + sortedBotMovesList.size());
-        logCommon("topList.size = " + topMovesList.size());
-        logCommon("resultMove[" + (matrix.getPosition() + 1) + "]: " + CommonUtils.moveToString(resultMove));
+        sortedBotMovesList.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
+        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
 
-        logEnter(LoggerParam.COMMON);
-        logCommon("ResultMove.RatingParams: ");
-        resultMove.getRatingMap().forEach((ratingParam, value) -> log.info("\tRP: " + ratingParam + "=>" + value));
+        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[pos = " + game.getPosition() + "]::::" + resultMove);
 
-        logEnter(LoggerParam.COMMON);
         logDoubleSeparator(LoggerParam.COMMON, 3);
-        logEnter(LoggerParam.COMMON, 50);
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
@@ -106,17 +99,6 @@ public abstract class AbstractBotService implements BotService {
         return false;
     }
 
-    protected void printMap(Map<CellDTO, List<ExtendedMove>> map, String cellName) {
-        map.forEach((cell, extendedMoves) -> {
-            log.info(cellName + ": " + cell);
-            printMoves(extendedMoves);
-        });
-    }
-
-    protected void printMoves(List<ExtendedMove> moves) {
-        moves.forEach(move -> log.info("\t" + CommonUtils.moveToString(move)));
-    }
-
     @Autowired
     public void setGameService(GameService gameService) {
         this.gameService = gameService;
@@ -127,24 +109,23 @@ public abstract class AbstractBotService implements BotService {
         this.botMoveDelay = botMoveDelay;
     }
 
-    protected void log(LoggerParam loggerParam, String message, Object... params) {
+    protected void log(LoggerParam loggerParam, Object message, Object... params) {
         if (loggerSettings.get(loggerParam)) {
-            log.info(message, params);
+            log.info(message.toString(), params);
         }
     }
 
-    protected void logCommon(String msg, Object... params) {
-        log(LoggerParam.COMMON, msg, params);
-    }
 
-    protected void logEnter(LoggerParam loggerParam, int count) {
-        for (int i = 0; i < count; i++) {
-            log(loggerParam, "");
+    protected void enter(LoggerParam loggerParam, int count) {
+        if (loggerSettings.get(loggerParam)) {
+            for (int i = 0; i < count; i++) {
+                System.out.println();
+            }
         }
     }
 
-    protected void logEnter(LoggerParam loggerParam) {
-        logEnter(loggerParam, 1);
+    protected void enter(LoggerParam loggerParam) {
+        enter(loggerParam, 1);
     }
 
     protected void logDoubleSeparator(LoggerParam loggerParam, int count) {

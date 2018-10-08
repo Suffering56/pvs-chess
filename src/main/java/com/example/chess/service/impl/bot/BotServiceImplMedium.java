@@ -8,7 +8,6 @@ import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -31,8 +30,8 @@ public class BotServiceImplMedium extends AbstractBotService {
             MoveResult moveResult = matrix.executeMove(analyzedMove.toMoveDTO(), null);
             CellsMatrix nextMatrix = moveResult.getNewMatrix();
 
-            Pair<RatingParam, Integer> materialResult = updateRatingByMaterial(analyzedMove, nextMatrix, game);
-            analyzedMove.updateRatingByParam(materialResult.getFirst(), materialResult.getSecond());
+            Rating rating = getMaterialRating(analyzedMove, nextMatrix, game);
+            analyzedMove.updateRating(rating);
 
             /*
              * Здесь должны быть отрицательные рейтинги.
@@ -56,7 +55,7 @@ public class BotServiceImplMedium extends AbstractBotService {
     }
 
     @SuppressWarnings("DanglingJavadoc")
-    private Pair<RatingParam, Integer> updateRatingByMaterial(ExtendedMove analyzedMove, CellsMatrix newMatrix, Game game) {
+    private Rating getMaterialRating(ExtendedMove analyzedMove, CellsMatrix newMatrix, Game game) {
         Side botSide = game.getActiveSide();
         Side playerSide = botSide.reverse();
 
@@ -94,28 +93,33 @@ public class BotServiceImplMedium extends AbstractBotService {
         }
 
 
-        int movesCount = exchangeValues.size();
-        logEnter(LoggerParam.MATERIAL);
-        logMaterial("movesCount[" + CommonUtils.moveToString(analyzedMove) + "] = " + movesCount);
+        int exchangeDeep = exchangeValues.size();
+        Rating.Builder builder = Rating.builder()
+                .var("move", CommonUtils.moveToString(analyzedMove))
+                .var("exchangeDeep", exchangeDeep);
 
-        if (movesCount == 1) {  //1) bot -> X
+        if (exchangeDeep == 1) {  //1) bot -> X
             if (targetCellValue == 0) {
-                return Pair.of(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));                                //diffList.get(0) == targetCellValue == 0  == пустая клетка (бот ничего не срубил)
+                //diffList.get(0) == targetCellValue == 0  == пустая клетка (бот ничего не срубил)
+                return builder.build(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));
             } else {
-                return Pair.of(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));                             //diffList.get(0) == targetCellValue == срубленная фигура
+                //diffList.get(0) == targetCellValue == срубленная фигура
+                return builder.build(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));
             }
         }
-        if (movesCount == 2) {  //1) bot -> X 2) player -> X
+        if (exchangeDeep == 2) {  //1) bot -> X 2) player -> X
             if (targetCellValue == 0) {
-                return Pair.of(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));                                //diffList.get(1) == analyzedMove.getValueFrom() == minPlayerMove.getValueTo()  == отданная фигура
+                //diffList.get(1) == analyzedMove.getValueFrom() == minPlayerMove.getValueTo()  == отданная фигура
+                return builder.build(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));
             } else {
-                return Pair.of(RatingParam.MATERIAL_SIMPLE_EXCHANGE, exchangeValues.get(1));                            //diffList.get(1) == targetCellValue - analyzedMove.getValueFrom() == срубленная фигура - отданная
+                //diffList.get(1) == targetCellValue - analyzedMove.getValueFrom() == срубленная фигура - отданная
+                return builder.build(RatingParam.MATERIAL_SIMPLE_EXCHANGE, exchangeValues.get(1));
             }
         }
 
         int totalMinB = exchangeValues.get(0);
         int totalMaxP = exchangeValues.get(1);
-        for (int n = 0; n < movesCount; n++) {
+        for (int n = 0; n < exchangeDeep; n++) {
             Integer currentExchangeValue = exchangeValues.get(n);
 
             if (isBotMove(n)) {   //bot move
@@ -125,28 +129,33 @@ public class BotServiceImplMedium extends AbstractBotService {
             }
         }
 
-        boolean botMovesLast = isBotMove(movesCount - 1);
-        int lastMoveValue = exchangeValues.get(movesCount - 1);
+        boolean botMovesLast = isBotMove(exchangeDeep - 1);
+        int lastMoveValue = exchangeValues.get(exchangeDeep - 1);
         if (botMovesLast) {
             totalMaxP = Math.max(totalMaxP, lastMoveValue);
         } else {//playerMovesLast
             totalMinB = Math.min(totalMinB, lastMoveValue);
         }
 
-        logMaterial("totalMaxP[" + CommonUtils.moveToString(analyzedMove) + "] = " + totalMaxP);
-        logMaterial("totalMinB[" + CommonUtils.moveToString(analyzedMove) + "] = " + totalMinB);
+        builder.var("totalMaxP", totalMaxP);
+        builder.var("totalMinB", totalMinB);
 
         int minB = exchangeValues.get(0);
         int maxP = exchangeValues.get(1);   //на самом деле null, но я не хочу использовать Integer;
-        for (int n = 0; n < movesCount; n++) {
+        for (int n = 0; n < exchangeDeep; n++) {
             Integer currentExchangeValue = exchangeValues.get(n);
 
             boolean stopByPlayer = currentExchangeValue == totalMinB;
             boolean stopByBot = currentExchangeValue == totalMaxP;
 
+            builder.var("n", n);
+
             if (isBotMove(n)) {//уже сделанный
                 minB = Math.min(minB, currentExchangeValue);
+
                 if (stopByPlayer) {
+                    builder.note("stopByPlayer");
+
                     /*
                      * Игрок прекращает размен, потому что добрался до наиболее выгодного для сеья момента =>
                      * Поэтому именно бот выбирает:
@@ -164,16 +173,19 @@ public class BotServiceImplMedium extends AbstractBotService {
                          *
                          * Поэтому возвращаем min(totalMinB, null) = totalMinB;
                          */
-                        logMaterial("stopByPlayer && n == 0: return totalMinB = " + totalMinB);
-                        return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMinB, maxP));
+                        return builder
+                                .var("maxP", null)
+                                .note("return totalMinB")
+                                .build(RatingParam.MATERIAL_DEEP_EXCHANGE, totalMinB);
                     }
-
-                    logMaterial("maxP[" + CommonUtils.moveToString(analyzedMove) + "] = " + maxP);
-                    logMaterial("minB[" + CommonUtils.moveToString(analyzedMove) + "] = " + minB);
-                    logMaterial("stopByPlayer: return Math.min(minB, maxP) = " + Math.min(totalMinB, maxP));
-                    return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMinB, maxP));
+                    return builder
+                            .var("maxP", maxP)
+                            .var("minB", minB)
+                            .note("Math.min(totalMinB, maxP)")
+                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMinB, maxP));
                 }
             } else { //player move
+                builder.note("stopByBot");
                 maxP = Math.max(maxP, currentExchangeValue);
                 if (stopByBot) {
                     /*
@@ -183,10 +195,11 @@ public class BotServiceImplMedium extends AbstractBotService {
                      * - либо последнее слово будет за ботом, а значит result = minB
                      * - ессно он выбирает меньшее из двух зол == Math.min(totalMaxP, minB);
                      */
-                    logMaterial("maxP[" + CommonUtils.moveToString(analyzedMove) + "] = " + maxP);
-                    logMaterial("minB[" + CommonUtils.moveToString(analyzedMove) + "] = " + minB);
-                    logMaterial("stopByBot: Math.min(totalMaxP, minB) = " + Math.min(totalMaxP, minB));
-                    return Pair.of(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMaxP, minB));
+                    return builder
+                            .var("maxP", maxP)
+                            .var("minB", minB)
+                            .note("Math.min(totalMaxP, minB)")
+                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMaxP, minB));
                 }
             }
         }
@@ -208,7 +221,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         return n % 2 == 0;
     }
 
-    private void logMaterial(String msg, Object... params) {
+    private void logMaterial(Object msg, Object... params) {
         log(LoggerParam.MATERIAL, msg, params);
     }
 }

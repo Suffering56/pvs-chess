@@ -93,27 +93,27 @@ public class BotServiceImplEasy extends AbstractBotService {
             MoveHelperAPI nextMoveHelper = new MoveHelper(game, nextMatrix);
 
             //EXCHANGE_DIFF
-            move.updateRatingByParam(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff());
+            move.updateRating(Rating.builder().build(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff()));
 
             //ATTACK_TO_DEFENSELESS_PLAYER_PIECE
             if (isAttackToDefenseless(nextMoveHelper, playerSide, move)) {
-                move.updateRatingByParam(RatingParam.ATTACK_TO_DEFENSELESS_PLAYER_PIECE, move.getValueFrom());
+                move.updateRating(Rating.builder().build(RatingParam.ATTACK_TO_DEFENSELESS_PLAYER_PIECE, move.getValueFrom()));
             }
 
             //CHECK
             if (nextMoveHelper.isKingUnderAttack(playerSide)) {
-                move.updateRatingByParam(RatingParam.CHECK);
+                move.updateRating(Rating.builder().build(RatingParam.CHECK));
 
                 //CHECKMATE
                 long availablePlayerMovesCount = nextMoveHelper.getStandardMovesStream(playerSide).count();
                 if (availablePlayerMovesCount == 0) {
-                    move.updateRatingByParam(RatingParam.CHECKMATE);
+                    move.updateRating(Rating.builder().build(RatingParam.CHECKMATE));
                 }
             }
 
             //SAVE_BOT_PIECE
             if (victimCells.contains(move.getFrom())) {
-                move.updateRatingByParam(RatingParam.SAVE_BOT_PIECE, move.getValueFrom());
+                move.updateRating(Rating.builder().build(RatingParam.SAVE_BOT_PIECE, move.getValueFrom()));
             }
 
             //USELESS_VICTIM
@@ -138,7 +138,7 @@ public class BotServiceImplEasy extends AbstractBotService {
                         То в 99% случаев это очень плохой ход
                         TODO: sacrifice/depth
                      */
-                    move.updateRatingByParam(RatingParam.USELESS_VICTIM, move.getValueFrom());
+                    move.updateRating(Rating.builder().build(RatingParam.USELESS_VICTIM, move.getValueFrom()));
 
                 } else {
 //                    log.info("else");
@@ -156,7 +156,7 @@ public class BotServiceImplEasy extends AbstractBotService {
                             Но поскольку мы внутри (if playerHarmlessMoves != null), значит эта клетка под атакой.
                             Значит мы просто решили отдать пешку противнику нахаляву
                          */
-                        move.updateRatingByParam(RatingParam.USELESS_VICTIM, move.getValueFrom());
+                        move.updateRating(Rating.builder().build(RatingParam.USELESS_VICTIM, move.getValueFrom()));
                     } else {
 //                        log.info("botPossibleMoves == null ==>>> else");
                         /*
@@ -181,7 +181,7 @@ public class BotServiceImplEasy extends AbstractBotService {
                             TODO: Есть исключения (например: если нашего слона защищенного пешкой атакует ферзь и ладья - то все норм)
                          */
                         if (playerMoves.size() > botPossibleMoves.size() - subtrahend) {
-                            move.updateRatingByParam(RatingParam.USELESS_VICTIM, move.getValueFrom());
+                            move.updateRating(Rating.builder().build(RatingParam.USELESS_VICTIM, move.getValueFrom()));
                         }
                     }
                 }

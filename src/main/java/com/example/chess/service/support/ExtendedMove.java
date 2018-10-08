@@ -4,13 +4,13 @@ import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
-import lombok.*;
+import com.example.chess.utils.CommonUtils;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
 
 @Getter
 @Setter
@@ -19,7 +19,7 @@ public class ExtendedMove {
     private CellDTO from;
     private CellDTO to;
 
-    private Map<RatingParam, Integer> ratingMap = new HashMap<>();
+    private final Map<RatingParam, Rating> ratingMap = new HashMap<>();
     private int total = 0;
 
     public ExtendedMove(CellDTO from, CellDTO to) {
@@ -88,17 +88,13 @@ public class ExtendedMove {
         return getValueTo() - getValueFrom();
     }
 
-    public void updateRatingByParam(RatingParam param) {
-        updateRatingByParam(param, 1);
-    }
+    public void updateRating(Rating rating) {
+        if (ratingMap.containsKey(rating.getParam())) {
+            throw new RuntimeException("Rating already exist");
+        }
+        ratingMap.put(rating.getParam(), rating);
 
-    public void updateRatingByParam(RatingParam param, Integer value) {
-//        if (value == null || value == 0) {
-//            return;
-//        }
-
-        ratingMap.put(param, value);
-        total += value * param.getFactor();
+        total += rating.getValue() * rating.getParam().getFactor();
     }
 
     public int getTotal() {
@@ -117,4 +113,15 @@ public class ExtendedMove {
     public boolean isVertical() {
         return from.getColumnIndex().equals(to.getColumnIndex());
     }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder("Move[" + CommonUtils.moveToString(this) + "].total = " + total + "\r\n");
+        for (Rating rating : ratingMap.values()) {
+            result.append(rating);
+        }
+
+        return result.toString();
+    }
+
 }
