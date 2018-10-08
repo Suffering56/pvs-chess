@@ -15,6 +15,7 @@ import java.lang.reflect.Method;
 @Component
 public class ProfileAdvice {
 
+	//FIXME: not working with multithreading;
 	@Around("@annotation(com.example.chess.aspects.Profile)")
 	public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
 		long start = System.currentTimeMillis();

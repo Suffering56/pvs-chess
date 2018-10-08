@@ -1,9 +1,9 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
@@ -20,18 +21,19 @@ import java.util.function.Consumer;
 public class BotServiceImplMedium extends AbstractBotService {
 
     @Override
-    protected MoveDTO findBestMove(Game game, CellsMatrix matrix) {
-        return super.findBestMove(game, matrix);
-    }
-
-    @Override
-    protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix) {
+    protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix originalMatrix) {
         return analyzedMove -> {
-            MoveResult moveResult = matrix.executeMove(analyzedMove.toMoveDTO(), null);
+            Side botSide = game.getActiveSide();
+            Side playerSide = botSide.reverse();
+
+            MoveResult moveResult = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null);
             CellsMatrix nextMatrix = moveResult.getNewMatrix();
 
-            Rating rating = getMaterialRating(analyzedMove, nextMatrix, game);
-            analyzedMove.updateRating(rating);
+            Rating materialRating = getMaterialRating(game, nextMatrix, analyzedMove, botSide, -1);
+            analyzedMove.updateRating(materialRating);
+
+            Rating invertedMaterialRating = getInvertedMaterialRating(game, nextMatrix, analyzedMove, playerSide);
+            analyzedMove.updateRating(invertedMaterialRating);
 
             /*
              * Здесь должны быть отрицательные рейтинги.
@@ -54,67 +56,112 @@ public class BotServiceImplMedium extends AbstractBotService {
         };
     }
 
-    @SuppressWarnings("DanglingJavadoc")
-    private Rating getMaterialRating(ExtendedMove analyzedMove, CellsMatrix newMatrix, Game game) {
-        Side botSide = game.getActiveSide();
+    private Rating getInvertedMaterialRating(Game game, CellsMatrix nextMatrix, ExtendedMove analyzedMove, Side playerSide) {
+        List<ExtendedMove> playerHarmfulMoves = new MoveHelper(game, nextMatrix)
+                .getStandardMovesStream(playerSide)
+                .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
+                .collect(Collectors.toList());
+
+        Rating.Builder builder = Rating.builder();
+        int maxPlayerMoveValue = 0;
+
+        for (ExtendedMove playerMove : playerHarmfulMoves) {
+            CellsMatrix afterPlayerMoveMatrix = nextMatrix.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
+
+            Rating playerMoveRating = getMaterialRating(game, afterPlayerMoveMatrix, playerMove, playerSide, -1);
+
+            String varName = "INVERTED_" + playerMoveRating.getParam() + "[" + CommonUtils.moveToString(playerMove) + "]";
+            builder.var(varName, playerMoveRating.getValue());
+
+            maxPlayerMoveValue = Math.max(maxPlayerMoveValue, playerMoveRating.getValue());
+        }
+
+        return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue);
+    }
+
+    private Rating getMaterialRating(Game game, CellsMatrix newMatrix, ExtendedMove analyzedMove, Side botSide, int maxDeep) {
+        List<Integer> exchangeValues = generateExchangeValuesList(game, newMatrix, analyzedMove, botSide, maxDeep);
+
+        int exchangeDeep = exchangeValues.size();
+        Rating.Builder builder = Rating.builder()
+                .var("exchangeDeep", exchangeDeep);
+
+        if (exchangeDeep <= 2) {
+            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
+        } else {
+            return getMaterialRatingForDeepExchange(builder, exchangeValues);
+        }
+    }
+
+    private List<Integer> generateExchangeValuesList(Game game, CellsMatrix afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
         Side playerSide = botSide.reverse();
 
-        int targetCellValue = analyzedMove.getValueTo(0);                                                     //player
-        PointDTO targetPoint = analyzedMove.getPointTo();                                                               //точка куда ходит move (здесь же происходит рубилово)
+        int targetCellValue = alreadyExecutedMove.getValueTo(0);
+        PointDTO targetPoint = alreadyExecutedMove.getPointTo();
 
+        List<Integer> exchangeValues = new ArrayList<>();
 
         int exchangeValue = targetCellValue;
-        List<Integer> exchangeValues = new ArrayList<>();
         exchangeValues.add(exchangeValue);
 
-        ExtendedMove minPlayerMove = getMinMove(game, newMatrix, targetPoint, playerSide);
-        CellsMatrix beforePlayerMoveMatrix = newMatrix;
+        ExtendedMove minPlayerMove = getMinMove(game, afterFirstMoveMatrix, targetPoint, playerSide);
+        CellsMatrix afterBotMoveMatrix = afterFirstMoveMatrix;
 
         while (true) {
-            if (minPlayerMove == null) break;
-            /**
+            if (minPlayerMove == null || exchangeValues.size() == maxDeep) break;
+            /*
              * EXECUTE PLAYER MOVE
              */
-            CellsMatrix beforeBotMoveMatrix = beforePlayerMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
-            ExtendedMove minBotMove = getMinMove(game, beforeBotMoveMatrix, targetPoint, botSide);
+            CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
+            ExtendedMove minBotMove = getMinMove(game, afterPlayerMoveMatrix, targetPoint, botSide);
 
             exchangeValue -= minPlayerMove.getValueTo();
             exchangeValues.add(exchangeValue);
 
-            if (minBotMove == null) break;
-            /**
+            if (minBotMove == null || exchangeValues.size() == maxDeep) break;
+            /*
              * EXECUTE BOT MOVE
              */
-            beforePlayerMoveMatrix = beforeBotMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
-            minPlayerMove = getMinMove(game, beforePlayerMoveMatrix, targetPoint, playerSide);
+            afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
+            minPlayerMove = getMinMove(game, afterBotMoveMatrix, targetPoint, playerSide);
 
             exchangeValue += minBotMove.getValueTo();
             exchangeValues.add(exchangeValue);
         }
 
+        return exchangeValues;
+    }
 
+    private Rating getMaterialRatingForSimpleMoves(Rating.Builder builder, List<Integer> exchangeValues) {
         int exchangeDeep = exchangeValues.size();
-        Rating.Builder builder = Rating.builder()
-                .var("move", CommonUtils.moveToString(analyzedMove))
-                .var("exchangeDeep", exchangeDeep);
 
         if (exchangeDeep == 1) {  //1) bot -> X
-            if (targetCellValue == 0) {
-                //diffList.get(0) == targetCellValue == 0  == пустая клетка (бот ничего не срубил)
+            if (exchangeValues.get(0) == 0) {
+                //бот шагнул на незащищенную (ботом), но безопасную (не находящуюся под атакой игрока) клетку = сделал самый обычный ход
                 return builder.build(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));
             } else {
-                //diffList.get(0) == targetCellValue == срубленная фигура
+                //бот срубил незащищенную фигуру игрока
                 return builder.build(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));
             }
         }
         if (exchangeDeep == 2) {  //1) bot -> X 2) player -> X
-            if (targetCellValue == 0) {
-                //diffList.get(1) == analyzedMove.getValueFrom() == minPlayerMove.getValueTo()  == отданная фигура
+            if (exchangeValues.get(0) == 0) {
+                //бот шагнул на незащищенную (ботом) пустую клетку, находящуюся под атакой игрока = отдал фигуру
                 return builder.build(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));
             } else {
-                //diffList.get(1) == targetCellValue - analyzedMove.getValueFrom() == срубленная фигура - отданная
+                //бот срубил фигуру, но срубившая фигура ничем теперь не защищена и игрок может ее срубить = простой размен
                 return builder.build(RatingParam.MATERIAL_SIMPLE_EXCHANGE, exchangeValues.get(1));
             }
+        }
+
+        throw new RuntimeException("exchangeDeep > 2");
+    }
+
+    private Rating getMaterialRatingForDeepExchange(Rating.Builder builder, List<Integer> exchangeValues) {
+        int exchangeDeep = exchangeValues.size();
+
+        if (exchangeDeep < 3) {
+            throw new RuntimeException("exchangeDeep < 3");
         }
 
         int totalMinB = exchangeValues.get(0);
@@ -181,8 +228,8 @@ public class BotServiceImplMedium extends AbstractBotService {
                     return builder
                             .var("maxP", maxP)
                             .var("minB", minB)
-                            .note("Math.min(totalMinB, maxP)")
-                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMinB, maxP));
+                            .note("return Math.max(totalMinB, maxP)")
+                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.max(totalMinB, maxP));
                 }
             } else { //player move
                 builder.note("stopByBot");
@@ -198,13 +245,14 @@ public class BotServiceImplMedium extends AbstractBotService {
                     return builder
                             .var("maxP", maxP)
                             .var("minB", minB)
-                            .note("Math.min(totalMaxP, minB)")
+                            .note("return Math.min(totalMaxP, minB)")
                             .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMaxP, minB));
                 }
             }
         }
 
-        throw new RuntimeException("WTF?");
+        //ситуации, когда код доберется сюда быть не должно. по крайней мере я такую придумать не смог
+        throw new UnattainablePointException();
     }
 
     //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
@@ -219,9 +267,5 @@ public class BotServiceImplMedium extends AbstractBotService {
 
     private boolean isBotMove(int n) {
         return n % 2 == 0;
-    }
-
-    private void logMaterial(Object msg, Object... params) {
-        log(LoggerParam.MATERIAL, msg, params);
     }
 }

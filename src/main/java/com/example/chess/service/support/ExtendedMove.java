@@ -97,6 +97,10 @@ public class ExtendedMove {
         total += rating.getValue() * rating.getParam().getFactor();
     }
 
+    public boolean hasDifferentPointTo(ExtendedMove otherMove) {
+        return !this.getPointTo().equals(otherMove.getPointTo());
+    }
+
     public int getTotal() {
         return total;
     }

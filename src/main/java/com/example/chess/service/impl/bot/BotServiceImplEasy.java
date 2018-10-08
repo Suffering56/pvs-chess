@@ -1,8 +1,6 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
@@ -24,16 +22,6 @@ import java.util.stream.Collectors;
 @Service
 @Qualifier(BotMode.EASY)
 public class BotServiceImplEasy extends AbstractBotService {
-
-    @Profile
-    @Override
-    public void applyBotMove(Game game) {
-        CommonUtils.executeInSecondaryThread(() -> {
-            CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
-            MoveDTO moveDTO = findBestMove(game, cellsMatrix);
-            gameService.applyMove(game, moveDTO);
-        });
-    }
 
     protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix) {
         log.info("updateRating");

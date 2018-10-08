@@ -35,6 +35,7 @@ public abstract class AbstractBotService implements BotService {
         put(LoggerParam.MATERIAL, false);
     }};
 
+
     @Profile
     @Override
     public void applyBotMove(Game game) {
@@ -44,8 +45,6 @@ public abstract class AbstractBotService implements BotService {
             gameService.applyMove(game, moveDTO);
         });
     }
-
-    protected abstract Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix);
 
     protected MoveDTO findBestMove(Game game, CellsMatrix matrix) {
         Side botSide = game.getActiveSide();
@@ -84,6 +83,8 @@ public abstract class AbstractBotService implements BotService {
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
+
+    protected abstract Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix);
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
         int i = (int) (movesList.size() * Math.random());
