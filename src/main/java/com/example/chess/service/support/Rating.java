@@ -2,7 +2,7 @@ package com.example.chess.service.support;
 
 import lombok.Getter;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Rating {
@@ -12,7 +12,7 @@ public class Rating {
     @Getter
     private int value;
 
-    private final Map<String, Object> description = new HashMap<>();
+    private final Map<String, Object> description = new LinkedHashMap<>();
     private static final String NOT_SHOW_THIS_VALUE = "NOT_SHOW_THIS_VALUE";
 
     private Rating() {

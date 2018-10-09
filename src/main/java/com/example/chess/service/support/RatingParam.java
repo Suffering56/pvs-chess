@@ -10,13 +10,15 @@ public enum RatingParam {
     MATERIAL_SIMPLE_EXCHANGE(RatingParam.MATERIAL_FACTOR),  //бот рубит фигуру, игрок рубит в ответ.
 
     MATERIAL_DEEP_EXCHANGE(RatingParam.MATERIAL_FACTOR),    //если рубиться до конца
-
     /**
      * Инвертированный материальный рейтинг.
      * Подсчитывается для ходов игрока. А то что игроку хорошо - боту плохо, и - наоборот.
      * Поэтому коэффициент отрицательный.
      */
     INVERTED_MATERIAL_FOR_PLAYER(-RatingParam.MATERIAL_FACTOR),
+
+    AVAILABLE_MOVES_COUNT(1),
+    INVERTED_AVAILABLE_MOVES_COUNT(-1),
 
     /**
      * Учитывается разница при размене фигур. Данная проверка ничего не знает о том, сможет ли противник вообще
@@ -48,7 +50,7 @@ public enum RatingParam {
     /**
      * Шах - это тоже хорошо
      */
-    CHECK(30),
+    CHECK(5),
     /**
      * А мат - еще лучше
      */

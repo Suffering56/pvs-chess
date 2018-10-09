@@ -2,6 +2,7 @@ package com.example.chess.service.impl.bot;
 
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
+import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.support.*;
@@ -25,27 +26,36 @@ public class BotServiceImplMedium extends AbstractBotService {
         return analyzedMove -> {
             Side botSide = game.getActiveSide();
             Side playerSide = botSide.reverse();
+            List<ExtendedMove> originalBotMoves = new MoveHelper(game, originalMatrix)
+                    .getStandardMovesStream(botSide)
+                    .collect(Collectors.toList());
+
+            List<ExtendedMove> originalPlayerMoves = new MoveHelper(game, originalMatrix)
+                    .getStandardMovesStream(playerSide)
+                    .collect(Collectors.toList());
 
             MoveResult moveResult = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null);
-            CellsMatrix nextMatrix = moveResult.getNewMatrix();
+            CellsMatrix resultMatrix = moveResult.getNewMatrix();
 
-            Rating materialRating = getMaterialRating(game, nextMatrix, analyzedMove, botSide, -1);
+            Rating materialRating = getMaterialRating(game, resultMatrix, analyzedMove, botSide, -1);
             analyzedMove.updateRating(materialRating);
 
-            Rating invertedMaterialRating = getInvertedMaterialRating(game, nextMatrix, analyzedMove, playerSide);
+            Rating invertedMaterialRating = getInvertedMaterialRating(game, resultMatrix, analyzedMove, playerSide);
             analyzedMove.updateRating(invertedMaterialRating);
+
+            Rating checkRating = getCheckRating(game, resultMatrix, playerSide);
+            analyzedMove.updateRating(checkRating);
+
+            Rating movesCountRating = getAvailableMovesCountRating(game, resultMatrix, originalBotMoves, botSide, false);
+            analyzedMove.updateRating(movesCountRating);
+
+            Rating invertedMovesCountRating = getAvailableMovesCountRating(game, resultMatrix, originalPlayerMoves, playerSide, true);
+            analyzedMove.updateRating(invertedMovesCountRating);
+
+
 
             /*
              * Здесь должны быть отрицательные рейтинги.
-             * TODO: спасение фигуры
-             * Мы ходим одно фигурой, а у нас в это время под атакой другая:
-             * в EASY_MODE - я давал положительный рейтинг за спасение - это неправильно
-             * нужно давать отрицательный рейтинг за НЕспасение
-             *
-             * TODO: а вдруг мы ходим связанной фигурой?
-             * Или если после выполнения данного хода на доске оказалась наша БОЛЕЕ дорогая фигура под атакой.
-             * Это может случиться если сделали ход связанной фигурой.
-             *
              * TODO: а вдруг мат?
              * Например если после выполнения данного хода игрок сможет поставить мат следующим ходом.
              * Каким бы ни был хорошим этот ход - он резко превращается в очень плохой
@@ -56,8 +66,75 @@ public class BotServiceImplMedium extends AbstractBotService {
         };
     }
 
-    private Rating getInvertedMaterialRating(Game game, CellsMatrix nextMatrix, ExtendedMove analyzedMove, Side playerSide) {
-        List<ExtendedMove> playerHarmfulMoves = new MoveHelper(game, nextMatrix)
+    /**
+     * Считает количество ходов expectedSide до хода бота и после.
+     * Разницу записывает в рейтинг. diff = movesAfter.size - movesBefore.size
+     * expectedSide - может быть как ботом так и игроком.
+     * <p>
+     * Если expectedSide == botSide:
+     * - боту выгодно, если сделанный ход дает ЕМУ БОЛЬШЕ пространства (возможностей) на доске.
+     * - значит боту выгодно когда diff > 0; (значит что текущий ход позволяет боту на следующий ход получить бОльшую вариацию ходов)
+     * <p>
+     * Если expectedSide == playerSide:
+     * - боту выгодно, если сделанный ход дает ИГРОКУ МЕНЬШЕ пространства.
+     * - значит боту выгодно когда diff < 0;
+     * <p>
+     * FIXME: в этом рейтинге есть косяки:
+     * 1) Он заставляет ферзя рано ходить. Т.к. ферзь в центре - приведет к максимальному коэффициенту.
+     * 2) Он пытается убрать пешки с вертикалей A,H чтобы как можно раньше вывести ладьи (тем самым исключая собственную рокировку)
+     * 3) Можно попасть под троекратное повторение одной и той же позиции (было такое, правда до внедрения INVERTED_AVAILABLE_MOVES_COUNT)
+     */
+    private Rating getAvailableMovesCountRating(Game game, CellsMatrix afterMoveMatrix, List<ExtendedMove> movesBefore, Side expectedSide, boolean isInverted) {
+        movesBefore = movesBefore.stream()
+                .filter(move -> move.getPieceFrom() != PieceType.KING)
+                .collect(Collectors.toList());
+
+        List<ExtendedMove> movesAfter = new MoveHelper(game, afterMoveMatrix)
+                .getStandardMovesStream(expectedSide)
+                .filter(move -> move.getPieceFrom() != PieceType.KING)
+                .collect(Collectors.toList());
+
+        Rating.Builder builder = Rating.builder()
+                .var("movesBefore", movesBefore.size())
+                .var("movesAfter", movesAfter.size());
+
+        if (isInverted) {
+            return builder.build(RatingParam.INVERTED_AVAILABLE_MOVES_COUNT, movesAfter.size() - movesBefore.size());
+        } else {
+            return builder.build(RatingParam.AVAILABLE_MOVES_COUNT, movesAfter.size() - movesBefore.size());
+        }
+    }
+
+    /**
+     * Алгоритм работает не только для определения материального рейтинга для бота, но и для игрока так же.
+     * Достаточно ему передать в параметр botSide - playerSide.
+     * В таком случае все понятия внутри функций инвертируются - все что было ботом - станет игроком, и наоборот.
+     * <p>
+     * Некрасиво, но если переименовать botSide и playerSide во что-то более абстрактное - легко будет запутаться.
+     */
+    private Rating getMaterialRating(Game game, CellsMatrix resultMatrix, ExtendedMove analyzedMove, Side botSide, int maxDeep) {
+        List<Integer> exchangeValues = generateExchangeValuesList(game, resultMatrix, analyzedMove, botSide, maxDeep);
+
+        int exchangeDeep = exchangeValues.size();
+        Rating.Builder builder = Rating.builder()
+                .var("exchangeDeep", exchangeDeep);
+
+        if (exchangeDeep <= 2) {
+            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
+        } else {
+            return getMaterialRatingForDeepExchange(builder, exchangeValues);
+        }
+    }
+
+    /**
+     * Алгоритм анализирует ситуацию на доске образовавшуюся после того как бот сделал текущий ход (analyzedMove)
+     * Он ищет все доступные враждебные(которые ведут к потере ботом фигуры или размену) ходы врага,
+     * кроме тех, которые хотят срубить только что сходившую фигуру бота (эти размены анализируются в другом месте)
+     * И анализирует этот самый размен вплоть до максимальной глубины.
+     * Если показатель положительный (для игрока), значит текущий сделанный ход - плохой и получит отрицательный рейтинг.
+     */
+    private Rating getInvertedMaterialRating(Game game, CellsMatrix resultMatrix, ExtendedMove analyzedMove, Side playerSide) {
+        List<ExtendedMove> playerHarmfulMoves = new MoveHelper(game, resultMatrix)
                 .getStandardMovesStream(playerSide)
                 .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
                 .collect(Collectors.toList());
@@ -66,7 +143,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         int maxPlayerMoveValue = 0;
 
         for (ExtendedMove playerMove : playerHarmfulMoves) {
-            CellsMatrix afterPlayerMoveMatrix = nextMatrix.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
+            CellsMatrix afterPlayerMoveMatrix = resultMatrix.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
 
             Rating playerMoveRating = getMaterialRating(game, afterPlayerMoveMatrix, playerMove, playerSide, -1);
 
@@ -79,18 +156,20 @@ public class BotServiceImplMedium extends AbstractBotService {
         return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue);
     }
 
-    private Rating getMaterialRating(Game game, CellsMatrix newMatrix, ExtendedMove analyzedMove, Side botSide, int maxDeep) {
-        List<Integer> exchangeValues = generateExchangeValuesList(game, newMatrix, analyzedMove, botSide, maxDeep);
+    private Rating getCheckRating(Game game, CellsMatrix matrix, Side checkedSide) {
+        MoveHelper moveHelper = new MoveHelper(game, matrix);
 
-        int exchangeDeep = exchangeValues.size();
-        Rating.Builder builder = Rating.builder()
-                .var("exchangeDeep", exchangeDeep);
+        if (moveHelper.isKingUnderAttack(checkedSide)) {
 
-        if (exchangeDeep <= 2) {
-            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
-        } else {
-            return getMaterialRatingForDeepExchange(builder, exchangeValues);
+            long availablePlayerMovesCount = moveHelper.getStandardMovesStream(checkedSide).count();
+            if (availablePlayerMovesCount == 0) {
+                return Rating.builder().build(RatingParam.CHECKMATE);
+            }
+
+            return Rating.builder().build(RatingParam.CHECK);
         }
+
+        return Rating.builder().build(RatingParam.CHECK, 0);
     }
 
     private List<Integer> generateExchangeValuesList(Game game, CellsMatrix afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
@@ -208,7 +287,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                      * Поэтому именно бот выбирает:
                      * - либо последнее слово будет за ним - т.к. дальше игрок не пойдет и result = totalMinB,
                      * - либо последнее слово будет за игроком, а значит result = maxP
-                     * - ессно он выбирает меньшее из двух зол == Math.min(totalMinB, maxP);
+                     * - ессно он выбирает меньшее из двух зол == Math.max(totalMinB, maxP) ;
                      */
 
                     if (n == 0) {
