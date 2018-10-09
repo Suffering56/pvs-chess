@@ -56,12 +56,6 @@ public enum RatingParam {
      */
     CHECKMATE(100000);
 
-    //pawn promotion
-    //fork (вилка)
-    //pin (связка)
-    //sacrifice
-    //hidden check
-
     private static final int MATERIAL_FACTOR = 100;
     private final int factor;
 

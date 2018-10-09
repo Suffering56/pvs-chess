@@ -62,6 +62,23 @@ public class AppTests {
                 .reduce((p1, p2) -> p1.getAge() <= p2.getAge() ? p1 : p2).orElse(null);
 
         System.out.println("youngestPerson = " + youngestPerson);
+
+
+        Map<Gender, List<String>> groupingByWithValueMapper = personList
+                .stream()
+                .collect(
+                        Collectors.groupingBy(
+                                Person::getGender,
+                                Collectors.mapping(
+                                        Person::getName,
+                                        Collectors.toList())));
+
+        groupingByWithValueMapper.forEach((gender, names) -> {
+            System.out.println("Gender: " + gender);
+            for (String name : names) {
+                System.out.println("\t" + name);
+            }
+        });
     }
 
     private class Person {
