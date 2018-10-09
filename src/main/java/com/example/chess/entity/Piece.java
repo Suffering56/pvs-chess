@@ -2,23 +2,20 @@ package com.example.chess.entity;
 
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.service.support.Immutable;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Immutable;
 
 import javax.persistence.*;
 
-/**
- * Immutable
- */
 @Entity
 @Getter
 @ToString
-@Immutable
+@org.hibernate.annotations.Immutable
 @SuppressWarnings("unused")
-public final class Piece {
+public final class Piece implements Immutable {
 
     @Id
     private Integer id;
@@ -30,7 +27,6 @@ public final class Piece {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PieceType type;
-
 
     @Override
     public boolean equals(Object o) {

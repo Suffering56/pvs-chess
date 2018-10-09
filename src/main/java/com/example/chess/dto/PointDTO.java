@@ -1,5 +1,6 @@
 package com.example.chess.dto;
 
+import com.example.chess.service.support.Immutable;
 import com.example.chess.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -8,12 +9,9 @@ import lombok.*;
 
 import java.util.Objects;
 
-/**
- * Immutable
- */
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public final class PointDTO {
+public final class PointDTO implements Immutable {
 
     private final Integer rowIndex;
     private final Integer columnIndex;

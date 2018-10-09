@@ -2,6 +2,8 @@ package com.example.chess.entity;
 
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
+import com.example.chess.service.support.FakeGame;
+import com.example.chess.service.support.Gameplay;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,7 +21,7 @@ import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 @Getter
 @Setter
 @ToString
-public class Game {
+public class Game implements Gameplay {
 
     @Id
     @GenericGenerator(name = "game_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "game_id_seq"))
@@ -63,16 +65,19 @@ public class Game {
     }
 
     @Transient
+    @Override
     public boolean isShortCastlingAvailable(Side side) {
         return featuresMap.get(side).getShortCastlingAvailable();
     }
 
     @Transient
+    @Override
     public boolean isLongCastlingAvailable(Side side) {
         return featuresMap.get(side).getLongCastlingAvailable();
     }
 
     @Transient
+    @Override
     public Integer getPawnLongMoveColumnIndex(Side side) {
         return featuresMap.get(side).getPawnLongMoveColumnIndex();
     }
@@ -88,6 +93,7 @@ public class Game {
     }
 
     @Transient
+    @Override
     public Side getUnderCheckSide() {
         for (GameFeatures features : featuresMap.values()) {
             if (features.getIsUnderCheck()) {
@@ -144,7 +150,12 @@ public class Game {
      */
     @Transient
     @JsonIgnore
-    public Side getActiveSide() {
+    public Side getReadyToMoveSide() {
         return getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
+    }
+
+    @Transient
+    public FakeGame toFake() {
+        return FakeGame.builder(this).build();
     }
 }

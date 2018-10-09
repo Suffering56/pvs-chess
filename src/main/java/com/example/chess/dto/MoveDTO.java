@@ -2,6 +2,7 @@ package com.example.chess.dto;
 
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
+import com.example.chess.service.support.Immutable;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -12,13 +13,10 @@ import lombok.ToString;
 
 import java.util.Objects;
 
-/**
- * Immutable
- */
 @Getter
 @ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public final class MoveDTO {
+public final class MoveDTO implements Immutable {
 
     private final PointDTO from;
     private final PointDTO to;

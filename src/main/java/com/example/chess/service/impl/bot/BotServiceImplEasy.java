@@ -23,12 +23,13 @@ import java.util.stream.Collectors;
 @Qualifier(BotMode.EASY)
 public class BotServiceImplEasy extends AbstractBotService {
 
-    protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix) {
+    @Override
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide) {
         log.info("updateRating");
 
-        Side botSide = game.getActiveSide();
+        Side botSide = readyToMoveSide;
         Side playerSide = botSide.reverse();
-        MoveHelper moveHelper = new MoveHelper(game, matrix);
+        MoveHelper moveHelper = MoveHelper.valueOf(fakeGame, originalMatrix);
 
         /*
             В полученной коллекции собраны ходы бота, которые в текущий момент нацелены на пустую клетку.
@@ -76,9 +77,9 @@ public class BotServiceImplEasy extends AbstractBotService {
             log.info("cellTo: " + move.getTo());
 
             //TODO: promotionPieceType can be not null
-            MoveResult moveResult = matrix.executeMove(move.toMoveDTO(), null);
+            MoveResult moveResult = originalMatrix.executeMove(move.toMoveDTO(), null);
             CellsMatrix nextMatrix = moveResult.getNewMatrix();
-            MoveHelperAPI nextMoveHelper = new MoveHelper(game, nextMatrix);
+            MoveHelperAPI nextMoveHelper = MoveHelper.valueOf(fakeGame, nextMatrix);
 
             //EXCHANGE_DIFF
             move.updateRating(Rating.builder().build(RatingParam.EXCHANGE_DIFF, move.getExchangeDiff()));

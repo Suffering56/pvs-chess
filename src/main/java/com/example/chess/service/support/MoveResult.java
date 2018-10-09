@@ -4,12 +4,9 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-/**
- * Immutable
- */
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class MoveResult {
+public class MoveResult implements Immutable {
 
     private final CellsMatrix prevMatrix;
     private final CellsMatrix newMatrix;

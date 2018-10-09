@@ -3,6 +3,7 @@ package com.example.chess.dto;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.service.support.Immutable;
 import com.example.chess.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -15,12 +16,9 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.Objects;
 
-/**
- * Immutable
- */
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public final class CellDTO {
+public final class CellDTO implements Immutable {
 
     private final Integer rowIndex;
     private final Integer columnIndex;

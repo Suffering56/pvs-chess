@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 @Log4j2
 public abstract class AbstractBotService implements BotService {
 
@@ -35,23 +36,23 @@ public abstract class AbstractBotService implements BotService {
         put(LoggerParam.MATERIAL, false);
     }};
 
-
     @Profile
     @Override
     public void applyBotMove(Game game) {
         CommonUtils.executeInSecondaryThread(() -> {
             CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
-            MoveDTO moveDTO = findBestMove(game, cellsMatrix);
+            Side readyToMoveSide = game.getReadyToMoveSide();
+            MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, readyToMoveSide);
             gameService.applyMove(game, moveDTO);
         });
     }
 
-    protected MoveDTO findBestMove(Game game, CellsMatrix matrix) {
-        Side botSide = game.getActiveSide();
+    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame game, CellsMatrix originalMatrix, Side readyToMoveSide);
 
-        List<ExtendedMove> sortedBotMovesList = new MoveHelper(game, matrix)
-                .getStandardMovesStream(botSide)
-                .peek(calculateRating(game, matrix))
+    protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide) {
+        List<ExtendedMove> sortedBotMovesList = MoveHelper.valueOf(fakeGame, originalMatrix)
+                .getStandardMovesStream(readyToMoveSide)
+                .peek(calculateRating(fakeGame, originalMatrix, readyToMoveSide))
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
@@ -77,14 +78,12 @@ public abstract class AbstractBotService implements BotService {
         logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
 
         enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[pos = " + game.getPosition() + "]::::" + resultMove);
+        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + resultMove);
 
         logDoubleSeparator(LoggerParam.COMMON, 3);
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
-
-    protected abstract Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix matrix);
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
         int i = (int) (movesList.size() * Math.random());

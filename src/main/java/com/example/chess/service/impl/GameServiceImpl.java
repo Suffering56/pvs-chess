@@ -113,7 +113,7 @@ public class GameServiceImpl implements GameService {
         game.setPosition(newMatrix.getPosition());
 
         Side enemySide = sideFrom.reverse();
-        MoveHelperAPI moveHelper = new MoveHelper(game, newMatrix);
+        MoveHelperAPI moveHelper = MoveHelper.valueOf(game.toFake(), newMatrix);
         if (moveHelper.isKingUnderAttack(enemySide)) {
             /*
                 Если данный ход объявил шах вражескому королю, то нужно подсветить вражеского короля на доске.
@@ -140,7 +140,7 @@ public class GameServiceImpl implements GameService {
     public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
         Game game = findAndCheckGame(gameId);
         CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
-        MoveHelperAPI moveHelper = new MoveHelper(game, matrix);
+        MoveHelperAPI moveHelper = MoveHelper.valueOf(game.toFake(), matrix);
 
         return moveHelper.getFilteredAvailablePoints(point);
     }

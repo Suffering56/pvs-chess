@@ -24,7 +24,7 @@ import static com.example.chess.ChessConstants.BOARD_SIZE;
 import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
 import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 
-public final class CellsMatrix {
+public final class CellsMatrix implements Immutable{
 
     @Getter
     private final int position;

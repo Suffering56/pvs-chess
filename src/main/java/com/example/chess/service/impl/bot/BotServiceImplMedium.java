@@ -1,7 +1,6 @@
 package com.example.chess.service.impl.bot;
 
 import com.example.chess.dto.PointDTO;
-import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.UnattainablePointException;
@@ -13,9 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,7 +22,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 
 
     @Override
-    protected Consumer<? super ExtendedMove> calculateRating(Game game, CellsMatrix originalMatrixBotNext) {
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrixBotNext, Side readyToMoveSide) {
         /*
          * 0) matrix = originalMatrixBotNext;
          *
@@ -36,14 +33,14 @@ public class BotServiceImplMedium extends AbstractBotService {
          * 3) executing bot move...
          */
         return analyzedMove -> {
-            Side botSide = game.getActiveSide();
+            Side botSide = readyToMoveSide;
             Side playerSide = botSide.reverse();
 
-            List<ExtendedMove> botMovesByOriginal = new MoveHelper(game, originalMatrixBotNext)
+            List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrixBotNext)
                     .getStandardMovesStream(botSide)
                     .collect(Collectors.toList());
 
-            List<ExtendedMove> playerMovesByOriginal = new MoveHelper(game, originalMatrixBotNext)
+            List<ExtendedMove> playerMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrixBotNext)
                     .getStandardMovesStream(playerSide)
                     .collect(Collectors.toList());
 
@@ -51,19 +48,19 @@ public class BotServiceImplMedium extends AbstractBotService {
             CellsMatrix firstMatrixPlayerNext = moveResult.getNewMatrix();
 
 
-            Rating materialRating = getMaterialRating(game, firstMatrixPlayerNext, analyzedMove, botSide, -1);
+            Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
             analyzedMove.updateRating(materialRating);
 
-            Rating invertedMaterialRating = getInvertedMaterialRating(game, firstMatrixPlayerNext, analyzedMove, playerSide);
+            Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide);
             analyzedMove.updateRating(invertedMaterialRating);
 
-            Rating checkRating = getCheckRating(game, firstMatrixPlayerNext, playerSide);
+            Rating checkRating = getCheckRating(fakeGame, firstMatrixPlayerNext, playerSide);
             analyzedMove.updateRating(checkRating);
 
-            Rating movesCountRating = getAvailableMovesCountRating(game, firstMatrixPlayerNext, botMovesByOriginal, botSide, false);
+            Rating movesCountRating = getAvailableMovesCountRating(fakeGame, firstMatrixPlayerNext, botMovesByOriginal, botSide, false);
             analyzedMove.updateRating(movesCountRating);
 
-            Rating invertedMovesCountRating = getAvailableMovesCountRating(game, firstMatrixPlayerNext, playerMovesByOriginal, playerSide, true);
+            Rating invertedMovesCountRating = getAvailableMovesCountRating(fakeGame, firstMatrixPlayerNext, playerMovesByOriginal, playerSide, true);
             analyzedMove.updateRating(invertedMovesCountRating);
 
 
@@ -76,16 +73,31 @@ public class BotServiceImplMedium extends AbstractBotService {
              * 4) put into rating (DEEP_ANALYSIS)
              */
 //            на каждый ход противника -> список всех доступных для бота вариантов ответа
-            Map<ExtendedMove, List<ExtendedMove>> collect = new MoveHelper(game, firstMatrixPlayerNext)
-                    .getStandardMovesStream(playerSide)
-                    .collect(Collectors.toMap(
-                            Function.identity(),
-                            move -> {
-                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-                                return new MoveHelper(game, secondMatrixBotNext)
-                                        .getStandardMovesStream(botSide)
-                                        .collect(Collectors.toList());
-                            }));
+//            Map<ExtendedMove, List<ExtendedMove>> collect = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                    .getStandardMovesStream(playerSide)
+//                    .collect(Collectors.toMap(
+//                            Function.identity(),
+//                            move -> {
+//                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                                return MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
+//                                        .getStandardMovesStream(botSide)
+//                                        .collect(Collectors.toList());
+//                            }));
+
+//
+//            MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                    .getStandardMovesStream(playerSide)
+//                    .collect(Collectors.toMap(
+//                            Function.identity(),
+//                            move -> {
+//                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                                MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
+//                                        .getStandardMovesStream(botSide)
+//                                        .peek(botCounterMove -> {
+//
+//                                        })
+////                                        .collect(Collectors.toList());
+//                            }));
 
 
             //pawn promotion
@@ -124,12 +136,12 @@ public class BotServiceImplMedium extends AbstractBotService {
      * 2) Он пытается убрать пешки с вертикалей A,H чтобы как можно раньше вывести ладьи (тем самым исключая собственную рокировку)
      * 3) Можно попасть под троекратное повторение одной и той же позиции (было такое, правда до внедрения INVERTED_AVAILABLE_MOVES_COUNT)
      */
-    private Rating getAvailableMovesCountRating(Game game, CellsMatrix firstMatrixPlayerNext, List<ExtendedMove> movesBefore, Side expectedSide, boolean isInverted) {
+    private Rating getAvailableMovesCountRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, List<ExtendedMove> movesBefore, Side expectedSide, boolean isInverted) {
         movesBefore = movesBefore.stream()
                 .filter(move -> move.getPieceFrom() != PieceType.KING)
                 .collect(Collectors.toList());
 
-        List<ExtendedMove> movesAfter = new MoveHelper(game, firstMatrixPlayerNext)
+        List<ExtendedMove> movesAfter = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
                 .getStandardMovesStream(expectedSide)
                 .filter(move -> move.getPieceFrom() != PieceType.KING)
                 .collect(Collectors.toList());
@@ -152,8 +164,8 @@ public class BotServiceImplMedium extends AbstractBotService {
      * <p>
      * Некрасиво, но если переименовать botSide и playerSide во что-то более абстрактное - легко будет запутаться.
      */
-    private Rating getMaterialRating(Game game, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side botSide, int maxDeep) {
-        List<Integer> exchangeValues = generateExchangeValuesList(game, firstMatrixPlayerNext, analyzedMove, botSide, maxDeep);
+    private Rating getMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side botSide, int maxDeep) {
+        List<Integer> exchangeValues = generateExchangeValuesList(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, maxDeep);
 
         int exchangeDeep = exchangeValues.size();
         Rating.Builder builder = Rating.builder()
@@ -173,8 +185,8 @@ public class BotServiceImplMedium extends AbstractBotService {
      * И анализирует этот самый размен вплоть до максимальной глубины.
      * Если показатель положительный (для игрока), значит текущий сделанный ход - плохой и получит отрицательный рейтинг.
      */
-    private Rating getInvertedMaterialRating(Game game, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side playerSide) {
-        List<ExtendedMove> playerHarmfulMoves = new MoveHelper(game, firstMatrixPlayerNext)
+    private Rating getInvertedMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side playerSide) {
+        List<ExtendedMove> playerHarmfulMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
                 .getStandardMovesStream(playerSide)
                 .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
                 .collect(Collectors.toList());
@@ -185,7 +197,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         for (ExtendedMove playerMove : playerHarmfulMoves) {
             CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
 
-            Rating playerMoveRating = getMaterialRating(game, secondMatrixBotNext, playerMove, playerSide, -1);
+            Rating playerMoveRating = getMaterialRating(fakeGame, secondMatrixBotNext, playerMove, playerSide, -1);
 
             String varName = "INVERTED_" + playerMoveRating.getParam() + "[" + CommonUtils.moveToString(playerMove) + "]";
             builder.var(varName, playerMoveRating.getValue());
@@ -196,8 +208,8 @@ public class BotServiceImplMedium extends AbstractBotService {
         return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue);
     }
 
-    private Rating getCheckRating(Game game, CellsMatrix matrix, Side checkedSide) {
-        MoveHelper moveHelper = new MoveHelper(game, matrix);
+    private Rating getCheckRating(FakeGame fakeGame, CellsMatrix matrix, Side checkedSide) {
+        MoveHelper moveHelper = MoveHelper.valueOf(fakeGame, matrix);
 
         if (moveHelper.isKingUnderAttack(checkedSide)) {
 
@@ -212,7 +224,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         return Rating.builder().build(RatingParam.CHECK, 0);
     }
 
-    private List<Integer> generateExchangeValuesList(Game game, CellsMatrix afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
+    private List<Integer> generateExchangeValuesList(FakeGame fakeGame, CellsMatrix afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
         Side playerSide = botSide.reverse();
 
         int targetCellValue = alreadyExecutedMove.getValueTo(0);
@@ -223,7 +235,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         int exchangeValue = targetCellValue;
         exchangeValues.add(exchangeValue);
 
-        ExtendedMove minPlayerMove = getMinMove(game, afterFirstMoveMatrix, targetPoint, playerSide);
+        ExtendedMove minPlayerMove = getMinMove(fakeGame, afterFirstMoveMatrix, targetPoint, playerSide);
         CellsMatrix afterBotMoveMatrix = afterFirstMoveMatrix;
 
         while (true) {
@@ -232,7 +244,7 @@ public class BotServiceImplMedium extends AbstractBotService {
              * EXECUTE PLAYER MOVE
              */
             CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
-            ExtendedMove minBotMove = getMinMove(game, afterPlayerMoveMatrix, targetPoint, botSide);
+            ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide);
 
             exchangeValue -= minPlayerMove.getValueTo();
             exchangeValues.add(exchangeValue);
@@ -242,7 +254,7 @@ public class BotServiceImplMedium extends AbstractBotService {
              * EXECUTE BOT MOVE
              */
             afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
-            minPlayerMove = getMinMove(game, afterBotMoveMatrix, targetPoint, playerSide);
+            minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide);
 
             exchangeValue += minBotMove.getValueTo();
             exchangeValues.add(exchangeValue);
@@ -375,9 +387,9 @@ public class BotServiceImplMedium extends AbstractBotService {
     }
 
     //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
-    //TODO: а еще про game подумай (longPawn, under check)
-    private ExtendedMove getMinMove(Game game, CellsMatrix matrix, PointDTO targetPoint, Side side) {
-        return new MoveHelper(game, matrix)
+    //TODO: а еще про fakeGame подумай (longPawn, under check)
+    private ExtendedMove getMinMove(FakeGame fakeGame, CellsMatrix matrix, PointDTO targetPoint, Side side) {
+        return MoveHelper.valueOf(fakeGame, matrix)
                 .getStandardMovesStream(side)
                 .filter(nextMove -> nextMove.getPointTo().equals(targetPoint))
                 .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
