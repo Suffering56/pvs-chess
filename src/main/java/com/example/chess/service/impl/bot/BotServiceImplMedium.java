@@ -74,19 +74,19 @@ public class BotServiceImplMedium extends AbstractBotService {
 //            на каждый ход противника -> список всех доступных для бота вариантов ответа
 
 
-//            if (isExternalCall) {
-//                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                        .getStandardMovesStream(playerSide)
-//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
-//                        .map(move -> {
-//                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//                            return findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false).getTotal();
-//                        })
-//                        .mapToInt(Integer::intValue)
-//                        .min().orElse(0);
-//
-//                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
-//            }
+            if (isExternalCall) {
+                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+                        .getStandardMovesStream(playerSide)
+                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
+                        .map(move -> {
+                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+                            return findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false).getTotal();
+                        })
+                        .mapToInt(Integer::intValue)
+                        .min().orElse(0);
+
+                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
+            }
 
 
             //pawn promotion
