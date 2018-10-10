@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 public class BotServiceImplGreedy extends AbstractBotService {
 
     @Override
-    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide) {
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide, boolean isExternalCall) {
         return ExtendedMove::applyGreedyMode;
     }
 

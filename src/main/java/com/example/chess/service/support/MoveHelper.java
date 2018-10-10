@@ -1,5 +1,6 @@
 package com.example.chess.service.support;
 
+import com.example.chess.App;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
@@ -23,18 +24,11 @@ public class MoveHelper implements MoveHelperAPI {
     private final FakeGame fakeGame;
     private final CellsMatrix originalMatrix;
 
+
     public static MoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
+        App.moveHelpersCount++;
         return new MoveHelper(fakeGame, originalMatrix);
     }
-
-//    public MoveHelper valueOf(Game game, CellsMatrix originalMatrix) {
-//        return new MoveHelper(fakeGame, originalMatrix);
-//    }
-
-//    public MoveHelper(FakeGame fakeGame, CellsMatrix originalMatrix) {
-//        this.fakeGame = fakeGame;
-//        this.originalMatrix = originalMatrix;
-//    }
 
     @Override
     public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
@@ -241,6 +235,9 @@ public class MoveHelper implements MoveHelperAPI {
             default:
                 moves = new HashSet<>();
         }
+
+        App.availablePointsFound += moves.size();
+        App.getUnfilteredMovesCallsCount++;
         return moves;
     }
 

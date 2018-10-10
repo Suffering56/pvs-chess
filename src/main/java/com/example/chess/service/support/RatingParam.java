@@ -19,6 +19,7 @@ public enum RatingParam {
 
     AVAILABLE_MOVES_COUNT(1),
     INVERTED_AVAILABLE_MOVES_COUNT(-1),
+    DEEP(1),
 
     /**
      * Учитывается разница при размене фигур. Данная проверка ничего не знает о том, сможет ли противник вообще

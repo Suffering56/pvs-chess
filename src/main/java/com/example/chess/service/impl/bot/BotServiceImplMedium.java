@@ -22,7 +22,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 
 
     @Override
-    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrixBotNext, Side readyToMoveSide) {
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrixBotNext, Side readyToMoveSide, boolean isExternalCall) {
         /*
          * 0) matrix = originalMatrixBotNext;
          *
@@ -47,11 +47,10 @@ public class BotServiceImplMedium extends AbstractBotService {
             MoveResult moveResult = originalMatrixBotNext.executeMove(analyzedMove.toMoveDTO(), null);     //n == 0 -> n == 1
             CellsMatrix firstMatrixPlayerNext = moveResult.getNewMatrix();
 
-
             Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
             analyzedMove.updateRating(materialRating);
 
-            Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide);
+            Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide, -1);
             analyzedMove.updateRating(invertedMaterialRating);
 
             Rating checkRating = getCheckRating(fakeGame, firstMatrixPlayerNext, playerSide);
@@ -73,31 +72,21 @@ public class BotServiceImplMedium extends AbstractBotService {
              * 4) put into rating (DEEP_ANALYSIS)
              */
 //            на каждый ход противника -> список всех доступных для бота вариантов ответа
-//            Map<ExtendedMove, List<ExtendedMove>> collect = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                    .getStandardMovesStream(playerSide)
-//                    .collect(Collectors.toMap(
-//                            Function.identity(),
-//                            move -> {
-//                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//                                return MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
-//                                        .getStandardMovesStream(botSide)
-//                                        .collect(Collectors.toList());
-//                            }));
 
+
+//            if (isExternalCall) {
+//                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                        .getStandardMovesStream(playerSide)
+//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
+//                        .map(move -> {
+//                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                            return findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false).getTotal();
+//                        })
+//                        .mapToInt(Integer::intValue)
+//                        .min().orElse(0);
 //
-//            MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                    .getStandardMovesStream(playerSide)
-//                    .collect(Collectors.toMap(
-//                            Function.identity(),
-//                            move -> {
-//                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//                                MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
-//                                        .getStandardMovesStream(botSide)
-//                                        .peek(botCounterMove -> {
-//
-//                                        })
-////                                        .collect(Collectors.toList());
-//                            }));
+//                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
+//            }
 
 
             //pawn promotion
@@ -185,7 +174,7 @@ public class BotServiceImplMedium extends AbstractBotService {
      * И анализирует этот самый размен вплоть до максимальной глубины.
      * Если показатель положительный (для игрока), значит текущий сделанный ход - плохой и получит отрицательный рейтинг.
      */
-    private Rating getInvertedMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side playerSide) {
+    private Rating getInvertedMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side playerSide, int maxDeep) {
         List<ExtendedMove> playerHarmfulMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
                 .getStandardMovesStream(playerSide)
                 .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
@@ -197,7 +186,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         for (ExtendedMove playerMove : playerHarmfulMoves) {
             CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
 
-            Rating playerMoveRating = getMaterialRating(fakeGame, secondMatrixBotNext, playerMove, playerSide, -1);
+            Rating playerMoveRating = getMaterialRating(fakeGame, secondMatrixBotNext, playerMove, playerSide, maxDeep);
 
             String varName = "INVERTED_" + playerMoveRating.getParam() + "[" + CommonUtils.moveToString(playerMove) + "]";
             builder.var(varName, playerMoveRating.getValue());
@@ -391,7 +380,7 @@ public class BotServiceImplMedium extends AbstractBotService {
     private ExtendedMove getMinMove(FakeGame fakeGame, CellsMatrix matrix, PointDTO targetPoint, Side side) {
         return MoveHelper.valueOf(fakeGame, matrix)
                 .getStandardMovesStream(side)
-                .filter(nextMove -> nextMove.getPointTo().equals(targetPoint))
+                .filter(nextMove -> nextMove.hasSamePointTo(targetPoint))
                 .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
                 .orElse(null);
     }

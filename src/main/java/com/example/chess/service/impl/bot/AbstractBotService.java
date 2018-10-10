@@ -1,8 +1,10 @@
 package com.example.chess.service.impl.bot;
 
+import com.example.chess.App;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
@@ -25,15 +27,23 @@ public abstract class AbstractBotService implements BotService {
     protected GameService gameService;
     protected Long botMoveDelay;
 
+
     protected enum LoggerParam {
         COMMON, PRINT_SORTED_BOT_MOVES_LIST, PRINT_RESULT_MOVE, MATERIAL;
     }
 
     private Map<LoggerParam, Boolean> loggerSettings = new HashMap<LoggerParam, Boolean>() {{
-        put(LoggerParam.COMMON, true);
-        put(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, true);
-        put(LoggerParam.PRINT_RESULT_MOVE, true);
+        put(LoggerParam.COMMON, false);
+        put(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, false);
+        put(LoggerParam.PRINT_RESULT_MOVE, false);
         put(LoggerParam.MATERIAL, false);
+    }};
+
+    private Map<Integer, MoveDTO> destinyMap = new HashMap<Integer, MoveDTO>() {{
+        // "e7---e6"
+        put(1, MoveDTO.valueOf(PointDTO.valueOf(6, 3), PointDTO.valueOf(5, 3), null));
+        // "Bf8---b4"
+        put(3, MoveDTO.valueOf(PointDTO.valueOf(7, 2), PointDTO.valueOf(3, 6), null));
     }};
 
     @Profile
@@ -47,12 +57,36 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame game, CellsMatrix originalMatrix, Side readyToMoveSide);
+    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame game, CellsMatrix originalMatrix, Side readyToMoveSide, boolean isExternalCall);
 
     protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide) {
+        long start = System.currentTimeMillis();
+        App.resetCounters();
+
+
+        ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, readyToMoveSide, true);
+
+        System.out.println();
+        App.printCounters();
+        System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
+
+        PieceType promotionPieceType = null;
+        if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
+            promotionPieceType = PieceType.QUEEN;
+        }
+
+        MoveDTO predestinedMove = destinyMap.get(originalMatrix.getPosition());
+        if (predestinedMove != null) {
+            return predestinedMove;
+        }
+
+        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
+    }
+
+    protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide, boolean isExternalCall) {
         List<ExtendedMove> sortedBotMovesList = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(readyToMoveSide)
-                .peek(calculateRating(fakeGame, originalMatrix, readyToMoveSide))
+                .peek(calculateRating(fakeGame, originalMatrix, readyToMoveSide, isExternalCall))
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
@@ -67,22 +101,15 @@ public abstract class AbstractBotService implements BotService {
 
         ExtendedMove resultMove = getRandomMove(topMovesList);
 
-        PieceType promotionPieceType = null;
-        if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
-            promotionPieceType = PieceType.QUEEN;
-        }
-
         enter(LoggerParam.COMMON, 50);
-
         sortedBotMovesList.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
         logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
 
         enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
         log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + resultMove);
-
         logDoubleSeparator(LoggerParam.COMMON, 3);
 
-        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
+        return resultMove;
     }
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {

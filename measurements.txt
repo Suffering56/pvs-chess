@@ -1,0 +1,275 @@
+MATERIAL_SIMPLE_MOVE=true
+MATERIAL_SIMPLE_FREEBIE=true
+MATERIAL_SIMPLE_FEED=true
+MATERIAL_SIMPLE_EXCHANGE=true
+MATERIAL_DEEP_EXCHANGE=true
+INVERTED_MATERIAL_FOR_PLAYER=true
+CHECK=true
+CHECKMATE=true
+AVAILABLE_MOVES_COUNT=true
+INVERTED_AVAILABLE_MOVES_COUNT=true
+DEEP=true
+===================================================
+1)
+
+max_exchange_deep = -1
+inverted_max_exchange_deep = -1
+DEEP=false
+
+move #1(e4):
+    moveHelpersCount = 151
+    movesExecuted = 3531
+    availablePointsFound = 34907
+    getUnfilteredMovesCallsCount = 26859
+    findBestMove executed in : 340ms
+move #2(d4):
+    moveHelpersCount = 234
+    movesExecuted = 7224
+    availablePointsFound = 133451
+    getUnfilteredMovesCallsCount = 53807
+    findBestMove executed in : 655ms
+
+2)
+max_exchange_deep = -1
+inverted_max_exchange_deep = -1
+DEEP=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+
+move #1(e4):
+    moveHelpersCount = 131
+    movesExecuted = 2931
+    availablePointsFound = 30026
+    getUnfilteredMovesCallsCount = 22340
+    findBestMove executed in : 306ms
+move #2(d4):
+    moveHelpersCount = 204
+    movesExecuted = 6087
+    availablePointsFound = 114933
+    getUnfilteredMovesCallsCount = 45374
+    findBestMove executed in : 575ms
+
+
+3)
+max_exchange_deep = -1
+inverted_max_exchange_deep = -1
+DEEP=false
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+
+move #1(e4):
+    moveHelpersCount = 111
+    movesExecuted = 2485
+    availablePointsFound = 23382
+    getUnfilteredMovesCallsCount = 18898
+    findBestMove executed in : 251ms
+move #2(d4):
+    moveHelpersCount = 174
+    movesExecuted = 5158
+    availablePointsFound = 93758
+    getUnfilteredMovesCallsCount = 38392
+    findBestMove executed in : 522ms
+
+4)
+max_exchange_deep = -1
+inverted_max_exchange_deep = -1
+DEEP=false
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+
+move #1(e4):
+    moveHelpersCount = 91
+    movesExecuted = 2485
+    availablePointsFound = 22942
+    getUnfilteredMovesCallsCount = 18598
+    findBestMove executed in : 260ms
+move #2(d4):
+    moveHelpersCount = 144
+    movesExecuted = 5121
+    availablePointsFound = 92177
+    getUnfilteredMovesCallsCount = 37667
+    findBestMove executed in : 480ms
+
+5)
+max_exchange_deep = -1
+inverted_max_exchange_deep = 2
+DEEP=false
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+
+move #1(e4):
+    moveHelpersCount = 91
+    movesExecuted = 2485
+    availablePointsFound = 22942
+    getUnfilteredMovesCallsCount = 18598
+    findBestMove executed in : 253ms
+move #2(d4):
+    moveHelpersCount = 144
+    movesExecuted = 5121
+    availablePointsFound = 92177
+    getUnfilteredMovesCallsCount = 37667
+    findBestMove executed in : 480ms
+
+6)
+max_exchange_deep = 2
+inverted_max_exchange_deep = 2
+DEEP=false
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+
+move #1(e4):
+    moveHelpersCount = 87
+    movesExecuted = 2373
+    availablePointsFound = 21264
+    getUnfilteredMovesCallsCount = 17808
+    findBestMove executed in : 245ms
+move #2(d4):
+    moveHelpersCount = 135
+    movesExecuted = 4795
+    availablePointsFound = 85794
+    getUnfilteredMovesCallsCount = 35381
+    findBestMove executed in : 460ms
+
+7)
+max_exchange_deep = 2
+inverted_max_exchange_deep = 2
+DEEP=false
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+//botMovesByOriginal
+//playerMovesByOriginal
+
+move #1(e4):
+    moveHelpersCount = 47
+    movesExecuted = 1373
+    availablePointsFound = 12284
+    getUnfilteredMovesCallsCount = 10168
+    findBestMove executed in : 161ms
+move #2(d4):
+    moveHelpersCount = 75
+    movesExecuted = 2755
+    availablePointsFound = 48144
+    getUnfilteredMovesCallsCount = 20141
+    findBestMove executed in : 280ms
+
+8)
+max_exchange_deep = 2
+inverted_max_exchange_deep = 2
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+//botMovesByOriginal
+//playerMovesByOriginal
+DEEP=true
+
+move #1(e4):
+    moveHelpersCount = 42437
+    movesExecuted = 1244590
+    availablePointsFound = 16555298
+    getUnfilteredMovesCallsCount = 9136335
+    findBestMove executed in : 150980ms
+move #2(d4):
+    moveHelpersCount = 122838
+    movesExecuted = 4387695
+    availablePointsFound = 86981991
+    getUnfilteredMovesCallsCount = 31817806
+    findBestMove executed in : 538477ms
+
+
+9)
+max_exchange_deep = 2
+inverted_max_exchange_deep = 2
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+//botMovesByOriginal
+//playerMovesByOriginal
+DEEP=true
+INVERTED_MATERIAL_FOR_PLAYER=false
+
+move #1(e4):
+    moveHelpersCount = 17581
+    movesExecuted = 525552
+    availablePointsFound = 6505170
+    getUnfilteredMovesCallsCount = 3828269
+    findBestMove executed in : 65394ms
+move #2(d4):
+    moveHelpersCount = 49176
+    movesExecuted = 1779480
+    availablePointsFound = 34287236
+    getUnfilteredMovesCallsCount = 12854912
+    findBestMove executed in : 212965ms
+
+10)
+max_exchange_deep = 2
+inverted_max_exchange_deep = 2
+AVAILABLE_MOVES_COUNT=false
+INVERTED_AVAILABLE_MOVES_COUNT=false
+CHECK=false
+CHECKMATE=false
+//botMovesByOriginal
+//playerMovesByOriginal
+DEEP=true
+INVERTED_MATERIAL_FOR_PLAYER=false
+MATERIAL_FOR_BOT=false
+
+move #1(e4):
+    moveHelpersCount = 615
+    movesExecuted = 27452
+    availablePointsFound = 221284
+    getUnfilteredMovesCallsCount = 106396
+    findBestMove executed in : 1599ms
+move #2(d4):
+    moveHelpersCount = 1119
+    movesExecuted = 68546
+    availablePointsFound = 795163
+    getUnfilteredMovesCallsCount = 258574
+    findBestMove executed in : 3782ms
+
+11)
+DEEP=true
+
+move #1(e4):
+    moveHelpersCount = 110776
+    movesExecuted = 2759267
+    availablePointsFound = 36398235
+    getUnfilteredMovesCallsCount = 20765757
+    findBestMove executed in : 329982ms
+move #2(d4):
+    moveHelpersCount = 300646
+    movesExecuted = 9470277
+    availablePointsFound = 189462100
+    getUnfilteredMovesCallsCount = 69933159
+    findBestMove executed in : 1159701ms
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -68,7 +68,7 @@ public class FakeGame implements Gameplay, Immutable {
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public class Builder {
 
-        public Builder setPawnLongMoveColumnIndex(Side side, int columnIndex) {
+        public Builder setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
             Objects.requireNonNull(side);
             featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
             featuresMap.get(side.reverse()).setPawnLongMoveColumnIndex(null);
@@ -76,9 +76,13 @@ public class FakeGame implements Gameplay, Immutable {
         }
 
         public Builder setUnderCheckSide(Side side) {
-            Objects.requireNonNull(side);
-            featuresMap.get(side).setUnderCheck(true);
-            featuresMap.get(side.reverse()).setUnderCheck(false);
+            if (side != null) {
+                featuresMap.get(side).setUnderCheck(true);
+                featuresMap.get(side.reverse()).setUnderCheck(false);
+            } else {
+                featuresMap.get(Side.WHITE).setUnderCheck(false);
+                featuresMap.get(Side.BLACK).setUnderCheck(false);
+            }
             return this;
         }
 

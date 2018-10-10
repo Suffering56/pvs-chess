@@ -98,7 +98,11 @@ public class ExtendedMove {
     }
 
     public boolean hasDifferentPointTo(ExtendedMove otherMove) {
-        return !this.getPointTo().equals(otherMove.getPointTo());
+        return !hasSamePointTo(otherMove.getPointTo());
+    }
+
+    public boolean hasSamePointTo(PointDTO pointTo) {
+        return this.getPointTo().equals(pointTo);
     }
 
     public int getTotal() {
