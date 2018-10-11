@@ -1,7 +1,6 @@
 package com.example.chess.service.impl.bot;
 
 import com.example.chess.dto.CellDTO;
-import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.support.*;
@@ -24,10 +23,9 @@ import java.util.stream.Collectors;
 public class BotServiceImplEasy extends AbstractBotService {
 
     @Override
-    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide, boolean isExternalCall) {
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, List<ExtendedMove> botMovesByOriginal, Side botSide, boolean isExternalCall) {
         log.info("updateRating");
 
-        Side botSide = readyToMoveSide;
         Side playerSide = botSide.reverse();
         MoveHelper moveHelper = MoveHelper.valueOf(fakeGame, originalMatrix);
 

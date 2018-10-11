@@ -108,13 +108,13 @@ public class GameServiceImpl implements GameService {
                 break;
         }
 
-        CellsMatrix newMatrix = moveResult.getNewMatrix();
-        List<History> newHistory = newMatrix.generateHistory(game.getId(), newMatrix.getPosition());
-        game.setPosition(newMatrix.getPosition());
+        CellsMatrix nextMatrix = moveResult.getNewMatrix();
+        List<History> newHistory = nextMatrix.generateHistory(game.getId(), nextMatrix.getPosition());
+        game.setPosition(nextMatrix.getPosition());
 
         Side enemySide = sideFrom.reverse();
-        MoveHelperAPI moveHelper = MoveHelper.valueOf(game.toFake(), newMatrix);
-        if (moveHelper.isKingUnderAttack(enemySide)) {
+        MoveHelperAPI nextMoveHelper = MoveHelper.valueOf(game.toFake(), nextMatrix);
+        if (nextMoveHelper.isKingUnderAttack(enemySide)) {
             /*
                 Если данный ход объявил шах вражескому королю, то нужно подсветить вражеского короля на доске.
                 А еще этот параметр (game.underCheckSide) используется при вычислении доступных ходов,
@@ -128,7 +128,7 @@ public class GameServiceImpl implements GameService {
         historyRepository.saveAll(newHistory);
         gameRepository.save(game);
 
-        return newMatrix.generateArrangement(game.getUnderCheckSide());
+        return nextMatrix.generateArrangement(game.getUnderCheckSide());
     }
 
     @Override

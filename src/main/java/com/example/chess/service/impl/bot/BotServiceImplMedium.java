@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+
 @Service
 @Log4j2
 @Qualifier(BotMode.MEDIUM)
@@ -22,7 +23,13 @@ public class BotServiceImplMedium extends AbstractBotService {
 
 
     @Override
-    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrixBotNext, Side readyToMoveSide, boolean isExternalCall) {
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, List<ExtendedMove> botMovesByOriginal, Side botSide, boolean isExternalCall) {
+        Side playerSide = botSide.reverse();
+
+        List<ExtendedMove> playerMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
+                .getStandardMovesStream(playerSide)
+                .collect(Collectors.toList());
+
         /*
          * 0) matrix = originalMatrixBotNext;
          *
@@ -33,18 +40,8 @@ public class BotServiceImplMedium extends AbstractBotService {
          * 3) executing bot move...
          */
         return analyzedMove -> {
-            Side botSide = readyToMoveSide;
-            Side playerSide = botSide.reverse();
 
-            List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrixBotNext)
-                    .getStandardMovesStream(botSide)
-                    .collect(Collectors.toList());
-
-            List<ExtendedMove> playerMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrixBotNext)
-                    .getStandardMovesStream(playerSide)
-                    .collect(Collectors.toList());
-
-            MoveResult moveResult = originalMatrixBotNext.executeMove(analyzedMove.toMoveDTO(), null);     //n == 0 -> n == 1
+            MoveResult moveResult = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null);     //n == 0 -> n == 1
             CellsMatrix firstMatrixPlayerNext = moveResult.getNewMatrix();
 
             Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
@@ -74,19 +71,19 @@ public class BotServiceImplMedium extends AbstractBotService {
 //            на каждый ход противника -> список всех доступных для бота вариантов ответа
 
 
-            if (isExternalCall) {
-                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-                        .getStandardMovesStream(playerSide)
-                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
-                        .map(move -> {
-                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-                            return findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false).getTotal();
-                        })
-                        .mapToInt(Integer::intValue)
-                        .min().orElse(0);
-
-                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
-            }
+//            if (isExternalCall) {
+//                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                        .getStandardMovesStream(playerSide)
+//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
+//                        .map(move -> {
+//                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                            return findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false).getTotal();
+//                        })
+//                        .mapToInt(Integer::intValue)
+//                        .min().orElse(0);
+//
+//                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
+//            }
 
 
             //pawn promotion

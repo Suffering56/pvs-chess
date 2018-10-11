@@ -1,6 +1,6 @@
 package com.example.chess.service.support;
 
-import com.example.chess.App;
+import com.example.chess.Debug;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
@@ -84,7 +84,7 @@ public final class CellsMatrix implements Immutable {
      * @return MoveResult (contains new matrix with updated state)
      */
     public MoveResult executeMove(MoveDTO move, Piece pieceFromPawn) {
-        App.movesExecuted++;
+        Debug.movesExecuted++;
         CellDTO cellFrom = getCell(move.getFrom());
         CellDTO cellTo = getCell(move.getTo());
 

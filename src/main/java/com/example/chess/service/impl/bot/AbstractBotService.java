@@ -1,22 +1,27 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.App;
+import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
-import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.*;
+import com.example.chess.service.support.CellsMatrix;
+import com.example.chess.service.support.ExtendedMove;
+import com.example.chess.service.support.FakeGame;
+import com.example.chess.service.support.MoveHelper;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -39,35 +44,28 @@ public abstract class AbstractBotService implements BotService {
         put(LoggerParam.MATERIAL, false);
     }};
 
-    private Map<Integer, MoveDTO> destinyMap = new HashMap<Integer, MoveDTO>() {{
-        // "e7---e6"
-        put(1, MoveDTO.valueOf(PointDTO.valueOf(6, 3), PointDTO.valueOf(5, 3), null));
-        // "Bf8---b4"
-        put(3, MoveDTO.valueOf(PointDTO.valueOf(7, 2), PointDTO.valueOf(3, 6), null));
-    }};
-
     @Profile
     @Override
     public void applyBotMove(Game game) {
         CommonUtils.executeInSecondaryThread(() -> {
             CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
-            Side readyToMoveSide = game.getReadyToMoveSide();
-            MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, readyToMoveSide);
+            Side botSide = game.getReadyToMoveSide();
+            MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, botSide);
             gameService.applyMove(game, moveDTO);
         });
     }
 
-    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame game, CellsMatrix originalMatrix, Side readyToMoveSide, boolean isExternalCall);
+    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, List<ExtendedMove> botMovesByOriginal, Side botSide, boolean isExternalCall);
 
-    protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide) {
+    protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide) {
         long start = System.currentTimeMillis();
-        App.resetCounters();
+        Debug.resetCounters();
 
 
-        ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, readyToMoveSide, true);
+        ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
 
         System.out.println();
-        App.printCounters();
+        Debug.printCounters();
         System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
 
         PieceType promotionPieceType = null;
@@ -75,7 +73,7 @@ public abstract class AbstractBotService implements BotService {
             promotionPieceType = PieceType.QUEEN;
         }
 
-        MoveDTO predestinedMove = destinyMap.get(originalMatrix.getPosition());
+        MoveDTO predestinedMove = Debug.getPredestinedMove(originalMatrix.getPosition());
         if (predestinedMove != null) {
             return predestinedMove;
         }
@@ -83,26 +81,28 @@ public abstract class AbstractBotService implements BotService {
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
-    protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side readyToMoveSide, boolean isExternalCall) {
-        List<ExtendedMove> sortedBotMovesList = MoveHelper.valueOf(fakeGame, originalMatrix)
-                .getStandardMovesStream(readyToMoveSide)
-                .peek(calculateRating(fakeGame, originalMatrix, readyToMoveSide, isExternalCall))
+    protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
+        List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
+                .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
-        int maxTotal = sortedBotMovesList.stream()
+        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
+
+        int maxTotal = botMovesByOriginal.stream()
+                .peek(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall))
                 .mapToInt(ExtendedMove::getTotal)
                 .max()
                 .orElseThrow(() -> new RuntimeException("Checkmate!!!"));
 
-        List<ExtendedMove> topMovesList = sortedBotMovesList.stream()
+        List<ExtendedMove> topMovesList = botMovesByOriginal.stream()
                 .filter(extendedMove -> extendedMove.getTotal() == maxTotal)
                 .collect(Collectors.toList());
 
         ExtendedMove resultMove = getRandomMove(topMovesList);
 
         enter(LoggerParam.COMMON, 50);
-        sortedBotMovesList.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
+        botMovesByOriginal.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
         logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
 
         enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);

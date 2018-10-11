@@ -11,27 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class App implements CommandLineRunner {
 
-    public static long availablePointsFound = 0;
-    public static long getUnfilteredMovesCallsCount = 0;
-    public static long moveHelpersCount = 0;
-    public static long movesExecuted = 0;
-
-    public static void resetCounters() {
-        availablePointsFound = 0;
-        getUnfilteredMovesCallsCount = 0;
-        moveHelpersCount = 0;
-        movesExecuted = 0;
-    }
-
-    public static void printCounters() {
-        System.out.println("moveHelpersCount = " + moveHelpersCount);
-        System.out.println("movesExecuted = " + movesExecuted);
-        System.out.println("availablePointsFound = " + availablePointsFound);
-        System.out.println("getUnfilteredMovesCallsCount = " + getUnfilteredMovesCallsCount);
-    }
-
-
-    //TODO: i think, i can use @Conditional instead @Qualifier
+    //FIXME: i think, i can use @Conditional instead @Qualifier
     public static final String DEFAULT_BOT_MODE = BotMode.MEDIUM;
 
     public static void main(String[] args) {
@@ -47,4 +27,6 @@ public class App implements CommandLineRunner {
     public static String getVersion() {
         return CommonUtils.readGradleProperty("project.version");
     }
+
+
 }

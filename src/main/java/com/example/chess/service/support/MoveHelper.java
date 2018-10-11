@@ -1,6 +1,6 @@
 package com.example.chess.service.support;
 
-import com.example.chess.App;
+import com.example.chess.Debug;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
@@ -26,7 +26,7 @@ public class MoveHelper implements MoveHelperAPI {
 
 
     public static MoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
-        App.moveHelpersCount++;
+        Debug.moveHelpersCount++;
         return new MoveHelper(fakeGame, originalMatrix);
     }
 
@@ -236,8 +236,8 @@ public class MoveHelper implements MoveHelperAPI {
                 moves = new HashSet<>();
         }
 
-        App.availablePointsFound += moves.size();
-        App.getUnfilteredMovesCallsCount++;
+        Debug.availablePointsFound += moves.size();
+        Debug.getUnfilteredMovesCallsCount++;
         return moves;
     }
 
