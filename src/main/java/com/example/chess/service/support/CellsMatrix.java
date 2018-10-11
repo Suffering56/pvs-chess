@@ -71,6 +71,12 @@ public final class CellsMatrix implements Immutable {
         Preconditions.checkElementIndex(columnIndex, BOARD_SIZE, "Out of board point");
     }
 
+    //FIXME: pieceFromPawn can be not null
+    public MoveData executeMove(ExtendedMove move, int deep) {
+        MoveResult moveResult = executeMove(move.toMoveDTO(), null);
+        return new MoveData(move, moveResult, deep);
+    }
+
     /**
      * Обычный ход.
      * <p>

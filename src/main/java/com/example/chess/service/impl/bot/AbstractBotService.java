@@ -4,15 +4,13 @@ import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
+import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.CellsMatrix;
-import com.example.chess.service.support.ExtendedMove;
-import com.example.chess.service.support.FakeGame;
-import com.example.chess.service.support.MoveHelper;
+import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,16 +79,59 @@ public abstract class AbstractBotService implements BotService {
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
+
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
+        Side playerSide = botSide.reverse();
+
         List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
-        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
+//        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
+
+        List<MoveData> collect = botMovesByOriginal.stream()
+                .map(botMove -> {
+                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
+                    fillDeeperMoves(fakeGame, moveData, 4);
+                    return moveData;
+                })
+                .collect(Collectors.toList());
+
+
+//        List<MoveData> collect = botMovesByOriginal.stream()
+//                .map(botMove -> {
+//                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
+//                    CellsMatrix firstMatrixPlayerNext = moveData.getNextMatrix();
+//
+//                    //FIXME: update FakeGame(need new instance)
+//                    Map<PointDTO, MoveData> moreDeepPlayerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                            .getStandardMovesStream(playerSide)
+//                            .collect(Collectors.toMap(ExtendedMove::getPointTo,
+//                                    playerMove -> firstMatrixPlayerNext.executeMove(playerMove, 2)));
+//
+//                    moveData.setMoreDeepMoves(moreDeepPlayerMoves);
+//
+//                    moreDeepPlayerMoves
+//                            .values()
+//                            .forEach(playerMoveData -> {
+//                                CellsMatrix secondMatrixBotNext = playerMoveData.getNextMatrix();
+//
+//                                //FIXME: update FakeGame(need new instance)
+//                                Map<PointDTO, MoveData> moreDeepBotMoves = MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
+//                                        .getStandardMovesStream(botSide)
+//                                        .collect(Collectors.toMap(ExtendedMove::getPointTo,
+//                                                deepBotMove -> secondMatrixBotNext.executeMove(deepBotMove, 3)));
+//
+//                                playerMoveData.setMoreDeepMoves(moreDeepBotMoves);
+//                            });
+//
+//                    return moveData;
+//                })
+//                .collect(Collectors.toList());
+
 
         int maxTotal = botMovesByOriginal.stream()
-                .peek(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall))
                 .mapToInt(ExtendedMove::getTotal)
                 .max()
                 .orElseThrow(() -> new RuntimeException("Checkmate!!!"));
@@ -110,6 +151,35 @@ public abstract class AbstractBotService implements BotService {
         logDoubleSeparator(LoggerParam.COMMON, 3);
 
         return resultMove;
+    }
+
+    private void fillDeeperMoves(FakeGame fakeGame, MoveData moveData, int maxDeep) {
+        CellsMatrix matrixAfterMove = moveData.getNextMatrix();
+
+        Side nextSide = moveData.getExecutedMoveSide().reverse();
+        int nextDeep = moveData.getDeep() + 1; //2
+
+        //FIXME: update FakeGame(need new instance)\
+        //FIXME: toMap replace by Collectors.groupingBy
+//        Map<PointDTO, MoveData> moreDeepMoves = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+//                .getStandardMovesStream(nextSide)
+//                .collect(Collectors.toMap(ExtendedMove::getPointTo,
+//                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
+
+        List<MoveData> moreDeepMoves = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+                .getStandardMovesStream(nextSide)
+                .map(deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep))
+                .collect(Collectors.toList());
+
+        moveData.setMoreDeepMoves(moreDeepMoves);
+
+        if (nextDeep + 1 > maxDeep) {
+            return;
+        }
+
+        moreDeepMoves
+//                .values()
+                .forEach(nextMoveData -> fillDeeperMoves(fakeGame, nextMoveData, maxDeep));
     }
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {

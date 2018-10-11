@@ -4,6 +4,7 @@ import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
+import com.example.chess.enums.Side;
 import com.example.chess.utils.CommonUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -120,6 +121,10 @@ public class ExtendedMove {
 
     public boolean isVertical() {
         return from.getColumnIndex().equals(to.getColumnIndex());
+    }
+
+    public Side getSide() {
+        return from.getSide();
     }
 
     @Override
