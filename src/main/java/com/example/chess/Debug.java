@@ -5,29 +5,62 @@ import com.example.chess.dto.PointDTO;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Debug {
 
     private static final boolean DESTINY_ENABLED = true;
+    public static final boolean IS_PARALLEL = true;
+
+    private static final AtomicLong availablePointsFound = new AtomicLong(0);
+    private static final AtomicLong getUnfilteredMovesCallsCount = new AtomicLong(0);
+    private static final AtomicLong moveHelpersCount = new AtomicLong(0);
+    private static final AtomicLong movesExecuted = new AtomicLong(0);
+
+    public static void incrementAvailablePointsFound(int pointsCount) {
+        increment(availablePointsFound, pointsCount);
+    }
+
+    public static void incrementGetUnfilteredMovesCallsCount() {
+        increment(getUnfilteredMovesCallsCount);
+    }
+
+    public static void incrementMoveHelpersCount() {
+        increment(moveHelpersCount);
+    }
 
 
-    public static long availablePointsFound = 0;
-    public static long getUnfilteredMovesCallsCount = 0;
-    public static long moveHelpersCount = 0;
-    public static long movesExecuted = 0;
+    public static void incrementMovesExecuted() {
+        increment(movesExecuted);
+    }
+
+    private static void increment(AtomicLong atomicLong) {
+        increment(atomicLong, 1);
+    }
+
+    private static void increment(AtomicLong atomicLong, int value) {
+        while (true) {
+            long existingValue = atomicLong.get();
+            long newValue = existingValue + value;
+            if (atomicLong.compareAndSet(existingValue, newValue)) {
+                return;
+            }
+        }
+    }
 
     public static void resetCounters() {
-        availablePointsFound = 0;
-        getUnfilteredMovesCallsCount = 0;
-        moveHelpersCount = 0;
-        movesExecuted = 0;
+        availablePointsFound.set(0);
+        getUnfilteredMovesCallsCount.set(0);
+        moveHelpersCount.set(0);
+        movesExecuted.set(0);
     }
 
     public static void printCounters() {
-        System.out.println("moveHelpersCount = " + moveHelpersCount);
-        System.out.println("movesExecuted = " + movesExecuted);
-        System.out.println("availablePointsFound = " + availablePointsFound);
-        System.out.println("getUnfilteredMovesCallsCount = " + getUnfilteredMovesCallsCount);
+        System.out.println("moveHelpersCount = " + moveHelpersCount.get());
+        System.out.println("movesExecuted = " + movesExecuted.get());
+        System.out.println("availablePointsFound = " + availablePointsFound.get());
+        System.out.println("getUnfilteredMovesCallsCount = " + getUnfilteredMovesCallsCount.get());
     }
 
 

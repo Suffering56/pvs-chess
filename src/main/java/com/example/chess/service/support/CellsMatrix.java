@@ -90,7 +90,7 @@ public final class CellsMatrix implements Immutable {
      * @return MoveResult (contains new matrix with updated state)
      */
     public MoveResult executeMove(MoveDTO move, Piece pieceFromPawn) {
-        Debug.movesExecuted++;
+        Debug.incrementMovesExecuted();
         CellDTO cellFrom = getCell(move.getFrom());
         CellDTO cellTo = getCell(move.getTo());
 
