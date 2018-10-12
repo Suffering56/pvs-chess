@@ -106,7 +106,7 @@ calculate_rating=false
 fillDeeperMoves=true
 maxDeep = 4
 public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
-IS_PARALLEL=true
+IS_PARALLEL=true                                                                                                        //!!!!!!!!!!!!!!!!
 
 move #1(e4):
     moveHelpersCount = 13781
@@ -142,3 +142,102 @@ move #2(d4):
     availablePointsFound = 23135406
     getUnfilteredMovesCallsCount = 9674136
     findBestMove executed in : 102191ms
+
+9)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+IS_PARALLEL=false
+OptimizedMoveHelper:
+    -isDefensive removed
+    -filterAvailableMoves disabled                                                                                      //!!!!!!!!!!!!!!!!
+
+move #1(e4):
+    moveHelpersCount = 13929
+    movesExecuted = 425817
+    availablePointsFound = 425817
+    getUnfilteredMovesCallsCount = 222685
+    findBestMove executed in : 3843ms
+move #2(d4):
+    moveHelpersCount = 36050
+    movesExecuted = 1362903
+    availablePointsFound = 1362903
+    getUnfilteredMovesCallsCount = 575850
+    findBestMove executed in : 22141ms
+
+10)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+OptimizedMoveHelper:
+    -isDefensive removed
+    -filterAvailableMoves disabled
+IS_PARALLEL=true
+
+move #1(e4):
+    moveHelpersCount = 13929
+    movesExecuted = 425817
+    availablePointsFound = 425817
+    getUnfilteredMovesCallsCount = 222685
+    findBestMove executed in : 4465ms
+move #2(d4):
+    moveHelpersCount = 36050
+    movesExecuted = 1362903
+    availablePointsFound = 1362903
+    getUnfilteredMovesCallsCount = 575850
+    findBestMove executed in : 21008ms
+
+
+11)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+OptimizedMoveHelper:
+    -isDefensive removed
+    -filterAvailableMoves disabled
+IS_PARALLEL=true
+IS_PARALLEL for: CellMatrix.allPiecesStream()                                                                           //!!!!!!!!!!!!
+
+
+move #1(e4):
+    moveHelpersCount = 13929
+    movesExecuted = 425817
+    availablePointsFound = 425817
+    getUnfilteredMovesCallsCount = 222685
+    findBestMove executed in : 1292ms
+move #2(d4):
+    moveHelpersCount = 36050
+    movesExecuted = 1362903
+    availablePointsFound = 1362903
+    getUnfilteredMovesCallsCount = 575850
+    findBestMove executed in : 4461ms
+
+
+12)                                                                                                                     //WTF (12.executionTime > 7.executionTime)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+OptimizedMoveHelper:
+    -isDefensive removed
+    -filterAvailableMoves disabled
+IS_PARALLEL=true
+IS_PARALLEL for: CellMatrix.allPiecesStream()
+    -filterAvailableMoves ENABLED
+
+
+move #1(e4):
+    moveHelpersCount = 13781
+    movesExecuted = 839229
+    availablePointsFound = 4763713
+    getUnfilteredMovesCallsCount = 3158588
+    findBestMove executed in : 16461ms
+move #2(d4):
+    moveHelpersCount = 34575
+    movesExecuted = 2569295
+    availablePointsFound = 23135406
+    getUnfilteredMovesCallsCount = 9674136
+    findBestMove executed in : 60978ms

@@ -56,10 +56,24 @@ public class OptimizedMoveHelper {
 
     private Set<PointDTO> getFilteredAvailablePoints(CellDTO moveableCell) {
         Set<PointDTO> moves = getUnfilteredMoves(fakeGame, originalMatrix, moveableCell);
+//        return moves;
         return filterAvailableMoves(moves, moveableCell);
     }
 
 
+    /*
+     * TODO: слабое место в производительности - предлагаю фильровать на стадии вычисления (т.е. не добавлять их, если нельзя)
+     * 1) не ходим королем под атакуемые поля:
+     * - вычисляем доступные ходы противника(кроме пешек)
+     * - если доступное для короля поле является атакуемым - НЕ ДОБАВЛЯЕМ
+     * 2) бросаем от короля лучи по всем 8 направлениям:
+     * - если на горизонтально-вертикальных направлениях присутствует вражеская ладья или ферзь
+     * - либо на диагональных направлениях присутствует вражеские слоны или ферзь
+     *  - считаем сколько фигур между ними стоит
+     *   - 0 не может - иначе был бы шах
+     *   - 2+ - значит можно ходить любой из этих 2+
+     *   - 1 - значит ЕЙ НЕЛЬЗЯ ХОДИТЬ
+     */
     private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {
         moves = moves.stream()
                 .filter(isKingNotAttackedByEnemy(moveableCell)

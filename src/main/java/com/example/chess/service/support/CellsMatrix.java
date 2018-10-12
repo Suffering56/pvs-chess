@@ -229,8 +229,11 @@ public final class CellsMatrix implements Immutable {
      * convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
      */
     public Stream<CellDTO> allPiecesStream() {
-//        Arrays.stream()
-        return cellsMatrix.stream().flatMap(List::stream);
+        if (Debug.IS_PARALLEL) {
+            return cellsMatrix.parallelStream().flatMap(List::stream);
+        } else {
+            return cellsMatrix.stream().flatMap(List::stream);
+        }
     }
 
     public Stream<CellDTO> allPiecesBySideStream(Side side) {

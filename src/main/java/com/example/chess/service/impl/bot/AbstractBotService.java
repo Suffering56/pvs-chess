@@ -84,7 +84,7 @@ public abstract class AbstractBotService implements BotService {
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
         Side playerSide = botSide.reverse();
 
-        List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
+        List<ExtendedMove> botMovesByOriginal = OptimizedMoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
@@ -177,7 +177,7 @@ public abstract class AbstractBotService implements BotService {
 //
 
 
-        Stream<ExtendedMove> movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+        Stream<ExtendedMove> movesStream = OptimizedMoveHelper.valueOf(fakeGame, matrixAfterMove)
                 .getStandardMovesStream(nextSide);
 
         if (Debug.IS_PARALLEL) {
