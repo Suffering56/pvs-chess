@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 @Log4j2
@@ -90,7 +91,14 @@ public abstract class AbstractBotService implements BotService {
 
 //        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
 
-        List<MoveData> collect = botMovesByOriginal.stream()
+        Stream<ExtendedMove> botMovesStream;
+        if (Debug.IS_PARALLEL) {
+            botMovesStream = botMovesByOriginal.parallelStream();
+        } else {
+            botMovesStream = botMovesByOriginal.stream();
+        }
+
+        List<MoveData> collect = botMovesStream
                 .map(botMove -> {
                     MoveData moveData = originalMatrix.executeMove(botMove, 1);
                     fillDeeperMoves(fakeGame, moveData, 4);
@@ -166,8 +174,17 @@ public abstract class AbstractBotService implements BotService {
 //                .collect(Collectors.toMap(ExtendedMove::getPointTo,
 //                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
 
-        List<MoveData> moreDeepMoves = MoveHelper.valueOf(fakeGame, matrixAfterMove)
-                .getStandardMovesStream(nextSide)
+//
+
+
+        Stream<ExtendedMove> movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+                .getStandardMovesStream(nextSide);
+
+        if (Debug.IS_PARALLEL) {
+            movesStream = movesStream.parallel();
+        }
+
+        List<MoveData> moreDeepMoves = movesStream
                 .map(deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep))
                 .collect(Collectors.toList());
 

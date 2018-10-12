@@ -20,6 +20,10 @@ public class AppTests {
 
     @Test
     public void contextLoads() {
+        streamTest();
+    }
+
+    private void streamTest() {
         List<Person> personList = new ArrayList<Person>() {{
             add(new Person("Victoria", 12, Gender.FEMALE));
             add(new Person("Kate", 31, Gender.FEMALE));

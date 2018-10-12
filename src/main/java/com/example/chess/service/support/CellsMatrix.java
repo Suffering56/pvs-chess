@@ -30,6 +30,7 @@ public final class CellsMatrix implements Immutable {
     @Getter
     private final int position;
     private final List<List<CellDTO>> cellsMatrix;
+//    private Map<Side, PointDTO> kingPoints = new HashMap<>();
 
     private CellsMatrix(int position, Function<Integer, Function<Integer, Piece>> pieceGenerator) {
         this.position = position;
@@ -228,6 +229,7 @@ public final class CellsMatrix implements Immutable {
      * convert matrix (List<List<T>> x8x8) to simple list (List<T> x64)
      */
     public Stream<CellDTO> allPiecesStream() {
+//        Arrays.stream()
         return cellsMatrix.stream().flatMap(List::stream);
     }
 
@@ -236,13 +238,49 @@ public final class CellsMatrix implements Immutable {
                 .filter(containsSide(side));
     }
 
-    public Stream<CellDTO> somePiecesStream(Side side, PieceType... pieceTypes) {
+    public Stream<CellDTO> containsPiecesStream(Side side, PieceType... pieceTypes) {
         return allPiecesStream()
-                .filter(containsPieces(side, pieceTypes));
+                .filter(containsPiecesOptimized(side, pieceTypes));
+    }
+
+    public Stream<CellDTO> notContainsPiecesStream(Side side, PieceType... pieceTypes) {
+        return allPiecesStream()
+                .filter(notContainsPiecesOptimized(side, pieceTypes));
     }
 
     private Predicate<CellDTO> containsPieces(Side side, PieceType[] pieceTypes) {
         return cell -> cell.getSide() == side && Arrays.stream(pieceTypes).anyMatch(type -> type == cell.getPieceType());
+    }
+
+    private Predicate<CellDTO> containsPiecesOptimized(Side side, PieceType[] pieceTypes) {
+        return cell -> {
+            if (cell.getSide() != side) {
+                return false;
+            }
+
+            boolean result = false;
+            for (PieceType pieceType : pieceTypes) {
+                if (cell.getPieceType() == pieceType) {
+                    result = true;
+                }
+            }
+            return result;
+        };
+    }
+
+    private Predicate<CellDTO> notContainsPiecesOptimized(Side side, PieceType[] pieceTypes) {
+        return cell -> {
+            if (cell.getSide() != side) {
+                return false;
+            }
+
+            for (PieceType pieceType : pieceTypes) {
+                if (cell.getPieceType() == pieceType) {
+                    return false;
+                }
+            }
+            return true;
+        };
     }
 
     private Predicate<CellDTO> containsSide(Side side) {
@@ -257,13 +295,13 @@ public final class CellsMatrix implements Immutable {
     }
 
     public Set<PointDTO> findPiecesCoords(Side side, PieceType... pieceTypes) {
-        return somePiecesStream(side, pieceTypes)
+        return containsPiecesStream(side, pieceTypes)
                 .map(CellDTO::getPoint)
                 .collect(Collectors.toSet());
     }
 
     public PointDTO findKingPoint(Side side) {
-        return somePiecesStream(side, PieceType.KING)
+        return containsPiecesStream(side, PieceType.KING)
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("KING not found on board"))
                 .getPoint();

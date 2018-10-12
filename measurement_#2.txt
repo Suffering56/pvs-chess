@@ -13,6 +13,7 @@ DEEP=true
 20v->20v->29->29->~40->~40
 ===================================================
 1)
+MAX_TIME(first release)
 DEEP=true
 
 move #1(e4):
@@ -27,25 +28,8 @@ move #2(d4):
     availablePointsFound = 189462100
     getUnfilteredMovesCallsCount = 69933159
     findBestMove executed in : 1159701ms
-
+==========================================
 2)
-DEEP=false
-inverted_max_exchange_deep = -1
-
-move #1(e4):
-    moveHelpersCount = 151
-    movesExecuted = 3531
-    availablePointsFound = 34907
-    getUnfilteredMovesCallsCount = 26859
-    findBestMove executed in : 340ms
-move #2(d4):
-    moveHelpersCount = 234
-    movesExecuted = 7224
-    availablePointsFound = 133451
-    getUnfilteredMovesCallsCount = 53807
-    findBestMove executed in : 655ms
-
-3)
 calculate_rating=false              //only botMovesByOriginal
 
 move #1(e4):
@@ -86,13 +70,75 @@ maxDeep = 4
 
 move #1(e4):
     moveHelpersCount = 13781
-    movesExecuted = 839229
+    movesExecuted = 839236
     availablePointsFound = 4763713
     getUnfilteredMovesCallsCount = 3158588
-    findBestMove executed in : 36911ms
+    findBestMove executed in : 36911ms/35141ms
 move #2(d4):
     moveHelpersCount = 34575
     movesExecuted = 2569295
     availablePointsFound = 23135406
     getUnfilteredMovesCallsCount = 9674136
-    findBestMove executed in : 117023ms
+    findBestMove executed in : 117023ms/108181ms
+
+6)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+
+move #1(e4):
+    moveHelpersCount = 13781
+    movesExecuted = 839236
+    availablePointsFound = 4763713
+    getUnfilteredMovesCallsCount = 3158588
+    findBestMove executed in : 34411ms/32132ms
+move #2(d4):
+    moveHelpersCount = 34575
+    movesExecuted = 2569295
+    availablePointsFound = 23135406
+    getUnfilteredMovesCallsCount = 9674136
+    findBestMove executed in : 103411ms/103536ms
+
+
+7)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+IS_PARALLEL=true
+
+move #1(e4):
+    moveHelpersCount = 13781
+    movesExecuted = 839236
+    availablePointsFound = 4763713
+    getUnfilteredMovesCallsCount = 3158588
+    findBestMove executed in : 13226ms
+move #2(d4):
+    moveHelpersCount = 34575
+    movesExecuted = 2569295
+    availablePointsFound = 23135406
+    getUnfilteredMovesCallsCount = 9674136
+    findBestMove executed in : 47784ms
+
+8)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+public static PointDTO valueOf -> return pointsArray[rowIndex][columnIndex];
+IS_PARALLEL=false
+OptimizedMoveHelper:
+    -isDefensive removed
+
+move #1(e4):
+    moveHelpersCount = 13781
+    movesExecuted = 839229
+    availablePointsFound = 4763713
+    getUnfilteredMovesCallsCount = 3158588
+    findBestMove executed in : 34586ms/32364ms
+move #2(d4):
+    moveHelpersCount = 34575
+    movesExecuted = 2569295
+    availablePointsFound = 23135406
+    getUnfilteredMovesCallsCount = 9674136
+    findBestMove executed in : 102191ms
