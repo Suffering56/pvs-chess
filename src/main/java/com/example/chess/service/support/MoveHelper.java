@@ -26,7 +26,7 @@ public class MoveHelper implements MoveHelperAPI {
 
 
     public static MoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
-        Debug.moveHelpersCount++;
+        Debug.incrementMoveHelpersCount();
         return new MoveHelper(fakeGame, originalMatrix);
     }
 
@@ -176,8 +176,12 @@ public class MoveHelper implements MoveHelperAPI {
 
         Set<PointDTO> pawnAttackMoves = new HashSet<>();
         enemyPawnPoints.forEach(point -> {
-            pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() + 1));
-            pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() - 1));
+            if (PointDTO.isCorrectIndex(point.getColumnIndex() + 1)) {
+                pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() + 1));
+            }
+            if (PointDTO.isCorrectIndex(point.getColumnIndex() - 1)) {
+                pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() - 1));
+            }
         });
 
         return pawnAttackMoves;
@@ -236,8 +240,8 @@ public class MoveHelper implements MoveHelperAPI {
                 moves = new HashSet<>();
         }
 
-        Debug.availablePointsFound += moves.size();
-        Debug.getUnfilteredMovesCallsCount++;
+        Debug.incrementAvailablePointsFound(moves.size());
+        Debug.incrementGetUnfilteredMovesCallsCount();
         return moves;
     }
 

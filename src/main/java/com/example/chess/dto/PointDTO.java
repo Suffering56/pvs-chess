@@ -13,12 +13,26 @@ import java.util.Objects;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PointDTO implements Immutable {
 
-    private final Integer rowIndex;
-    private final Integer columnIndex;
+    private final int rowIndex;
+    private final int columnIndex;
+
+    private static PointDTO[][] pointsArray = new PointDTO[8][8];
+
+    static {
+        for (int rowIndex = 0; rowIndex < 8; rowIndex++) {
+            for (int columnIndex = 0; columnIndex < 8; columnIndex++) {
+                pointsArray[rowIndex][columnIndex] = new PointDTO(rowIndex, columnIndex);
+            }
+        }
+    }
 
     @JsonCreator
-    public static PointDTO valueOf(@JsonProperty Integer rowIndex, @JsonProperty Integer columnIndex) {
-        return new PointDTO(rowIndex, columnIndex);
+    public static PointDTO valueOf(@JsonProperty int rowIndex, @JsonProperty int columnIndex) {
+        return pointsArray[rowIndex][columnIndex];
+    }
+
+    public static boolean isCorrectIndex(int index) {
+        return index >= 0 && index < 8;
     }
 
     public PointDTO setRowIndex(Integer rowIndex) {
