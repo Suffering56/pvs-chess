@@ -2,27 +2,27 @@ package com.example.chess.service.support;
 
 import com.example.chess.Debug;
 import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings({"ConstantConditions", "Duplicates"})
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class OptimizedMoveHelper {
 
     private final FakeGame fakeGame;
     private final CellsMatrix originalMatrix;
 
+    private OptimizedMoveHelper(FakeGame fakeGame, CellsMatrix originalMatrix) {
+        this.fakeGame = fakeGame;
+        this.originalMatrix = originalMatrix;
+    }
 
     public static OptimizedMoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
         Debug.incrementMoveHelpersCount();
@@ -34,32 +34,147 @@ public class OptimizedMoveHelper {
         boolean kingUnderAttack = OptimizedMoveHelper.valueOf(null, null).isKingUnderAttack(Side.WHITE);
     }
 
-    public boolean isKingUnderAttack(Side kingSide) {
-        PointDTO kingPoint = originalMatrix.findKingPoint(kingSide);
-        Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(fakeGame, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
-        return enemyMoves.contains(kingPoint);
-    }
+//    public boolean isKingUnderAttack(Side kingSide) {
+//        PointDTO kingPoint = originalMatrix.findKingPoint(kingSide);
+//        Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(fakeGame, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
+//        return enemyMoves.contains(kingPoint);
+//    }
 
     public Stream<ExtendedMove> getStandardMovesStream(Side side) {
+        Side enemySide = side.reverse();
+        PointDTO kingPoint = originalMatrix.findKingPoint(side);
+        Set<PointDTO> enemyPoints = getAttackedByEnemyPoints(enemySide);
+
+        List<PointDTO> unmovablePoints = originalMatrix
+                .includePiecesStream(enemySide, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN)
+                .map(enemyPossibleAttackerCell -> {
+                    CellDTO unmovableCell = null;
+
+                    switch (enemyPossibleAttackerCell.getPieceType()) {
+                        case BISHOP:
+                            unmovableCell = getSingleBishopDefenderCell(kingPoint, enemyPossibleAttackerCell);
+                            break;
+                        case ROOK:
+                            unmovableCell = getSingleRookDefenderCell(kingPoint, enemyPossibleAttackerCell);
+                            break;
+                        case QUEEN:
+                            unmovableCell = getSingleBishopDefenderCell(kingPoint, enemyPossibleAttackerCell);
+                            if (unmovableCell == null) {
+                                unmovableCell = getSingleRookDefenderCell(kingPoint, enemyPossibleAttackerCell);
+                            }
+                            break;
+                    }
+
+                    if (unmovableCell.getPieceType() == PieceType.QUEEN || unmovableCell.getPieceType() == enemyPossibleAttackerCell.getPieceType()) {
+                        switch (unmovableCell.getPieceType()) {
+                            case BISHOP:
+                                break;
+                            case ROOK:
+                                break;
+                            case QUEEN:
+                                break;
+                        }
+                    }
+
+                    return unmovableCell;
+                })
+                .filter(Objects::nonNull)
+                .map(CellDTO::getPoint)
+                .collect(Collectors.toList());
+
+
         return originalMatrix
                 .allPiecesBySideStream(side)
-                .flatMap(toExtendedMovesStream(this::getFilteredAvailablePoints));
+                .flatMap(moveableCell -> {
+                    Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, enemyPoints, unmovablePoints);
+                    return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
+                });
     }
 
-    private Function<CellDTO, Stream<? extends ExtendedMove>> toExtendedMovesStream(Function<CellDTO, Set<PointDTO>> movesExtractor) {
-        return moveableCell -> {
-            Set<PointDTO> availableMoves = movesExtractor.apply(moveableCell);
-            return availableMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
-        };
+    private CellDTO getSingleRookDefenderCell(PointDTO kingPoint, CellDTO cell) {
+        int diff;
+        int rowVector = 0;
+        int columnVector = 0;
+
+        if (kingPoint.getRowIndex() == cell.getRowIndex()) {
+            diff = kingPoint.getColumnIndex() - cell.getColumnIndex();
+            columnVector = diff > 0 ? 1 : -1;
+
+        } else if (kingPoint.getColumnIndex() == cell.getColumnIndex()) {
+            diff = kingPoint.getRowIndex() - cell.getRowIndex();
+            rowVector = diff > 0 ? 1 : -1;
+        } else {
+            return null;
+        }
+
+        int rayLength = Math.abs(diff) - 1;
+        return getNotEmptyBetweenCellIfSingle(kingPoint, rayLength, rowVector, columnVector);
     }
 
+    private CellDTO getSingleBishopDefenderCell(PointDTO kingPoint, CellDTO cell) {
+        int rowDiff = kingPoint.getRowIndex() - cell.getRowIndex();
+        int columnDiff = kingPoint.getColumnIndex() - cell.getColumnIndex();
 
-    private Set<PointDTO> getFilteredAvailablePoints(CellDTO moveableCell) {
-        Set<PointDTO> moves = getUnfilteredMoves(fakeGame, originalMatrix, moveableCell);
-//        return moves;
-        return filterAvailableMoves(moves, moveableCell);
+        if (Math.abs(rowDiff) == Math.abs(columnDiff)) {
+            int rayLength = Math.abs(rowDiff) - 1;
+
+            int rowVector = rowDiff > 0 ? 1 : -1;
+            int columnVector = columnDiff > 0 ? 1 : -1;
+
+            return getNotEmptyBetweenCellIfSingle(kingPoint, rayLength, rowVector, columnVector);
+        }
+
+        return null;
     }
 
+    private CellDTO getNotEmptyBetweenCellIfSingle(PointDTO kingPoint, int rayLength, int rowVector, int columnVector) {
+        int piecesBetweenCount = 0;
+        CellDTO result = null;
+
+        for (int i = 1; i <= rayLength; i++) {
+            int rowOffset = i * rowVector;
+            int columnOffset = i * columnVector;
+
+            CellDTO betweenCell = getCellByKingPoint(kingPoint, rowOffset, columnOffset);
+            if (!betweenCell.isEmpty()) {
+                piecesBetweenCount++;
+                if (result == null) {
+                    result = betweenCell;
+                }
+            }
+        }
+
+        if (piecesBetweenCount == 1) {
+            return result;
+        }
+        return null;
+    }
+
+    private Set<PointDTO> getAttackedByEnemyPoints(Side enemySide) {
+        Set<PointDTO> result = new HashSet<>();
+        originalMatrix
+                .allPiecesBySideStream(enemySide)
+                .forEach(movableCell -> {
+                    if (movableCell.getPieceType() == PieceType.PAWN) {
+                        addPawnDiagonalMoves(result, movableCell, enemySide);
+                    } else {
+                        addUnfilteredMovesForCell(result, movableCell);
+                    }
+                });
+        return result;
+    }
+
+    private void addPawnDiagonalMoves(Set<PointDTO> moves, CellDTO movableCell, Side enemySide) {
+        PointDTO point = movableCell.getPoint();
+        int vector = enemySide.getPawnMoveVector();
+
+        if (PointDTO.isCorrectIndex(point.getColumnIndex() + 1)) {
+            moves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() + 1));
+        }
+        if (PointDTO.isCorrectIndex(point.getColumnIndex() - 1)) {
+            moves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() - 1));
+        }
+    }
 
     /*
      * TODO: слабое место в производительности - предлагаю фильровать на стадии вычисления (т.е. не добавлять их, если нельзя)
@@ -74,392 +189,259 @@ public class OptimizedMoveHelper {
      *   - 2+ - значит можно ходить любой из этих 2+
      *   - 1 - значит ЕЙ НЕЛЬЗЯ ХОДИТЬ
      */
-    private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {
-        moves = moves.stream()
-                .filter(isKingNotAttackedByEnemy(moveableCell)
-                        .and(isKingNotAttackedByEnemyPawns(moveableCell)))
-                .collect(Collectors.toSet());
-
-
-        //TODO: can optimize
-        if (moveableCell.getPieceType() == PieceType.KING) {
-            Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(moveableCell.getPoint(), moves);
-            moves.removeAll(unavailableCastlingMoves);            //запрещаем рокировку если король пересекает битое поле
-        }
-
+//    private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO movableCell) {
+//        moves = moves.stream()
+//                .filter(isKingNotAttackedByEnemy(movableCell)
+//                        .and(isKingNotAttackedByEnemyPawns(movableCell)))
+//                .collect(Collectors.toSet());
+//
+//
+//        //TODO: can optimize
+//        if (movableCell.getPieceType() == PieceType.KING) {
+//            Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(movableCell.getPoint(), moves);
+//            moves.removeAll(unavailableCastlingMoves);            //запрещаем рокировку если король пересекает битое поле
+//        }
+//
+//        return moves;
+//    }
+//
+    private Set<PointDTO> getFilteredMovesForCell(CellDTO moveableCell, Set<PointDTO> enemyPoints, List<PointDTO> unmovablePoints) {
+        Set<PointDTO> moves = new HashSet<>();
+        addFilteredMovesForCell(moves, moveableCell, enemyPoints, unmovablePoints);
         return moves;
     }
 
-    private Set<PointDTO> getUnfilteredPiecesMoves(FakeGame fakeGame, CellsMatrix matrix, Side side, PieceType... pieceTypes) {
-        return matrix
-                .containsPiecesStream(side, pieceTypes)
-                .map(moveableCell -> getUnfilteredMoves(fakeGame, matrix, moveableCell))
-                .flatMap(Set::stream)
-                .collect(Collectors.toSet());
+    private void addUnfilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell) {
+        addMovesForCell(moves, moveableCell, null, null);
+    }
+
+    private void addFilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, Set<PointDTO> enemyPoints, List<PointDTO> unmovablePoints) {
+        addMovesForCell(moves, moveableCell, Objects.requireNonNull(enemyPoints), Objects.requireNonNull(unmovablePoints));
     }
 
     /**
-     * 1) Проверяет не встали ли мы под шах от простой фигуры (коня/слона/ладьи/ферзя).
-     * 2) Так же проверяет, не передвинули ли мы фигуру, защищающую короля от шаха вражеской простой фигуры
-     * TODO: can optimize:
-     * если понадобится лучшая производительность: пункт №2 -> эту проверку нужно будет делать ДО вычисления доступных ходов.
-     * ведь если фигурой ходить нельзья, зачем для нее находить доступные ходы вообще, когда можно вернуть пустой set?
+     * Не вызывай этот метод ниоткуда, кроме addUnfilteredMovesForCell()/addFilteredMovesForCell(), ладно?
      */
-    private Predicate<PointDTO> isKingNotAttackedByEnemy(CellDTO moveableCell) {
-        //TODO: can optimize
-        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());
+    private void addMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, Set<PointDTO> enemyPoints, List<PointDTO> unmovablePoints) {
+        new InternalMoveHelper(moves, moveableCell, enemyPoints, unmovablePoints)
+                .addAnyPieceMoves();
 
-        return pointTo -> {
-            //имитируем ход
-            MoveDTO move = MoveDTO.valueOf(moveableCell.getPoint(), pointTo, null);
-            MoveResult moveResult = originalMatrix.executeMove(move, null);
-            CellsMatrix newMatrix = moveResult.getNewMatrix();
-
-            //для всех дальнобойных фигур собираем все доступные ходы врага на следующий ход
-            Set<PointDTO> unfilteredEnemyMoves = getUnfilteredPiecesMoves(fakeGame, newMatrix, moveableCell.getEnemySide(),
-                    PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
-
-            //и проверяем, что мы не поставили нашего короля под атаку
-            boolean isCanAttack;
-            if (moveableCell.getPieceType() == PieceType.KING) {
-                //если мы пошли королем, то не встал ли он под шах
-                isCanAttack = unfilteredEnemyMoves.contains(pointTo);
-            } else {
-                //если другой фигурой - а не открылся ли шах
-                isCanAttack = unfilteredEnemyMoves.contains(allyKingPoint);
-            }
-
-            return !isCanAttack;
-        };
-    }
-
-    /**
-     * Проверяет не встали ли мы королем под шах пешки противника
-     */
-    private Predicate<? super PointDTO> isKingNotAttackedByEnemyPawns(CellDTO moveableCell) {
-        Side enemySide = moveableCell.getEnemySide();
-        //TODO: can optimize
-        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());
-
-        if (moveableCell.getPieceType() == PieceType.KING) {
-            //если ходим королем, то не даем ему пойти под шах от пешки
-            Set<PointDTO> enemyPawnAttackMoves = findPawnAttackMoves(enemySide, null);
-            return pointTo -> !enemyPawnAttackMoves.contains(pointTo);
-
-        } else {
-            if (fakeGame.getUnderCheckSide() == moveableCell.getSide()) {
-                /*
-                    Если другой фигурой (не королем), но при этом наш король находится под шахом - значит что ему шахует вражеская пешка:
-                    1) пешка - потому, что в предыдущей проверке = isKingNotAttackedByEnemy мы проверили все фигуры кроме пешки (KNIGHT, BISHOP, ROOK, QUEEN).
-                    2) проверка - не встали ли мы под шах от вражеского короля происходит в методе = isNotAttackingByEnemyKing, вызываемом в методе getMovesForKing.
-
-                    то... не даем фигурам ходить, кроме случая если она рубит пешку объявившую шах
-                 */
-                //TODO: can optimize
-                return pointTo -> !findPawnAttackMoves(enemySide, pointTo).contains(allyKingPoint);
-            } else {
-                /*
-                    если король не под шахом то шаха от вражеской пешки быть не может
-                    ведь шаха не было, а ходим мы не королем
-                 */
-                return pointTo -> true;
-            }
-        }
-    }
-
-    private Set<PointDTO> findPawnAttackMoves(Side side, PointDTO excludePoint) {
-        Set<PointDTO> enemyPawnPoints = originalMatrix.findPiecesCoords(side, PieceType.PAWN);
-        enemyPawnPoints.remove(excludePoint);
-
-        int vector = side.getPawnMoveVector();
-
-        Set<PointDTO> pawnAttackMoves = new HashSet<>();
-        enemyPawnPoints.forEach(point -> {
-            if (PointDTO.isCorrectIndex(point.getColumnIndex() + 1)) {
-                pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() + 1));
-            }
-            if (PointDTO.isCorrectIndex(point.getColumnIndex() - 1)) {
-                pawnAttackMoves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() - 1));
-            }
-        });
-
-        return pawnAttackMoves;
-    }
-
-
-    /**
-     * Проверка на рокировку через битое поле
-     */
-    private Set<PointDTO> getUnavailableCastlingPoints(PointDTO pointFrom, Set<PointDTO> moves) {
-        return moves.stream()
-                .filter(pointFrom::isNotBorderedBy)                                                                     //если pointTo не граничит с позицией короля значит это рокировка
-                .filter(castlingPoint -> {
-                    int castlingVector = (castlingPoint.getColumnIndex() - pointFrom.getColumnIndex()) / 2;             //определяем вектор рокировки
-                    int crossColumnIndex = pointFrom.getColumnIndex() + castlingVector;                                 //прибавляем к позиции короля
-                    PointDTO crossPoint = PointDTO.valueOf(pointFrom.getRowIndex(), crossColumnIndex);                  //получаем пересекаемое при рокировке поле
-
-                    //проверяем есть ли оно среди доступных ходов (если нет -> значит оно битое -> значит рокировка в эту сторону запрещена)
-                    return !moves.contains(crossPoint);
-                }).collect(Collectors.toSet());
-    }
-
-
-    private Set<PointDTO> getUnfilteredMoves(FakeGame fakeGame, CellsMatrix matrix, CellDTO moveableCell) {
-        moveableCell.requireNotEmpty();
-        InternalMoveHelper helper = new InternalMoveHelper(fakeGame, matrix, moveableCell);
-        Set<PointDTO> moves;
-
-
-        //noinspection ConstantConditions
-        switch (moveableCell.getPieceType()) {
-            case PAWN: {
-                moves = helper.getMovesForPawn();
-                break;
-            }
-            case KNIGHT: {
-                moves = helper.getMovesForKnight();
-                break;
-            }
-            case BISHOP: {
-                moves = helper.getMovesForBishop();
-                break;
-            }
-            case ROOK: {
-                moves = helper.getMovesForRook();
-                break;
-            }
-            case QUEEN: {
-                moves = helper.getMovesForQueen();
-                break;
-            }
-            case KING: {
-                moves = helper.getMovesForKing();
-                break;
-            }
-            default:
-                moves = new HashSet<>();
-        }
-
+        //FIXME: moves.size not actual
         Debug.incrementAvailablePointsFound(moves.size());
         Debug.incrementGetUnfilteredMovesCallsCount();
-        return moves;
     }
 
     @SuppressWarnings({"PointlessArithmeticExpression"})
     private class InternalMoveHelper {
 
-        private final FakeGame fakeGame;
-        private final CellsMatrix matrix;
-        private final CellDTO moveableCell;
+        private final CellDTO movableCell;
+        private final boolean checkFilterEnabled;
+        private final Set<PointDTO> enemyPoints;
+        private final List<PointDTO> unmovablePoints;
+        private final Set<PointDTO> moves;
+        private final Side allySide;
 
-        private InternalMoveHelper(FakeGame fakeGame, CellsMatrix matrix, CellDTO moveableCell) {
-            this.fakeGame = fakeGame;
-            this.matrix = matrix;
-            this.moveableCell = moveableCell;
+        private InternalMoveHelper(Set<PointDTO> moves, CellDTO movableCell, Set<PointDTO> enemyPoints, List<PointDTO> unmovablePoints) {
+            this.unmovablePoints = unmovablePoints;
+            movableCell.requireNotEmpty();
 
-            moveableCell.requireNotEmpty();
+            this.movableCell = movableCell;
+            this.enemyPoints = enemyPoints;
+            this.checkFilterEnabled = enemyPoints != null;
+            this.moves = moves;
+            this.allySide = movableCell.getSide();
         }
 
-        private Set<PointDTO> getMovesForPawn() {
-            Set<PointDTO> moves = new HashSet<>();
-
-            int activeRow = moveableCell.getRowIndex();
-            int activeColumn = moveableCell.getColumnIndex();
-            Side allySide = moveableCell.getSide();
-
-            int vector = allySide.getPawnMoveVector();
-
-            boolean isFirstMove = false;
-            if (activeRow == 1 || activeRow == 6) {
-                isFirstMove = true;
+        private void addAnyPieceMoves() {
+            if (checkFilterEnabled && unmovablePoints.contains(movableCell.getPoint())) {
+                //TODO: на самом деле можно ходить по той же диагонали/горизонтали
+                //поэтому List<PointDTO> -> to Map<PointDTO unmovablePoint, List<PointDTO> availablePoints>
+                return;
             }
 
-            CellDTO cell;
-
-
-            cell = getCell(activeRow + 1 * vector, activeColumn);
-            boolean isAdded = addPawnMove(moves, cell, allySide, false);
-
-            if (isFirstMove && isAdded) {
-                cell = getCell(activeRow + 2 * vector, activeColumn);
-                addPawnMove(moves, cell, allySide, false);
+            switch (movableCell.getPieceType()) {
+                case PAWN:
+                    addMovesForPawn();
+                    break;
+                case KNIGHT:
+                    addMovesForKnight();
+                    break;
+                case BISHOP:
+                    addMovesForBishop();
+                    break;
+                case ROOK:
+                    addMovesForRook();
+                    break;
+                case QUEEN:
+                    addMovesForQueen();
+                    break;
+                case KING:
+                    addMovesForKing();
+                    break;
             }
+        }
 
-            //attack
-            cell = getCell(activeRow + vector, activeColumn + 1);
-            addPawnMove(moves, cell, allySide, true);
+        private void addMovesForKnight() {
+            addMove(1, 2);
+            addMove(2, 1);
+            addMove(1, -2);
+            addMove(2, -1);
+            addMove(-1, 2);
+            addMove(-2, 1);
+            addMove(-1, -2);
+            addMove(-2, -1);
+        }
 
-            cell = getCell(activeRow + vector, activeColumn - 1);
-            addPawnMove(moves, cell, allySide, true);
+        private void addMovesForBishop() {
+            addMovesByVector(1, 1);
+            addMovesByVector(-1, 1);
+            addMovesByVector(1, -1);
+            addMovesByVector(-1, -1);
+        }
 
-            Integer enemyLongMoveColumnIndex = fakeGame.getPawnLongMoveColumnIndex(moveableCell.getEnemySide());
-            if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
+        private void addMovesForRook() {
+            addMovesByVector(1, 0);
+            addMovesByVector(-1, 0);
+            addMovesByVector(0, 1);
+            addMovesByVector(0, -1);
+        }
 
-                if (Math.abs(enemyLongMoveColumnIndex - activeColumn) == 1) {    //и эта пешка рядом с выделенной (слева или справа)
+        private void addMovesForQueen() {
+            addMovesForRook();
+            addMovesForBishop();
+        }
 
-                    if (activeRow == 3 || activeRow == 4) {        //и это творится на нужной горизонтали
-                        //значит можно делать взятие на проходе
-                        //проверять ничего не нужно, эта ячейка 100% пуста (не могла же пешка перепрыгнуть фигуру)
-                        //noinspection ConstantConditions
-                        moves.add(PointDTO.valueOf(activeRow + allySide.getPawnMoveVector(), enemyLongMoveColumnIndex));
+        private void addMovesForKing() {
+            addKingMove(0, 1);
+            addKingMove(0, -1);
+            addKingMove(1, 0);
+            addKingMove(-1, 0);
+
+            addKingMove(1, 1);
+            addKingMove(1, -1);
+            addKingMove(-1, 1);
+            addKingMove(-1, -1);
+
+            Integer kingRowIndex = movableCell.getRowIndex();
+
+            if (fakeGame.isShortCastlingAvailable(allySide)) {
+                if (isEmptyCellsOnRow(kingRowIndex, 1, 2)) {
+                    if (isSafeCrossPointForCastling(-1)) {
+                        addKingMove(0, -2);
                     }
                 }
             }
-
-            return moves;
-        }
-
-        private Set<PointDTO> getMovesForKnight() {
-            Set<PointDTO> moves = new HashSet<>();
-
-            addKnightMove(moves, 1, 2);
-            addKnightMove(moves, 2, 1);
-            addKnightMove(moves, 1, -2);
-            addKnightMove(moves, 2, -1);
-            addKnightMove(moves, -1, 2);
-            addKnightMove(moves, -2, 1);
-            addKnightMove(moves, -1, -2);
-            addKnightMove(moves, -2, -1);
-
-            return moves;
-        }
-
-        private Set<PointDTO> getMovesForBishop() {
-            Set<PointDTO> moves = new HashSet<>();
-
-            addAvailableMovesForRay(moves, 1, 1);
-            addAvailableMovesForRay(moves, -1, 1);
-            addAvailableMovesForRay(moves, 1, -1);
-            addAvailableMovesForRay(moves, -1, -1);
-
-            return moves;
-        }
-
-        private Set<PointDTO> getMovesForRook() {
-            Set<PointDTO> moves = new HashSet<>();
-
-            addAvailableMovesForRay(moves, 1, 0);
-            addAvailableMovesForRay(moves, -1, 0);
-            addAvailableMovesForRay(moves, 0, 1);
-            addAvailableMovesForRay(moves, 0, -1);
-
-            return moves;
-        }
-
-        private Set<PointDTO> getMovesForQueen() {
-            Set<PointDTO> moves = new HashSet<>();
-
-            moves.addAll(getMovesForRook());
-            moves.addAll(getMovesForBishop());
-
-            return moves;
-        }
-
-        private Set<PointDTO> getMovesForKing() {
-            Set<PointDTO> moves = new HashSet<>();
-
-            addAvailableMovesForRay(moves, 1, 0, 1);
-            addAvailableMovesForRay(moves, -1, 0, 1);
-            addAvailableMovesForRay(moves, 0, 1, 1);
-            addAvailableMovesForRay(moves, 0, -1, 1);
-            addAvailableMovesForRay(moves, 1, 1, 1);
-            addAvailableMovesForRay(moves, -1, 1, 1);
-            addAvailableMovesForRay(moves, 1, -1, 1);
-            addAvailableMovesForRay(moves, -1, -1, 1);
-
-            if (fakeGame.isShortCastlingAvailable(moveableCell.getSide())) {
-                if (isEmptyCellsByActiveRow(1, 2)) {
-                    addMove(moves, getCell(moveableCell.getRowIndex(), moveableCell.getColumnIndex() - 2), moveableCell.getSide());
+            if (fakeGame.isLongCastlingAvailable(allySide)) {
+                if (isEmptyCellsOnRow(kingRowIndex, 4, 5, 6)) {
+                    if (isSafeCrossPointForCastling(1)) {
+                        addKingMove(0, 2);
+                    }
                 }
             }
-            if (fakeGame.isLongCastlingAvailable(moveableCell.getSide())) {
-                if (isEmptyCellsByActiveRow(4, 5, 6)) {
-                    addMove(moves, getCell(moveableCell.getRowIndex(), moveableCell.getColumnIndex() + 2), moveableCell.getSide());
+        }
+
+        private void addMovesForPawn() {
+            int currentRow = movableCell.getRowIndex();
+            int currentColumn = movableCell.getColumnIndex();
+            int vector = allySide.getPawnMoveVector();
+            Side enemySide = allySide.reverse();
+
+            boolean isAdded = addMove(1 * vector, 0);
+            if (isAdded) {
+                boolean isFirstMove = currentRow == 1 || currentRow == 6;
+                if (isFirstMove) {
+                    addMove(2 * vector, 0);
                 }
             }
 
-            return moves.stream()
-                    //фильровать здесь!!!
-                    //если это делать там, где происходят остальные проверки на шах - попадем в бесконечную рекурсию
-                    .filter(isNotAttackedByEnemyKing(moveableCell.getEnemySide()))
-                    .collect(Collectors.toSet());
-        }
+            addPawnAttackMoves(enemySide, vector);
 
-        private void addAvailableMovesForRay(Set<PointDTO> moves, int rowVector, int columnVector) {
-            addAvailableMovesForRay(moves, rowVector, columnVector, 7);
-        }
+            CellDTO cell = getCellByOffsets(1 * vector, 1);
+            if (cell.getSide() == enemySide) {
+                //attack
+                moves.add(cell.getPoint());
+            }
 
-        private void addAvailableMovesForRay(Set<PointDTO> moves, int rowVector, int columnVector, int rayLength) {
-            for (int i = 1; i < rayLength + 1; i++) {
-                CellDTO cell = getCell(moveableCell.getRowIndex() + rowVector * i, moveableCell.getColumnIndex() + columnVector * i);
-                if (!addMove(moves, cell, moveableCell.getSide())) {
-                    break;
+            cell = getCellByOffsets(1 * vector, -1);
+            if (cell.getSide() == enemySide) {
+                //attack
+                moves.add(cell.getPoint());
+            }
+
+            Integer enemyLongMoveColumnIndex = fakeGame.getPawnLongMoveColumnIndex(enemySide);
+            if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
+
+                if (Math.abs(enemyLongMoveColumnIndex - currentColumn) == 1) {    //и эта пешка рядом с выделенной (слева или справа)
+
+                    if (currentRow == 3 || currentRow == 4) {        //и это творится на нужной горизонтали
+                        //значит можно делать взятие на проходе
+                        //проверять ничего не нужно, эта ячейка 100% пуста (не могла же пешка перепрыгнуть фигуру)
+                        //noinspection ConstantConditions
+                        addMove(1 * vector, enemyLongMoveColumnIndex - currentColumn);
+                    }
                 }
             }
         }
 
         /**
-         * Добавляет point(от cell) в moves, в случае если данный ход доступен в рамках правил игры:
-         * - происходит перемещение фигуры на пустую ячейку
-         * if (isDefensive == false)
-         * - происходит перемещение фигуры на ячейку с фигурой противника (взятие)
-         * else (isDefensive = true)
-         * - происходит перемещение фигуры на ячейку с союзной фигурой (защита фигуры)
-         * <p>
-         * Возвращаемое значение нужно для поиска доступных ходов по вектору (для фигур BISHOP, ROOK, QUEEN).
-         * <p>
-         * return false - если мы вышли за край доски или же ячейка не пуста, иначе - true
+         * @return true if move added, false - otherwise (addable cell is null or ally)
          */
-        private boolean addMove(Set<PointDTO> moves, CellDTO cell, Side allySide) {
-            if (cell == null || cell.getSide() == allySide) {
-                return false;
+        private boolean addMove(int rowIndexOffset, int columnIndexOffset) {
+            CellDTO cell = getCellByOffsets(rowIndexOffset, columnIndexOffset);
+            if (cell != null && cell.getSide() != allySide) {
+                moves.add(cell.getPoint());
+                return true;
             }
-
-            moves.add(cell.getPoint());
-
-            return cell.isEmpty();
+            return false;
         }
 
-        private void addKnightMove(Set<PointDTO> moves, int rowOffset, int columnOffset) {
-            CellDTO cell = getCell(moveableCell.getRowIndex() + rowOffset, moveableCell.getColumnIndex() + columnOffset);
-            Side allySide = moveableCell.getSide();
+        private void addMovesByVector(int rowVector, int columnVector) {
+            for (int i = 1; i < 8; i++) {
+                boolean isAdded = addMove(rowVector * i, columnVector * i);
+                if (!isAdded) {
+                    return;
+                }
+            }
+        }
 
+        private void addKingMove(int rowIndexOffset, int columnIndexOffset) {
+            CellDTO cell = getCellByOffsets(rowIndexOffset, columnIndexOffset);
             if (cell != null && cell.getSide() != allySide) {
+                PointDTO point = cell.getPoint();
+
+                if (checkFilterEnabled) {
+                    if (!enemyPoints.contains(point)) {
+                        moves.add(point);
+                    }
+                } else {
+                    moves.add(point);
+                }
+            }
+        }
+
+        private boolean isSafeCrossPointForCastling(int columnIndexOffset) {
+            PointDTO crossPoint = getPointByOffsets(0, columnIndexOffset);
+            if (crossPoint != null) {
+                return checkFilterEnabled && !enemyPoints.contains(crossPoint);
+            }
+            return false;
+        }
+
+        private void addPawnAttackMoves(Side enemySide, int vector) {
+            CellDTO cell = getCellByOffsets(1 * vector, 1);
+            if (cell != null && cell.getSide() == enemySide) {
+                moves.add(cell.getPoint());
+            }
+
+            cell = getCellByOffsets(1 * vector, -1);
+            if (cell != null && cell.getSide() == enemySide) {
                 moves.add(cell.getPoint());
             }
         }
 
-        private boolean addPawnMove(Set<PointDTO> moves, CellDTO cell, Side allySide, boolean isAttack) {
-            if (cell == null || cell.getSide() == allySide) {
-                return false;
-            }
-
-            if (isAttack) {
-                if (cell.getSide() == allySide.reverse()) {
-                    moves.add(cell.getPoint());
-                }
-                return false;
-            } else {
-                if (cell.getSide() == allySide.reverse()) {
-                    return false;
-                } else {
-                    moves.add(cell.getPoint());
-                    return true;
-                }
-            }
-        }
-
-        /**
-         * Проверяет не встали ли мы королем под шах вражеского короля.
-         */
-        private Predicate<PointDTO> isNotAttackedByEnemyKing(Side enemySide) {
-            PointDTO enemyKingPoint = findKingPoint(enemySide);
-            return enemyKingPoint::isNotBorderedBy;  //или может подошли вплотную к вражескому королю?
-        }
-
-        private boolean isEmptyCellsByActiveRow(int... columnIndexes) {
+        private boolean isEmptyCellsOnRow(int rowIndex, int... columnIndexes) {
             for (int columnIndex : columnIndexes) {
-                if (!isEmptyCell(moveableCell.getRowIndex(), columnIndex)) {
+                if (!isEmptyCell(rowIndex, columnIndex)) {
                     return false;
                 }
             }
@@ -467,21 +449,35 @@ public class OptimizedMoveHelper {
             return true;
         }
 
-        private CellDTO getCell(int rowIndex, int columnIndex) {
-            try {
-                return matrix.getCell(rowIndex, columnIndex);
-            } catch (IndexOutOfBoundsException e) {
-                return null;
-            }
-        }
 
         private boolean isEmptyCell(int rowIndex, int columnIndex) {
-            return matrix.isEmptyCell(rowIndex, columnIndex);
+            CellDTO cell = getCell(rowIndex, columnIndex);
+            Objects.requireNonNull(cell);
+            return Objects.requireNonNull(cell).isEmpty();
         }
 
-        private PointDTO findKingPoint(Side side) {
-            return matrix.findKingPoint(side);
+
+        private CellDTO getCellByOffsets(int rowIndexOffset, int columnIndexOffset) {
+            return getCell(movableCell.getRowIndex() + rowIndexOffset, movableCell.getColumnIndex() + columnIndexOffset);
         }
 
+        private PointDTO getPointByOffsets(int rowIndexOffset, int columnIndexOffset) {
+            CellDTO cell = getCellByOffsets(rowIndexOffset, columnIndexOffset);
+            if (cell != null) {
+                return cell.getPoint();
+            }
+            return null;
+        }
+    }
+
+    private CellDTO getCell(int rowIndex, int columnIndex) {
+        if (PointDTO.isCorrectIndex(rowIndex, columnIndex)) {
+            return originalMatrix.getCell(rowIndex, columnIndex);
+        }
+        return null;
+    }
+
+    private CellDTO getCellByKingPoint(PointDTO kingPoint, int rowIndexOffset, int columnIndexOffset) {
+        return getCell(kingPoint.getRowIndex() + rowIndexOffset, kingPoint.getColumnIndex() + columnIndexOffset);
     }
 }

@@ -241,12 +241,12 @@ public final class CellsMatrix implements Immutable {
                 .filter(containsSide(side));
     }
 
-    public Stream<CellDTO> containsPiecesStream(Side side, PieceType... pieceTypes) {
+    public Stream<CellDTO> includePiecesStream(Side side, PieceType... pieceTypes) {
         return allPiecesStream()
                 .filter(containsPiecesOptimized(side, pieceTypes));
     }
 
-    public Stream<CellDTO> notContainsPiecesStream(Side side, PieceType... pieceTypes) {
+    public Stream<CellDTO> excludePiecesStream(Side side, PieceType... pieceTypes) {
         return allPiecesStream()
                 .filter(notContainsPiecesOptimized(side, pieceTypes));
     }
@@ -298,13 +298,13 @@ public final class CellsMatrix implements Immutable {
     }
 
     public Set<PointDTO> findPiecesCoords(Side side, PieceType... pieceTypes) {
-        return containsPiecesStream(side, pieceTypes)
+        return includePiecesStream(side, pieceTypes)
                 .map(CellDTO::getPoint)
                 .collect(Collectors.toSet());
     }
 
     public PointDTO findKingPoint(Side side) {
-        return containsPiecesStream(side, PieceType.KING)
+        return includePiecesStream(side, PieceType.KING)
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("KING not found on board"))
                 .getPoint();

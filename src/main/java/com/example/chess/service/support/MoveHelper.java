@@ -93,7 +93,7 @@ public class MoveHelper implements MoveHelperAPI {
 
     private Set<PointDTO> getUnfilteredPiecesMoves(FakeGame fakeGame, CellsMatrix matrix, Side side, boolean isDefensive, PieceType... pieceTypes) {
         return matrix
-                .containsPiecesStream(side, pieceTypes)
+                .includePiecesStream(side, pieceTypes)
                 .map(moveableCell -> getUnfilteredMoves(fakeGame, matrix, moveableCell, isDefensive))
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
@@ -514,7 +514,7 @@ public class MoveHelper implements MoveHelperAPI {
 
     private Stream<ExtendedMove> getAllPawnsDiagonalMovesStream(Side side) {
         return originalMatrix
-                .containsPiecesStream(side, PieceType.PAWN)
+                .includePiecesStream(side, PieceType.PAWN)
                 .flatMap(toExtendedMovesStream(this::getPawnDiagonalMoves));
     }
 

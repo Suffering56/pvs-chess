@@ -35,6 +35,16 @@ public final class PointDTO implements Immutable {
         return index >= 0 && index < 8;
     }
 
+    public static boolean isCorrectIndex(int... indexes) {
+        for (int index : indexes) {
+            if (index < 0 || index >= 8) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public PointDTO setRowIndex(Integer rowIndex) {
         return new PointDTO(rowIndex, this.columnIndex);
     }
