@@ -1,6 +1,7 @@
 package com.example.chess.service.support;
 
 import com.example.chess.enums.Side;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,10 +16,12 @@ public class MoveData {
     @Getter
     private final MoveResult moveExecutionResult;     //the chessboard state after executedMove completion
 
-    @Setter
     @Getter
 //    private Map<PointDTO, MoveData> moreDeepMoves;   //key = targetPoint (value.getExecutedMove().getPointTo();
     private List<MoveData> moreDeepMoves;   //key = targetPoint (value.getExecutedMove().getPointTo();
+    @Setter(AccessLevel.PRIVATE)
+    @Getter
+    private MoveData parent;
 
     public MoveData(ExtendedMove executedMove, MoveResult moveExecutionResult, int deep) {
         this.executedMove = executedMove;
@@ -39,6 +42,13 @@ public class MoveData {
             return "player";
         } else {
             return "bot";
+        }
+    }
+
+    public void setMoreDeepMoves(List<MoveData> moreDeepMoves) {
+        this.moreDeepMoves = moreDeepMoves;
+        for (MoveData moreDeepMove : moreDeepMoves) {
+            moreDeepMove.setParent(this);
         }
     }
 }

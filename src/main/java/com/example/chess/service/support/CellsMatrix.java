@@ -9,6 +9,7 @@ import com.example.chess.entity.History;
 import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.KingNotFoundException;
 import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -30,7 +31,7 @@ public final class CellsMatrix implements Immutable {
     @Getter
     private final int position;
     private final List<List<CellDTO>> cellsMatrix;
-//    private Map<Side, PointDTO> kingPoints = new HashMap<>();
+    private Map<Side, PointDTO> kingPoints = new HashMap<>();
 
     private CellsMatrix(int position, Function<Integer, Function<Integer, Piece>> pieceGenerator) {
         this.position = position;
@@ -45,6 +46,10 @@ public final class CellsMatrix implements Immutable {
                 Piece piece = pieceGenerator.apply(rowIndex).apply(columnIndex);
                 CellDTO cell = CellDTO.valueOf(rowIndex, columnIndex, piece);
                 rowCells.add(cell);
+
+                if (piece != null && piece.getType() == PieceType.KING) {
+                    kingPoints.put(piece.getSide(), PointDTO.valueOf(rowIndex, columnIndex));
+                }
             }
             cellsMatrix.add(rowCells);
         }
@@ -303,10 +308,23 @@ public final class CellsMatrix implements Immutable {
                 .collect(Collectors.toSet());
     }
 
-    public PointDTO findKingPoint(Side side) {
-        return includePiecesStream(side, PieceType.KING)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("KING not found on board"))
-                .getPoint();
+    public PointDTO getKingPoint(Side side) throws KingNotFoundException {
+        PointDTO kingPoint = kingPoints.get(side);
+        if (kingPoint == null) {
+            System.out.println("KingNotFoundException.side = " + side);
+            print();
+            throw new KingNotFoundException();
+        }
+
+        return kingPoint;
+    }
+
+    public void print() {
+        for (List<CellDTO> rows : cellsMatrix) {
+            for (CellDTO cell : rows) {
+                System.out.print(cell + "\t");
+            }
+            System.out.println();
+        }
     }
 }

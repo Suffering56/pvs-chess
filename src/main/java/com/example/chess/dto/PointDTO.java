@@ -70,13 +70,14 @@ public final class PointDTO implements Immutable {
         }
     }
 
+    /**
+     * Все point-ы лежат в pointsArray. В программе невозможно наличие point-ов которых нет в pointsArray.
+     * Если у двух point-ов одинаковые координаты, значит это один и тот же point (если конечно не баловаться reflection).
+     * Поэтому метод equals можно упростить. Тем более что используется он довольно часто.
+     */
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        PointDTO pointDTO = (PointDTO) o;
-        return Objects.equals(rowIndex, pointDTO.rowIndex) &&
-                Objects.equals(columnIndex, pointDTO.columnIndex);
+        return this == o;
     }
 
     @Override

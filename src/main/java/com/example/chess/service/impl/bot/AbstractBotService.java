@@ -8,6 +8,7 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.KingNotFoundException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import com.example.chess.service.support.*;
@@ -174,11 +175,22 @@ public abstract class AbstractBotService implements BotService {
 //                .collect(Collectors.toMap(ExtendedMove::getPointTo,
 //                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
 
-//
 
-
-        Stream<ExtendedMove> movesStream = OptimizedMoveHelper.valueOf(fakeGame, matrixAfterMove)
-                .getStandardMovesStream(nextSide);
+        Stream<ExtendedMove> movesStream;
+        try {
+            movesStream = OptimizedMoveHelper.valueOf(fakeGame, matrixAfterMove)
+                    .getStandardMovesStream(nextSide);
+        } catch (KingNotFoundException e) {
+            MoveData md = moveData;
+            while (md != null) {
+                System.out.println("md.getDeep() = " + md.getDeep());
+                System.out.println("executedMove: " + CommonUtils.moveToString(md.getExecutedMove()));
+                System.out.println("-------------------------------------\n");
+                md = md.getParent();
+            }
+            System.exit(0);
+            return;
+        }
 
         if (Debug.IS_PARALLEL) {
             movesStream = movesStream.parallel();

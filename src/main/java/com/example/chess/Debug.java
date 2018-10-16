@@ -10,10 +10,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Debug {
 
     private static final boolean DESTINY_ENABLED = true;
-    public static final boolean IS_PARALLEL = true;
+    public static final boolean IS_PARALLEL = false;
 
     private static final AtomicLong availablePointsFound = new AtomicLong(0);
-    private static final AtomicLong getUnfilteredMovesCallsCount = new AtomicLong(0);
+    private static final AtomicLong addMovesForCallsCount = new AtomicLong(0);
     private static final AtomicLong moveHelpersCount = new AtomicLong(0);
     private static final AtomicLong movesExecuted = new AtomicLong(0);
 
@@ -21,8 +21,8 @@ public class Debug {
         increment(availablePointsFound, pointsCount);
     }
 
-    public static void incrementGetUnfilteredMovesCallsCount() {
-        increment(getUnfilteredMovesCallsCount);
+    public static void incrementAddMovesForCallsCount() {
+        increment(addMovesForCallsCount);
     }
 
     public static void incrementMoveHelpersCount() {
@@ -50,7 +50,7 @@ public class Debug {
 
     public static void resetCounters() {
         availablePointsFound.set(0);
-        getUnfilteredMovesCallsCount.set(0);
+        addMovesForCallsCount.set(0);
         moveHelpersCount.set(0);
         movesExecuted.set(0);
     }
@@ -59,7 +59,7 @@ public class Debug {
         System.out.println("moveHelpersCount = " + moveHelpersCount.get());
         System.out.println("movesExecuted = " + movesExecuted.get());
         System.out.println("availablePointsFound = " + availablePointsFound.get());
-        System.out.println("getUnfilteredMovesCallsCount = " + getUnfilteredMovesCallsCount.get());
+        System.out.println("addMovesForCallsCount = " + addMovesForCallsCount.get());
     }
 
 

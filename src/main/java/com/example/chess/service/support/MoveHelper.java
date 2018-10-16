@@ -38,7 +38,7 @@ public class MoveHelper implements MoveHelperAPI {
 
     @Override
     public boolean isKingUnderAttack(Side kingSide) {
-        PointDTO kingPoint = originalMatrix.findKingPoint(kingSide);
+        PointDTO kingPoint = originalMatrix.getKingPoint(kingSide);
         Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(fakeGame, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
         return enemyMoves.contains(kingPoint);
     }
@@ -108,7 +108,7 @@ public class MoveHelper implements MoveHelperAPI {
      */
     private Predicate<PointDTO> isKingNotAttackedByEnemy(CellDTO moveableCell) {
         //TODO: can optimize
-        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());
+        PointDTO allyKingPoint = originalMatrix.getKingPoint(moveableCell.getSide());
 
         return pointTo -> {
             //имитируем ход
@@ -140,7 +140,7 @@ public class MoveHelper implements MoveHelperAPI {
     private Predicate<? super PointDTO> isKingNotAttackedByEnemyPawns(CellDTO moveableCell) {
         Side enemySide = moveableCell.getEnemySide();
         //TODO: can optimize
-        PointDTO allyKingPoint = originalMatrix.findKingPoint(moveableCell.getSide());
+        PointDTO allyKingPoint = originalMatrix.getKingPoint(moveableCell.getSide());
 
         if (moveableCell.getPieceType() == PieceType.KING) {
             //если ходим королем, то не даем ему пойти под шах от пешки
@@ -241,7 +241,7 @@ public class MoveHelper implements MoveHelperAPI {
         }
 
         Debug.incrementAvailablePointsFound(moves.size());
-        Debug.incrementGetUnfilteredMovesCallsCount();
+        Debug.incrementAddMovesForCallsCount();
         return moves;
     }
 
@@ -499,7 +499,7 @@ public class MoveHelper implements MoveHelperAPI {
         }
 
         private PointDTO findKingPoint(Side side) {
-            return matrix.findKingPoint(side);
+            return matrix.getKingPoint(side);
         }
 
     }
