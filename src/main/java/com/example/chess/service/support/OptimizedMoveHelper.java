@@ -44,17 +44,25 @@ public class OptimizedMoveHelper {
         return enemyMoves.contains(kingPoint);
     }
 
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    @Getter
+    private class FilterData {
+        Set<PointDTO> enemyPoints;
+        Set<CellDTO> checkSourcesSet;
+        Map<PointDTO, UnmovableData> unmovablePointsMap;
+    }
+
     public Stream<ExtendedMove> getStandardMovesStream(Side side) throws KingNotFoundException {
         Side enemySide = side.reverse();
         PointDTO kingPoint = originalMatrix.getKingPoint(side);
 
-        Pair<Set<PointDTO>, Set<CellDTO>> attackedByEnemyPoints = getAttackedByEnemyPoints(kingPoint, enemySide);
+        Pair<Set<PointDTO>, Set<CellDTO>> pair = getAttackedByEnemyPoints(kingPoint, enemySide);
         Map<PointDTO, UnmovableData> unmovablePointsMap = getUnmovablePointsMap(enemySide, kingPoint);
 
         return originalMatrix
                 .allPiecesBySideStream(side)
                 .flatMap(moveableCell -> {
-                    Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, enemyPoints, unmovablePointsMap);
+                    Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, new FilterData(pair.getFirst(), pair.getSecond(), unmovablePointsMap));
                     return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
                 });
     }
@@ -73,7 +81,6 @@ public class OptimizedMoveHelper {
                         enemyPoints.addAll(moves);
 
                         if (moves.contains(kingPoint)) {
-                            //TODO: нам тут шах дружище
                             checkSourcesSet.add(enemyCell);
                         }
                     }
@@ -123,7 +130,6 @@ public class OptimizedMoveHelper {
     }
 
     private Set<PointDTO> getPointsForUnmovableCell(PointDTO kingPoint, BetweenParams params, CellDTO unmovableCell) {
-
         Set<PointDTO> points = new HashSet<>();
 
         for (int i = 1; i <= params.rayLength; i++) {
@@ -141,18 +147,17 @@ public class OptimizedMoveHelper {
 
     @Getter
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    class UnmovableData {
+    private class UnmovableData {
         private PointDTO unmovableCellPoint;
         private Set<PointDTO> availablePoints;
 
     }
 
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    class BetweenParams {
+    private class BetweenParams {
         private int rayLength;
         private int rowVector;
         private int columnVector;
-
     }
 
     private Pair<CellDTO, BetweenParams> getSingleRookDefenderCell(PointDTO kingPoint, CellDTO cell) {
@@ -276,27 +281,27 @@ public class OptimizedMoveHelper {
         return moves;
     }
 
-    private Set<PointDTO> getFilteredMovesForCell(CellDTO moveableCell, Set<PointDTO> enemyPoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
+    private Set<PointDTO> getFilteredMovesForCell(CellDTO moveableCell, FilterData filterData) {
         Set<PointDTO> moves = new HashSet<>();
-        addFilteredMovesForCell(moves, moveableCell, enemyPoints, unmovablePointsMap);
+        addFilteredMovesForCell(moves, moveableCell, filterData);
 
         Debug.incrementAvailablePointsFound(moves.size());
         return moves;
     }
 
     private void addUnfilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell) {
-        addMovesForCell(moves, moveableCell, null, null);
+        addMovesForCell(moves, moveableCell, null);
     }
 
-    private void addFilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, Set<PointDTO> enemyPoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
-        addMovesForCell(moves, moveableCell, Objects.requireNonNull(enemyPoints), Objects.requireNonNull(unmovablePointsMap));
+    private void addFilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, FilterData filterData) {
+        addMovesForCell(moves, moveableCell, Objects.requireNonNull(filterData));
     }
 
     /**
      * Не вызывай этот метод ниоткуда, кроме addUnfilteredMovesForCell()/addFilteredMovesForCell(), ладно?
      */
-    private void addMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, Set<PointDTO> enemyPoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
-        new InternalMoveHelper(moves, moveableCell, enemyPoints, unmovablePointsMap)
+    private void addMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, FilterData filterData) {
+        new InternalMoveHelper(moves, moveableCell, filterData)
                 .addAnyPieceMoves();
 
         Debug.incrementAddMovesForCallsCount();
@@ -311,16 +316,25 @@ public class OptimizedMoveHelper {
         private final Map<PointDTO, UnmovableData> unmovablePointsMap;
         private final Set<PointDTO> moves;
         private final Side allySide;
+        private final Set<CellDTO> checkSourcesSet;
 
-        private InternalMoveHelper(Set<PointDTO> moves, CellDTO movableCell, Set<PointDTO> enemyPoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
-            this.unmovablePointsMap = unmovablePointsMap;
+        private InternalMoveHelper(Set<PointDTO> moves, CellDTO movableCell, FilterData filterData) {
             movableCell.requireNotEmpty();
-
             this.movableCell = movableCell;
-            this.enemyPoints = enemyPoints;
-            this.checkFilterEnabled = enemyPoints != null;
             this.moves = moves;
             this.allySide = movableCell.getSide();
+
+
+            this.checkFilterEnabled = filterData != null;
+            if (checkFilterEnabled) {
+                this.unmovablePointsMap = filterData.getUnmovablePointsMap();
+                this.enemyPoints = filterData.getEnemyPoints();
+                this.checkSourcesSet = filterData.getCheckSourcesSet();
+            } else {
+                this.unmovablePointsMap = null;
+                this.enemyPoints = null;
+                this.checkSourcesSet = null;
+            }
         }
 
         private void addAnyPieceMoves() {
