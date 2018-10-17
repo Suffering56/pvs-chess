@@ -4,9 +4,11 @@ import com.example.chess.ChessConstants;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.KingNotFoundException;
 import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
+import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -46,11 +48,19 @@ public class BotServiceImplMedium extends AbstractBotService {
             MoveResult moveResult = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null);     //n == 0 -> n == 1
             CellsMatrix firstMatrixPlayerNext = moveResult.getNewMatrix();
 
-            Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
-            analyzedMove.updateRating(materialRating);
+            try {
+                Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
+                analyzedMove.updateRating(materialRating);
 
-            Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide, -1);
-            analyzedMove.updateRating(invertedMaterialRating);
+                Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide, -1);
+                analyzedMove.updateRating(invertedMaterialRating);
+            } catch (KingNotFoundException e) {
+                e.setAnalyzedMove(analyzedMove);
+                e.setOriginalMatrix(originalMatrix);
+                e.print();
+
+                System.exit(0);
+            }
 
             Rating checkRating = getCheckRating(fakeGame, firstMatrixPlayerNext, playerSide);
             analyzedMove.updateRating(checkRating);
@@ -217,6 +227,12 @@ public class BotServiceImplMedium extends AbstractBotService {
         return Rating.builder().build(RatingParam.CHECK, 0);
     }
 
+    @AllArgsConstructor
+    class DebugHelper {
+        CellsMatrix lastCorrectMatrix;
+        ExtendedMove moveWhichKillKing;
+    }
+
     private List<Integer> generateExchangeValuesList(FakeGame fakeGame, CellsMatrix afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
         Side playerSide = botSide.reverse();
 
@@ -228,7 +244,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         int exchangeValue = targetCellValue;
         exchangeValues.add(exchangeValue);
 
-        ExtendedMove minPlayerMove = getMinMove(fakeGame, afterFirstMoveMatrix, targetPoint, playerSide);
+        ExtendedMove minPlayerMove = getMinMove(fakeGame, afterFirstMoveMatrix, targetPoint, playerSide, new DebugHelper(null, alreadyExecutedMove));
         CellsMatrix afterBotMoveMatrix = afterFirstMoveMatrix;
 
         while (true) {
@@ -237,7 +253,7 @@ public class BotServiceImplMedium extends AbstractBotService {
              * EXECUTE PLAYER MOVE
              */
             CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
-            ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide);
+            ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide, new DebugHelper(afterBotMoveMatrix, minPlayerMove));
 
             exchangeValue -= minPlayerMove.getValueTo();
             exchangeValues.add(exchangeValue);
@@ -247,7 +263,7 @@ public class BotServiceImplMedium extends AbstractBotService {
              * EXECUTE BOT MOVE
              */
             afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
-            minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide);
+            minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide, new DebugHelper(afterPlayerMoveMatrix, minBotMove));
 
             exchangeValue += minBotMove.getValueTo();
             exchangeValues.add(exchangeValue);
@@ -381,12 +397,18 @@ public class BotServiceImplMedium extends AbstractBotService {
 
     //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
     //TODO: а еще про fakeGame подумай (longPawn, under check)
-    private ExtendedMove getMinMove(FakeGame fakeGame, CellsMatrix matrix, PointDTO targetPoint, Side side) {
-        return MoveHelper.valueOf(fakeGame, matrix)
-                .getStandardMovesStream(side)
-                .filter(nextMove -> nextMove.hasSamePointTo(targetPoint))
-                .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
-                .orElse(null);
+    private ExtendedMove getMinMove(FakeGame fakeGame, CellsMatrix matrix, PointDTO targetPoint, Side side, DebugHelper debugHelper) {
+        try {
+            return MoveHelper.valueOf(fakeGame, matrix)
+                    .getStandardMovesStream(side)
+                    .filter(nextMove -> nextMove.hasSamePointTo(targetPoint))
+                    .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
+                    .orElse(null);
+        } catch (KingNotFoundException e) {
+            e.setLastCorrectMatrix(debugHelper.lastCorrectMatrix);
+            e.setMoveWhichKillKing(debugHelper.moveWhichKillKing);
+            throw e;
+        }
     }
 
     private boolean isBotMove(int n) {

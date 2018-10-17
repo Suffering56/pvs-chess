@@ -311,9 +311,7 @@ public final class CellsMatrix implements Immutable {
     public PointDTO getKingPoint(Side side) throws KingNotFoundException {
         PointDTO kingPoint = kingPoints.get(side);
         if (kingPoint == null) {
-            System.out.println("KingNotFoundException.side = " + side);
-            print();
-            throw new KingNotFoundException();
+            throw new KingNotFoundException(side, this);
         }
 
         return kingPoint;
