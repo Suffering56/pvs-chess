@@ -4,7 +4,6 @@ import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
-import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
@@ -85,7 +84,7 @@ public abstract class AbstractBotService implements BotService {
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
         Side playerSide = botSide.reverse();
 
-        List<ExtendedMove> botMovesByOriginal = OptimizedMoveHelper.valueOf(fakeGame, originalMatrix)
+        List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
@@ -178,7 +177,7 @@ public abstract class AbstractBotService implements BotService {
 
         Stream<ExtendedMove> movesStream;
         try {
-            movesStream = OptimizedMoveHelper.valueOf(fakeGame, matrixAfterMove)
+            movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
                     .getStandardMovesStream(nextSide);
         } catch (KingNotFoundException e) {
             MoveData md = moveData;

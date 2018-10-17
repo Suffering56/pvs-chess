@@ -26,7 +26,7 @@ public class BotServiceImplMedium extends AbstractBotService {
     protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, List<ExtendedMove> botMovesByOriginal, Side botSide, boolean isExternalCall) {
         Side playerSide = botSide.reverse();
 
-        List<ExtendedMove> playerMovesByOriginal = OptimizedMoveHelper.valueOf(fakeGame, originalMatrix)
+        List<ExtendedMove> playerMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(playerSide)
                 .collect(Collectors.toList());
 
@@ -72,7 +72,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 
 
 //            if (isExternalCall) {
-//                int val = OptimizedMoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
 //                        .getStandardMovesStream(playerSide)
 //                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
 //                        .map(move -> {
@@ -127,7 +127,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                 .filter(move -> move.getPieceFrom() != PieceType.KING)
                 .collect(Collectors.toList());
 
-        List<ExtendedMove> movesAfter = OptimizedMoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+        List<ExtendedMove> movesAfter = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
                 .getStandardMovesStream(expectedSide)
                 .filter(move -> move.getPieceFrom() != PieceType.KING)
                 .collect(Collectors.toList());
@@ -172,7 +172,7 @@ public class BotServiceImplMedium extends AbstractBotService {
      * Если показатель положительный (для игрока), значит текущий сделанный ход - плохой и получит отрицательный рейтинг.
      */
     private Rating getInvertedMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side playerSide, int maxDeep) {
-        List<ExtendedMove> playerHarmfulMoves = OptimizedMoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+        List<ExtendedMove> playerHarmfulMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
                 .getStandardMovesStream(playerSide)
                 .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
                 .collect(Collectors.toList());
@@ -195,7 +195,7 @@ public class BotServiceImplMedium extends AbstractBotService {
     }
 
     private Rating getCheckRating(FakeGame fakeGame, CellsMatrix matrix, Side checkedSide) {
-        OptimizedMoveHelper moveHelper = OptimizedMoveHelper.valueOf(fakeGame, matrix);
+        MoveHelper moveHelper = MoveHelper.valueOf(fakeGame, matrix);
 
         if (moveHelper.isKingUnderAttack(checkedSide)) {
 
@@ -375,7 +375,7 @@ public class BotServiceImplMedium extends AbstractBotService {
     //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
     //TODO: а еще про fakeGame подумай (longPawn, under check)
     private ExtendedMove getMinMove(FakeGame fakeGame, CellsMatrix matrix, PointDTO targetPoint, Side side) {
-        return OptimizedMoveHelper.valueOf(fakeGame, matrix)
+        return MoveHelper.valueOf(fakeGame, matrix)
                 .getStandardMovesStream(side)
                 .filter(nextMove -> nextMove.hasSamePointTo(targetPoint))
                 .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
