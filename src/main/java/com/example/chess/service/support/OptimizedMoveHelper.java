@@ -34,9 +34,10 @@ public class OptimizedMoveHelper {
 
     public boolean isKingUnderAttack(Side kingSide) {
         PointDTO kingPoint = originalMatrix.getKingPoint(kingSide);
+        Side enemySide = kingSide.reverse();
 
         Set<PointDTO> enemyMoves = originalMatrix
-                .excludePiecesStream(kingSide.reverse(), PieceType.KING)
+                .excludePiecesStream(enemySide, PieceType.KING)
                 .map(enemyCell -> getUnfilteredMovesForCell(enemyCell, false))
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
@@ -44,6 +45,12 @@ public class OptimizedMoveHelper {
         return enemyMoves.contains(kingPoint);
     }
 
+    public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
+        CellDTO moveableCell = originalMatrix.getCell(pointFrom);
+        FilterData filterData = createFilterData(moveableCell.getSide());
+
+        return getFilteredMovesForCell(moveableCell, filterData, false);
+    }
 
     public Stream<ExtendedMove> getStandardMovesStream(Side side) throws KingNotFoundException {
         FilterData filterData = createFilterData(side);
@@ -105,11 +112,13 @@ public class OptimizedMoveHelper {
                 case PAWN:
                 case KNIGHT:
                     filterData.shieldPoints = null;
+                    filterData.excludePoints = null;
                     break;
                 case BISHOP:
                 case ROOK:
                 case QUEEN:
                     filterData.shieldPoints = calculateShieldPoints(source, kingPoint);
+                    filterData.excludePoints = calculateExcludePoints(source, kingPoint);
                     break;
                 case KING:
                     throw new UnattainablePointException();
@@ -117,25 +126,53 @@ public class OptimizedMoveHelper {
         }
     }
 
+    private Set<PointDTO> calculateExcludePoints(CellDTO source, PointDTO kingPoint) {
+        Set<PointDTO> excludePoints = new HashSet<>();
+        BetweenParams params = createBetweenParams(kingPoint, source);
+        int[] directionArray = {-1, 1};
+
+        for (int direction : directionArray) {
+            int rowOffset = direction * params.rowVector;
+            int columnOffset = direction * params.columnVector;
+
+            int rowIndex = kingPoint.getRowIndex() + rowOffset;
+            int columnIndex = kingPoint.getColumnIndex() + columnOffset;
+
+            if (PointDTO.isCorrectIndex(rowIndex, columnIndex)) {
+                PointDTO excludePoint = PointDTO.valueOf(rowIndex, columnIndex);
+
+                if (!source.getPoint().equals(excludePoint)) {
+                    excludePoints.add(excludePoint);
+                }
+            }
+        }
+
+        return excludePoints;
+    }
+
     private Set<PointDTO> calculateShieldPoints(CellDTO source, PointDTO kingPoint) {
         BetweenParams betweenParams = createBetweenParams(kingPoint, source);
         Objects.requireNonNull(betweenParams);
-        return findBetweenPoints(kingPoint, betweenParams);
+        return findBetweenPoints(kingPoint, betweenParams, null);
     }
 
-    private Set<PointDTO> findBetweenPoints(PointDTO kingPoint, BetweenParams params) {
-        Set<PointDTO> betweenPoints = new HashSet<>();
-        params.rayLength++; //увеличиваем на один, т.к. в данном случае можем рубить источник шаха
+    private Set<PointDTO> findBetweenPoints(PointDTO kingPoint, BetweenParams params, PointDTO excludePoint) {
+        Set<PointDTO> points = new HashSet<>();
 
-        for (int i = 1; i <= params.rayLength; i++) {
+        //увеличиваем params.rayLength на один, т.к. в данном случае можем рубить источник шаха
+        for (int i = 1; i <= params.rayLength + 1; i++) {
             int rowOffset = i * params.rowVector;
             int columnOffset = i * params.columnVector;
 
-            betweenPoints.add(PointDTO.valueOf(kingPoint.getRowIndex() + rowOffset,
-                    kingPoint.getColumnIndex() + columnOffset));
+            PointDTO point = PointDTO.valueOf(kingPoint.getRowIndex() + rowOffset,
+                    kingPoint.getColumnIndex() + columnOffset);
+
+            if (!point.equals(excludePoint)) {
+                points.add(point);
+            }
         }
 
-        return betweenPoints;
+        return points;
     }
 
     private Map<PointDTO, UnmovableData> getUnmovablePointsMap(Side enemySide, PointDTO kingPoint) {
@@ -155,7 +192,7 @@ public class OptimizedMoveHelper {
 
                     Set<PointDTO> availablePoints = null;
                     if (unmovableCell.getPieceType() == PieceType.QUEEN || unmovableCell.getPieceType() == enemyPossibleAttackerCell.getPieceType()) {
-                        availablePoints = getPointsForUnmovableCell(kingPoint, betweenParams, unmovableCell);
+                        availablePoints = findBetweenPoints(kingPoint, betweenParams, unmovableCell.getPoint());
                     }
 
                     return new UnmovableData(unmovableCell.getPoint(), availablePoints);
@@ -179,22 +216,6 @@ public class OptimizedMoveHelper {
             default:
                 throw new UnattainablePointException();
         }
-    }
-
-    private Set<PointDTO> getPointsForUnmovableCell(PointDTO kingPoint, BetweenParams params, CellDTO unmovableCell) {
-        Set<PointDTO> points = new HashSet<>();
-
-        for (int i = 1; i <= params.rayLength; i++) {
-            int rowOffset = i * params.rowVector;
-            int columnOffset = i * params.columnVector;
-
-            PointDTO point = PointDTO.valueOf(kingPoint.getRowIndex() + rowOffset, kingPoint.getColumnIndex() + columnOffset);
-            if (!point.equals(unmovableCell.getPoint())) {
-                points.add(point);
-            }
-        }
-
-        return points;
     }
 
     private BetweenParams createBetweenParamsForRook(PointDTO kingPoint, CellDTO cell) {
@@ -299,9 +320,9 @@ public class OptimizedMoveHelper {
         private final boolean isDefensive;
 
         private InternalMoveHelper(CellDTO movableCell, FilterData filterData, boolean isDefensive) {
-            this.isDefensive = isDefensive;
             movableCell.requireNotEmpty();
 
+            this.isDefensive = isDefensive;
             this.filterData = filterData;
             this.movableCell = movableCell;
             this.moves = new HashSet<>();
@@ -318,6 +339,7 @@ public class OptimizedMoveHelper {
             PieceType movablePieceType = movableCell.getPieceType();
 
             if (isCheckFilterEnabled() && movablePieceType != PieceType.KING) {
+
                 if (filterData.isMultiCheck) {
                     return moves;
                 }
@@ -353,21 +375,28 @@ public class OptimizedMoveHelper {
                     break;
             }
 
+
             if (isCheckFilterEnabled() && movablePieceType != PieceType.KING) {
+
                 CellDTO sourceOfCheck = filterData.sourceOfCheck;
                 if (sourceOfCheck != null) {                        //значит нам шах
+
+                    PointDTO sourcePoint = sourceOfCheck.getPoint();
+                    if (movablePieceType == PieceType.PAWN && movableCell.getColumnIndex() == sourcePoint.getColumnIndex()) {
+                        return new HashSet<>();
+                    }
+
                     if (filterData.shieldPoints != null) {          //шах от слона/ладьи/ферзя -> значит можно или срубить или закрыться
                         moves.retainAll(filterData.shieldPoints);   //в moves - теперь пересечение moves и shieldPoints
                         return moves;
                     }
 
-                    Set<PointDTO> result = new HashSet<>();
-                    PointDTO sourcePoint = sourceOfCheck.getPoint();
-
                     if (moves.contains(sourcePoint)) {
-                        result.add(sourcePoint);
+                        return new HashSet<PointDTO>() {{
+                            add(sourcePoint);
+                        }};
                     }
-                    return result;
+                    return new HashSet<>();
                 }
             }
 
@@ -473,10 +502,17 @@ public class OptimizedMoveHelper {
          */
         private boolean addMove(int rowIndexOffset, int columnIndexOffset) {
             CellDTO cell = getCellByOffsets(rowIndexOffset, columnIndexOffset);
-            if (cell != null && (cell.isEmpty() || cell.getSide() == expectedSide)) {
-                moves.add(cell.getPoint());
-                return true;
+            if (cell != null) {
+                if (cell.isEmpty()) {
+                    moves.add(cell.getPoint());
+                    return true;
+                }
+                if (cell.getSide() == expectedSide) {
+                    moves.add(cell.getPoint());
+                    return false;
+                }
             }
+
             return false;
         }
 
@@ -497,6 +533,13 @@ public class OptimizedMoveHelper {
                 if (!isCheckFilterEnabled()) {
                     moves.add(point);
                     return;
+                }
+
+                if (filterData.sourceOfCheck != null && filterData.excludePoints != null) {
+                    //нам шах от слона, ладьи или ферзья (запрещаем королю оставаться на атакуемой вертикали/горизонтали/диагонали)
+                    if (filterData.excludePoints.contains(point)) {
+                        return;
+                    }
                 }
 
                 if (cell.isEmpty()) {
@@ -541,7 +584,6 @@ public class OptimizedMoveHelper {
             return true;
         }
 
-
         private boolean isEmptyCell(int rowIndex, int columnIndex) {
             CellDTO cell = getCell(rowIndex, columnIndex);
             Objects.requireNonNull(cell);
@@ -585,6 +627,7 @@ public class OptimizedMoveHelper {
         private CellDTO sourceOfCheck = null;
         private boolean isMultiCheck = false;   //only king can move;
         private Set<PointDTO> shieldPoints;     //if sourceOfCheck == BISHOP, ROOK, QUEEN
+        private Set<PointDTO> excludePoints;    //if sourceOfCheck == BISHOP, ROOK, QUEEN
 
         private FilterData(Set<PointDTO> enemyDefensivePoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
             this.enemyPoints = new HashSet<>();

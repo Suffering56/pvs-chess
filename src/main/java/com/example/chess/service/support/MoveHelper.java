@@ -6,7 +6,6 @@ import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
-import com.example.chess.service.support.api.MoveHelperAPI;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
@@ -19,7 +18,7 @@ import java.util.stream.Stream;
 
 @SuppressWarnings({"ConstantConditions", "Duplicates"})
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class MoveHelper implements MoveHelperAPI {
+public class MoveHelper {
 
     private final FakeGame fakeGame;
     private final CellsMatrix originalMatrix;
@@ -30,45 +29,55 @@ public class MoveHelper implements MoveHelperAPI {
         return new MoveHelper(fakeGame, originalMatrix);
     }
 
-    @Override
-    public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
-        CellDTO moveableCell = originalMatrix.getCell(pointFrom);
-        return getFilteredAvailablePoints(moveableCell);
-    }
+    //    @Override
+//    public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
+//        CellDTO moveableCell = originalMatrix.getCell(pointFrom);
+//        Set<PointDTO> moves = getUnfilteredMoves(fakeGame, originalMatrix, moveableCell, false);
+//        return filterAvailableMoves(moves, moveableCell);
+//    }
 
-    @Override
-    public boolean isKingUnderAttack(Side kingSide) {
-        PointDTO kingPoint = originalMatrix.getKingPoint(kingSide);
-        Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(fakeGame, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
-        return enemyMoves.contains(kingPoint);
-    }
+    //    @Override
+//    public boolean isKingUnderAttack(Side kingSide) {
+//        PointDTO kingPoint = originalMatrix.getKingPoint(kingSide);
+//        Set<PointDTO> enemyMoves = getUnfilteredPiecesMoves(fakeGame, originalMatrix, kingSide.reverse(), PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN);
+//        return enemyMoves.contains(kingPoint);
+//    }
 
-    @Override
-    public Stream<ExtendedMove> getStandardMovesStream(Side side) {
-        return originalMatrix
-                .allPiecesBySideStream(side)
-                .flatMap(toExtendedMovesStream(this::getFilteredAvailablePoints));
-    }
+    //    @Override
+//    public Stream<ExtendedMove> getStandardMovesStream(Side side) {
+//        return originalMatrix
+//                .allPiecesBySideStream(side)
+//                .flatMap(toExtendedMovesStream(this::getFilteredAvailablePoints));
+//    }
+
+    //    @Override
+//    public Set<PointDTO> getFilteredAvailablePoints(CellDTO moveableCell) {
+//        Set<PointDTO> moves = getUnfilteredMoves(fakeGame, originalMatrix, moveableCell, false);
+//        return filterAvailableMoves(moves, moveableCell);
+//    }
+
+    //    @Override
+//    public Stream<ExtendedMove> getDefensiveMovesStream(Side side) {
+//        return originalMatrix
+//                .allPiecesBySideStream(side)
+//                .flatMap(toExtendedMovesStream(
+//                        moveableCell -> getUnfilteredMoves(fakeGame, originalMatrix, moveableCell, true)));
+//    }
+
+
+    //    @Override
+//    public Stream<ExtendedMove> getPossibleMovesStream(Side side) {
+//        return Stream.concat(
+//                getStandardMovesStream(side).filter(excludePawnMoves()),
+//                getAllPawnsDiagonalMovesStream(side)
+//        );
+//    }
 
     private Function<CellDTO, Stream<? extends ExtendedMove>> toExtendedMovesStream(Function<CellDTO, Set<PointDTO>> movesExtractor) {
         return moveableCell -> {
             Set<PointDTO> availableMoves = movesExtractor.apply(moveableCell);
             return availableMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
         };
-    }
-
-    @Override
-    public Set<PointDTO> getFilteredAvailablePoints(CellDTO moveableCell) {
-        Set<PointDTO> moves = getUnfilteredMoves(fakeGame, originalMatrix, moveableCell, false);
-        return filterAvailableMoves(moves, moveableCell);
-    }
-
-    @Override
-    public Stream<ExtendedMove> getDefensiveMovesStream(Side side) {
-        return originalMatrix
-                .allPiecesBySideStream(side)
-                .flatMap(toExtendedMovesStream(
-                        moveableCell -> getUnfilteredMoves(fakeGame, originalMatrix, moveableCell, true)));
     }
 
     private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO moveableCell) {
@@ -502,14 +511,6 @@ public class MoveHelper implements MoveHelperAPI {
             return matrix.getKingPoint(side);
         }
 
-    }
-
-    @Override
-    public Stream<ExtendedMove> getPossibleMovesStream(Side side) {
-        return Stream.concat(
-                getStandardMovesStream(side).filter(excludePawnMoves()),
-                getAllPawnsDiagonalMovesStream(side)
-        );
     }
 
     private Stream<ExtendedMove> getAllPawnsDiagonalMovesStream(Side side) {
