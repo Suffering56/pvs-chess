@@ -16,10 +16,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -62,6 +59,9 @@ public abstract class AbstractBotService implements BotService {
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
+        if (resultMove == null) {
+            throw new RuntimeException("Checkmate!!!");
+        }
 
         System.out.println();
         Debug.printCounters();
@@ -105,10 +105,7 @@ public abstract class AbstractBotService implements BotService {
 //                .collect(Collectors.toList());
 
 
-
         botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
-
-
 
 
 //        List<MoveData> collect = botMovesByOriginal.stream()
@@ -142,14 +139,16 @@ public abstract class AbstractBotService implements BotService {
 //                })
 //                .collect(Collectors.toList());
 
-
-        int maxTotal = botMovesByOriginal.stream()
+        OptionalInt maxTotal = botMovesByOriginal.stream()
                 .mapToInt(ExtendedMove::getTotal)
-                .max()
-                .orElseThrow(() -> new RuntimeException("Checkmate!!!"));
+                .max();
+
+        if (!maxTotal.isPresent()) {    //TODO: checkmate
+            return null;
+        }
 
         List<ExtendedMove> topMovesList = botMovesByOriginal.stream()
-                .filter(extendedMove -> extendedMove.getTotal() == maxTotal)
+                .filter(extendedMove -> extendedMove.getTotal() == maxTotal.getAsInt())
                 .collect(Collectors.toList());
 
         ExtendedMove resultMove = getRandomMove(topMovesList);

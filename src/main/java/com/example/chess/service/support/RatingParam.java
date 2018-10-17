@@ -1,5 +1,6 @@
 package com.example.chess.service.support;
 
+import com.example.chess.ChessConstants;
 import lombok.Getter;
 
 @Getter
@@ -55,7 +56,7 @@ public enum RatingParam {
     /**
      * А мат - еще лучше
      */
-    CHECKMATE(100000);
+    CHECKMATE(ChessConstants.CHECKMATE_VALUE);
 
     private static final int MATERIAL_FACTOR = 100;
     private final int factor;

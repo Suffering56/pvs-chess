@@ -303,12 +303,13 @@ public class MoveHelper {
     private void addPawnDiagonalMoves(Set<PointDTO> moves, CellDTO movableCell, Side enemySide) {
         PointDTO point = movableCell.getPoint();
         int vector = enemySide.getPawnMoveVector();
+        int rowIndex = point.getRowIndex() + vector;
 
-        if (PointDTO.isCorrectIndex(point.getColumnIndex() + 1)) {
-            moves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() + 1));
+        if (PointDTO.isCorrectIndex(rowIndex, point.getColumnIndex() + 1)) {
+            moves.add(PointDTO.valueOf(rowIndex, point.getColumnIndex() + 1));
         }
-        if (PointDTO.isCorrectIndex(point.getColumnIndex() - 1)) {
-            moves.add(PointDTO.valueOf(point.getRowIndex() + vector, point.getColumnIndex() - 1));
+        if (PointDTO.isCorrectIndex(rowIndex, point.getColumnIndex() - 1)) {
+            moves.add(PointDTO.valueOf(rowIndex, point.getColumnIndex() - 1));
         }
     }
 
