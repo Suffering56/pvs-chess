@@ -1,0 +1,40 @@
+DELETE FROM public.history WHERE game_id = 341;
+DELETE FROM public.game_features WHERE game_id = 341;
+DELETE FROM public.game WHERE id = 341;
+
+INSERT INTO public.game (id, mode, position) VALUES (341, 'AI', 12);
+
+INSERT INTO public.game_features (id, is_under_check, last_visit_date, long_castling_available, pawn_long_move_column_index, session_id, short_castling_available, side, game_id) VALUES (681, false, '2018-10-17 17:20:25.588000', false, null, '2E105CA4A3786ED662870D01B5808798', false, 'WHITE', 341);
+INSERT INTO public.game_features (id, is_under_check, last_visit_date, long_castling_available, pawn_long_move_column_index, session_id, short_castling_available, side, game_id) VALUES (682, false, '2018-10-17 17:20:29.808000', true, null, null, true, 'BLACK', 341);
+
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101375, 1, 341, 6, 12, 0);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101376, 2, 341, 4, 12, 0);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101377, 4, 341, 5, 12, 0);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101378, 6, 341, 2, 12, 0);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101379, 7, 341, 4, 12, 0);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101380, 0, 341, 1, 12, 1);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101381, 1, 341, 1, 12, 1);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101382, 2, 341, 1, 12, 1);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101383, 5, 341, 1, 12, 1);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101384, 6, 341, 1, 12, 1);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101385, 7, 341, 1, 12, 1);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101386, 2, 341, 8, 12, 2);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101387, 4, 341, 1, 12, 2);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101388, 3, 341, 1, 12, 3);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101389, 5, 341, 3, 12, 3);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101390, 1, 341, 3, 12, 4);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101391, 3, 341, 7, 12, 4);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101392, 7, 341, 7, 12, 4);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101393, 2, 341, 11, 12, 5);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101394, 0, 341, 7, 12, 6);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101395, 1, 341, 7, 12, 6);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101396, 2, 341, 7, 12, 6);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101397, 4, 341, 7, 12, 6);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101398, 5, 341, 7, 12, 6);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101399, 6, 341, 7, 12, 6);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101400, 0, 341, 10, 12, 7);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101401, 1, 341, 8, 12, 7);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101402, 2, 341, 9, 12, 7);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101403, 3, 341, 12, 12, 7);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101404, 5, 341, 9, 12, 7);
+INSERT INTO public.history (id, column_index, game_id, piece_id, position, row_index) VALUES (101405, 7, 341, 10, 12, 7);

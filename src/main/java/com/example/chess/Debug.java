@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class Debug {
 
-    private static final boolean DESTINY_ENABLED = true;
+    private static final boolean DESTINY_ENABLED = false;
     public static final boolean IS_PARALLEL = false;
 
     private static final AtomicLong availablePointsFound = new AtomicLong(0);

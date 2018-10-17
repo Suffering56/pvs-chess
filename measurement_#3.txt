@@ -1,0 +1,50 @@
+MATERIAL_SIMPLE_MOVE=true
+MATERIAL_SIMPLE_FREEBIE=true
+MATERIAL_SIMPLE_FEED=true
+MATERIAL_SIMPLE_EXCHANGE=true
+MATERIAL_DEEP_EXCHANGE=true
+INVERTED_MATERIAL_FOR_PLAYER=true
+CHECK=true
+CHECKMATE=true
+AVAILABLE_MOVES_COUNT=true
+INVERTED_AVAILABLE_MOVES_COUNT=true
+DEEP=true
+
+20v->20v->29->29->~40->~40
+===================================================
+1)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+
+move #1(e4):
+    moveHelpersCount = 13781
+    movesExecuted = 839236
+    availablePointsFound = 4763713
+    getUnfilteredMovesCallsCount = 3158588
+    findBestMove executed in : 36911ms/35141ms
+move #2(d4):
+    moveHelpersCount = 34575
+    movesExecuted = 2569295
+    availablePointsFound = 23135406
+    getUnfilteredMovesCallsCount = 9674136
+    findBestMove executed in : 117023ms/108181ms
+==========================================
+2)
+calculate_rating=false
+fillDeeperMoves=true
+maxDeep = 4
+OptimizedMoveHelperReworked = true
+
+move #1(e4):
+    moveHelpersCount = 13918
+    movesExecuted = 425496
+    availablePointsFound = 1009732
+    addMovesForCallsCount = 556263
+    findBestMove executed in : 3244ms
+move #2(d4):
+    moveHelpersCount = 34963
+    movesExecuted = 1287543
+    availablePointsFound = 3207850
+    addMovesForCallsCount = 1396587
+    findBestMove executed in : 18356ms

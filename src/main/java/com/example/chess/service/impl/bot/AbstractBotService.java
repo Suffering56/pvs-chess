@@ -1,5 +1,6 @@
 package com.example.chess.service.impl.bot;
 
+import com.example.chess.ChessConstants;
 import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.CellDTO;
@@ -60,7 +61,13 @@ public abstract class AbstractBotService implements BotService {
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
         if (resultMove == null) {
-            throw new RuntimeException("Checkmate!!!");
+            throw new RuntimeException("Checkmate by player!!!");
+        }
+
+        System.out.println("resultMove = " + resultMove);
+
+        if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
+            System.out.println("Bot want checkmate you!!!");
         }
 
         System.out.println();
