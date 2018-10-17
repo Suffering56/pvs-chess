@@ -6,8 +6,6 @@ public interface Gameplay {
 
     Integer getPawnLongMoveColumnIndex(Side side);
 
-    Side getUnderCheckSide();
-
     boolean isLongCastlingAvailable(Side side);
 
     boolean isShortCastlingAvailable(Side side);

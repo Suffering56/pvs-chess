@@ -474,11 +474,11 @@ public class MoveHelper {
                 return;
             }
 
-            boolean isAdded = addMove(1 * vector, 0);
+            boolean isAdded = addPawnHarmlessMove(1 * vector);
             if (isAdded) {
                 boolean isFirstMove = currentRow == 1 || currentRow == 6;
                 if (isFirstMove) {
-                    addMove(2 * vector, 0);
+                    addPawnHarmlessMove(2 * vector);
                 }
             }
 
@@ -495,6 +495,19 @@ public class MoveHelper {
                     }
                 }
             }
+        }
+
+        /**
+         * @return true if move added, false - otherwise (addable cell is null or ally)
+         */
+        private boolean addPawnHarmlessMove(int rowIndexOffset) {
+            CellDTO cell = getCellByOffsets(rowIndexOffset, 0);
+            if (cell != null && cell.isEmpty()) {
+                moves.add(cell.getPoint());
+                return true;
+            }
+
+            return false;
         }
 
         /**

@@ -89,22 +89,26 @@ public abstract class AbstractBotService implements BotService {
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
-//        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
+//        Stream<ExtendedMove> botMovesStream;
+//        if (Debug.IS_PARALLEL) {
+//            botMovesStream = botMovesByOriginal.parallelStream();
+//        } else {
+//            botMovesStream = botMovesByOriginal.stream();
+//        }
+//
+//        List<MoveData> rootMoveData = botMovesStream
+//                .map(botMove -> {
+//                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
+//                    fillDeeperMoves(fakeGame, moveData, 4);
+//                    return moveData;
+//                })
+//                .collect(Collectors.toList());
 
-        Stream<ExtendedMove> botMovesStream;
-        if (Debug.IS_PARALLEL) {
-            botMovesStream = botMovesByOriginal.parallelStream();
-        } else {
-            botMovesStream = botMovesByOriginal.stream();
-        }
 
-        List<MoveData> collect = botMovesStream
-                .map(botMove -> {
-                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
-                    fillDeeperMoves(fakeGame, moveData, 4);
-                    return moveData;
-                })
-                .collect(Collectors.toList());
+
+        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
+
+
 
 
 //        List<MoveData> collect = botMovesByOriginal.stream()
@@ -175,21 +179,8 @@ public abstract class AbstractBotService implements BotService {
 //                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
 
 
-        Stream<ExtendedMove> movesStream;
-        try {
-            movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
-                    .getStandardMovesStream(nextSide);
-        } catch (KingNotFoundException e) {
-            MoveData md = moveData;
-            while (md != null) {
-                System.out.println("md.getDeep() = " + md.getDeep());
-                System.out.println("executedMove: " + CommonUtils.moveToString(md.getExecutedMove()));
-                System.out.println("-------------------------------------\n");
-                md = md.getParent();
-            }
-            System.exit(0);
-            return;
-        }
+        Stream<ExtendedMove> movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+                .getStandardMovesStream(nextSide);
 
         if (Debug.IS_PARALLEL) {
             movesStream = movesStream.parallel();

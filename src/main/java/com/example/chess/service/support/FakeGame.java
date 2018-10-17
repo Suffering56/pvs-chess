@@ -34,17 +34,6 @@ public class FakeGame implements Gameplay, Immutable {
         return featuresMap.get(side).getPawnLongMoveColumnIndex();
     }
 
-    @Override
-    public Side getUnderCheckSide() {
-        if (featuresMap.get(Side.WHITE).isUnderCheck()) {
-            return Side.WHITE;
-        }
-        if (featuresMap.get(Side.BLACK).isUnderCheck()) {
-            return Side.BLACK;
-        }
-        return null;
-    }
-
     public Builder copy() {
         return builder(this);
     }
@@ -58,7 +47,6 @@ public class FakeGame implements Gameplay, Immutable {
 
         for (Side side : Side.values()) {
             builder.setPawnLongMoveColumnIndex(side, gameplay.getPawnLongMoveColumnIndex(side))
-                    .setUnderCheckSide(gameplay.getUnderCheckSide())
                     .setLongCastlingAvailable(side, gameplay.isLongCastlingAvailable(side))
                     .setShortCastlingAvailable(side, gameplay.isShortCastlingAvailable(side));
         }
@@ -72,17 +60,6 @@ public class FakeGame implements Gameplay, Immutable {
             Objects.requireNonNull(side);
             featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
             featuresMap.get(side.reverse()).setPawnLongMoveColumnIndex(null);
-            return this;
-        }
-
-        public Builder setUnderCheckSide(Side side) {
-            if (side != null) {
-                featuresMap.get(side).setUnderCheck(true);
-                featuresMap.get(side.reverse()).setUnderCheck(false);
-            } else {
-                featuresMap.get(Side.WHITE).setUnderCheck(false);
-                featuresMap.get(Side.BLACK).setUnderCheck(false);
-            }
             return this;
         }
 

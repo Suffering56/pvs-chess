@@ -93,7 +93,6 @@ public class Game implements Gameplay {
     }
 
     @Transient
-    @Override
     public Side getUnderCheckSide() {
         for (GameFeatures features : featuresMap.values()) {
             if (features.getIsUnderCheck()) {
