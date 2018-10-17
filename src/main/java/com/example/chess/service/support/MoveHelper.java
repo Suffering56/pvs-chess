@@ -191,14 +191,38 @@ public class MoveHelper {
                     }
 
                     Set<PointDTO> availablePoints = null;
-                    if (unmovableCell.getPieceType() == PieceType.QUEEN || unmovableCell.getPieceType() == enemyPossibleAttackerCell.getPieceType()) {
+                    PieceType unmovablePieceType = unmovableCell.getPieceType();
+
+                    if (unmovablePieceType == PieceType.QUEEN || unmovablePieceType == enemyPossibleAttackerCell.getPieceType()) {
                         availablePoints = findBetweenPoints(kingPoint, betweenParams, unmovableCell.getPoint());
+
+                    } else if (unmovablePieceType == PieceType.PAWN) {
+                        availablePoints = findAvailablePointsForPawn(unmovableCell, enemyPossibleAttackerCell);
                     }
 
                     return new UnmovableData(unmovableCell.getPoint(), availablePoints);
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(UnmovableData::getUnmovableCellPoint, Function.identity()));
+    }
+
+    private Set<PointDTO> findAvailablePointsForPawn(CellDTO unmovableCell, CellDTO enemyPossibleAttackerCell) {
+        int pawnVector = unmovableCell.getSide().getPawnMoveVector();
+        int rowIndex = unmovableCell.getRowIndex() + pawnVector;
+
+        for (int columnOffset : new int[]{-1, +1}) {
+            int columnIndex = unmovableCell.getColumnIndex() + columnOffset;
+
+            if (PointDTO.isCorrectIndex(rowIndex, columnIndex)) {
+                PointDTO pawnAttackPoint = PointDTO.valueOf(rowIndex, columnIndex);
+                if (pawnAttackPoint.equals(enemyPossibleAttackerCell.getPoint())) {
+                    return new HashSet<PointDTO>() {{
+                        add(pawnAttackPoint);
+                    }};
+                }
+            }
+        }
+        return null;
     }
 
     private BetweenParams createBetweenParams(PointDTO kingPoint, CellDTO enemyPossibleAttackerCell) {
