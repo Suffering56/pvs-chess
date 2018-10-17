@@ -6,10 +6,10 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
+import com.example.chess.exceptions.UnattainablePointException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.springframework.data.util.Pair;
 
 import java.util.*;
 import java.util.function.Function;
@@ -37,103 +37,148 @@ public class OptimizedMoveHelper {
 
         Set<PointDTO> enemyMoves = originalMatrix
                 .excludePiecesStream(kingSide.reverse(), PieceType.KING)
-                .map(this::getUnfilteredMovesForCell)
+                .map(enemyCell -> getUnfilteredMovesForCell(enemyCell, false))
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
 
         return enemyMoves.contains(kingPoint);
     }
 
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    @Getter
-    private class FilterData {
-        Set<PointDTO> enemyPoints;
-        Set<CellDTO> checkSourcesSet;
-        Map<PointDTO, UnmovableData> unmovablePointsMap;
-    }
 
     public Stream<ExtendedMove> getStandardMovesStream(Side side) throws KingNotFoundException {
-        Side enemySide = side.reverse();
-        PointDTO kingPoint = originalMatrix.getKingPoint(side);
-
-        Pair<Set<PointDTO>, Set<CellDTO>> pair = getAttackedByEnemyPoints(kingPoint, enemySide);
-        Map<PointDTO, UnmovableData> unmovablePointsMap = getUnmovablePointsMap(enemySide, kingPoint);
+        FilterData filterData = createFilterData(side);
 
         return originalMatrix
                 .allPiecesBySideStream(side)
                 .flatMap(moveableCell -> {
-                    Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, new FilterData(pair.getFirst(), pair.getSecond(), unmovablePointsMap));
+                    Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, filterData, false);
                     return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
                 });
     }
 
-    private Pair<Set<PointDTO>, Set<CellDTO>> getAttackedByEnemyPoints(PointDTO kingPoint, Side enemySide) {
-        Set<PointDTO> enemyPoints = new HashSet<>();
-        Set<CellDTO> checkSourcesSet = new HashSet<>();
+    private FilterData createFilterData(Side side) {
+        Side enemySide = side.reverse();
+        PointDTO kingPoint = originalMatrix.getKingPoint(side);
+        Map<PointDTO, UnmovableData> unmovablePointsMap = getUnmovablePointsMap(enemySide, kingPoint);
+
+        Set<PointDTO> enemyDefensivePoints = originalMatrix
+                .allPiecesBySideStream(enemySide)
+                .flatMap(enemyCell -> getUnfilteredMovesForCell(enemyCell, true).stream())
+                .collect(Collectors.toSet());
+
+
+        FilterData filterData = new FilterData(enemyDefensivePoints, unmovablePointsMap);
+        initFilterData(kingPoint, enemySide, filterData);
+        updateFilterData(filterData, kingPoint);
+        return filterData;
+    }
+
+    private void initFilterData(PointDTO kingPoint, Side enemySide, FilterData filterData) {
 
         originalMatrix
                 .allPiecesBySideStream(enemySide)
                 .forEach(enemyCell -> {
                     if (enemyCell.getPieceType() == PieceType.PAWN) {
-                        addPawnDiagonalMoves(enemyPoints, enemyCell, enemySide);
+                        addPawnDiagonalMoves(filterData.enemyPoints, enemyCell, enemySide);
                     } else {
-                        Set<PointDTO> moves = getUnfilteredMovesForCell(enemyCell);
-                        enemyPoints.addAll(moves);
+                        Set<PointDTO> enemyMoves = getUnfilteredMovesForCell(enemyCell, false);
+                        filterData.enemyPoints.addAll(enemyMoves);
 
-                        if (moves.contains(kingPoint)) {
+                        if (enemyMoves.contains(kingPoint)) {
                             //нам УЖЕ шах! => мы далеко не каждой фигурой можем ходить
-                            //TODO: король шаховать не может
-                            //TODO: если set.size > 1 - тогда просто в FilterParams ставим что ходить может только король
-                            //TODO: если шахует конь или пешка, то ходить может либо король - или фигура которая сможет срубить этого коня или пешку
-                            //TODO: если шахуют остальные фигуры (слон, ладья, ферзь) - то вычисляем поля на которые можно встать любой фигурой кроме короля - чтобы защитить от нападения
-                            // + если кто-то может срубить атакующего
-                            // + ессно может ходить и король
-                            checkSourcesSet.add(enemyCell);
+                            if (filterData.sourceOfCheck == null) {
+                                filterData.sourceOfCheck = enemyCell;
+                            } else {
+                                filterData.isMultiCheck = true;
+                            }
                         }
                     }
                 });
-        return Pair.of(enemyPoints, checkSourcesSet);
+    }
+
+    private void updateFilterData(FilterData filterData, PointDTO kingPoint) {
+        CellDTO source = filterData.sourceOfCheck;
+
+        if (source != null && !filterData.isMultiCheck) {
+            switch (source.getPieceType()) {
+
+                case PAWN:
+                case KNIGHT:
+                    filterData.shieldPoints = null;
+                    break;
+                case BISHOP:
+                case ROOK:
+                case QUEEN:
+                    filterData.shieldPoints = calculateShieldPoints(source, kingPoint);
+                    break;
+                case KING:
+                    throw new UnattainablePointException();
+            }
+        }
+    }
+
+    private Set<PointDTO> calculateShieldPoints(CellDTO source, PointDTO kingPoint) {
+        BetweenParams betweenParams = createBetweenParams(kingPoint, source);
+        Objects.requireNonNull(betweenParams);
+        return findBetweenPoints(kingPoint, betweenParams);
+    }
+
+    private Set<PointDTO> findBetweenPoints(PointDTO kingPoint, BetweenParams params) {
+        Set<PointDTO> betweenPoints = new HashSet<>();
+        params.rayLength++; //увеличиваем на один, т.к. в данном случае можем рубить источник шаха
+
+        for (int i = 1; i <= params.rayLength; i++) {
+            int rowOffset = i * params.rowVector;
+            int columnOffset = i * params.columnVector;
+
+            betweenPoints.add(PointDTO.valueOf(kingPoint.getRowIndex() + rowOffset,
+                    kingPoint.getColumnIndex() + columnOffset));
+        }
+
+        return betweenPoints;
     }
 
     private Map<PointDTO, UnmovableData> getUnmovablePointsMap(Side enemySide, PointDTO kingPoint) {
         return originalMatrix
                 .includePiecesStream(enemySide, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN)
                 .map(enemyPossibleAttackerCell -> {
-                    Pair<CellDTO, BetweenParams> pair = null;
+                    BetweenParams betweenParams = createBetweenParams(kingPoint, enemyPossibleAttackerCell);
 
-                    switch (enemyPossibleAttackerCell.getPieceType()) {
-                        case BISHOP:
-                            pair = getSingleBishopDefenderCell(kingPoint, enemyPossibleAttackerCell);
-                            break;
-                        case ROOK:
-                            pair = getSingleRookDefenderCell(kingPoint, enemyPossibleAttackerCell);
-                            break;
-                        case QUEEN:
-                            pair = getSingleBishopDefenderCell(kingPoint, enemyPossibleAttackerCell);
-                            if (pair == null) {
-                                pair = getSingleRookDefenderCell(kingPoint, enemyPossibleAttackerCell);
-                            }
-                            break;
+                    CellDTO unmovableCell = null;
+                    if (betweenParams != null) {
+                        unmovableCell = findUnmovableCell(kingPoint, betweenParams);
                     }
 
-                    if (pair == null) {
+                    if (unmovableCell == null) {
                         return null;
                     }
 
-                    CellDTO unmovableCell = pair.getFirst();
-                    PieceType unmovablePiece = unmovableCell.getPieceType();
                     Set<PointDTO> availablePoints = null;
-
-
-                    if (unmovablePiece == PieceType.QUEEN || unmovablePiece == enemyPossibleAttackerCell.getPieceType()) {
-                        BetweenParams params = pair.getSecond();
-                        availablePoints = getPointsForUnmovableCell(kingPoint, params, unmovableCell);
+                    if (unmovableCell.getPieceType() == PieceType.QUEEN || unmovableCell.getPieceType() == enemyPossibleAttackerCell.getPieceType()) {
+                        availablePoints = getPointsForUnmovableCell(kingPoint, betweenParams, unmovableCell);
                     }
 
                     return new UnmovableData(unmovableCell.getPoint(), availablePoints);
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(UnmovableData::getUnmovableCellPoint, Function.identity()));
+    }
+
+    private BetweenParams createBetweenParams(PointDTO kingPoint, CellDTO enemyPossibleAttackerCell) {
+        switch (enemyPossibleAttackerCell.getPieceType()) {
+            case BISHOP:
+                return createBetweenParamsForBishop(kingPoint, enemyPossibleAttackerCell);
+            case ROOK:
+                return createBetweenParamsForRook(kingPoint, enemyPossibleAttackerCell);
+            case QUEEN:
+                BetweenParams betweenParams = createBetweenParamsForBishop(kingPoint, enemyPossibleAttackerCell);
+                if (betweenParams == null) {
+                    return createBetweenParamsForRook(kingPoint, enemyPossibleAttackerCell);
+                }
+                return betweenParams;
+            default:
+                throw new UnattainablePointException();
+        }
     }
 
     private Set<PointDTO> getPointsForUnmovableCell(PointDTO kingPoint, BetweenParams params, CellDTO unmovableCell) {
@@ -152,22 +197,7 @@ public class OptimizedMoveHelper {
         return points;
     }
 
-    @Getter
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    private class UnmovableData {
-        private PointDTO unmovableCellPoint;
-        private Set<PointDTO> availablePoints;
-
-    }
-
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    private class BetweenParams {
-        private int rayLength;
-        private int rowVector;
-        private int columnVector;
-    }
-
-    private Pair<CellDTO, BetweenParams> getSingleRookDefenderCell(PointDTO kingPoint, CellDTO cell) {
+    private BetweenParams createBetweenParamsForRook(PointDTO kingPoint, CellDTO cell) {
         int diff;
         int rowVector = 0;
         int columnVector = 0;
@@ -184,17 +214,10 @@ public class OptimizedMoveHelper {
         }
 
         int rayLength = Math.abs(diff) - 1;
-        BetweenParams params = new BetweenParams(rayLength, rowVector, columnVector);
-
-        CellDTO unmovableCell = findUnmovableCell(kingPoint, params);
-        if (unmovableCell != null) {
-            return Pair.of(unmovableCell, params);
-        }
-
-        return null;
+        return new BetweenParams(rayLength, rowVector, columnVector);
     }
 
-    private Pair<CellDTO, BetweenParams> getSingleBishopDefenderCell(PointDTO kingPoint, CellDTO cell) {
+    private BetweenParams createBetweenParamsForBishop(PointDTO kingPoint, CellDTO cell) {
         int rowDiff = kingPoint.getRowIndex() - cell.getRowIndex();
         int columnDiff = kingPoint.getColumnIndex() - cell.getColumnIndex();
 
@@ -203,12 +226,7 @@ public class OptimizedMoveHelper {
 
             int rowVector = rowDiff > 0 ? -1 : 1;
             int columnVector = columnDiff > 0 ? -1 : 1;
-            BetweenParams params = new BetweenParams(rayLength, rowVector, columnVector);
-
-            CellDTO unmovableCell = findUnmovableCell(kingPoint, params);
-            if (unmovableCell != null) {
-                return Pair.of(unmovableCell, params);
-            }
+            return new BetweenParams(rayLength, rowVector, columnVector);
         }
 
         return null;
@@ -249,119 +267,72 @@ public class OptimizedMoveHelper {
         }
     }
 
-    /*
-     * TODO: слабое место в производительности - предлагаю фильровать на стадии вычисления (т.е. не добавлять их, если нельзя)
-     * 1) не ходим королем под атакуемые поля:
-     * - вычисляем доступные ходы противника(кроме пешек)
-     * - если доступное для короля поле является атакуемым - НЕ ДОБАВЛЯЕМ
-     * 2) бросаем от короля лучи по всем 8 направлениям:
-     * - если на горизонтально-вертикальных направлениях присутствует вражеская ладья или ферзь
-     * - либо на диагональных направлениях присутствует вражеские слоны или ферзь
-     *  - считаем сколько фигур между ними стоит
-     *   - 0 не может - иначе был бы шах
-     *   - 2+ - значит можно ходить любой из этих 2+
-     *   - 1 - значит ЕЙ НЕЛЬЗЯ ХОДИТЬ
-     */
-//    private Set<PointDTO> filterAvailableMoves(Set<PointDTO> moves, CellDTO movableCell) {
-//        moves = moves.stream()
-//                .filter(isKingNotAttackedByEnemy(movableCell)
-//                        .and(isKingNotAttackedByEnemyPawns(movableCell)))
-//                .collect(Collectors.toSet());
-//
-//
-//        //TODO: can optimize
-//        if (movableCell.getPieceType() == PieceType.KING) {
-//            Set<PointDTO> unavailableCastlingMoves = getUnavailableCastlingPoints(movableCell.getPoint(), moves);
-//            moves.removeAll(unavailableCastlingMoves);            //запрещаем рокировку если король пересекает битое поле
-//        }
-//
-//        return moves;
-//    }
-//
-
-
-    private Set<PointDTO> getUnfilteredMovesForCell(CellDTO moveableCell) {
-        Set<PointDTO> moves = new HashSet<>();
-        addUnfilteredMovesForCell(moves, moveableCell);
-
-        Debug.incrementAvailablePointsFound(moves.size());
-        return moves;
+    private Set<PointDTO> getUnfilteredMovesForCell(CellDTO moveableCell, boolean isDefensive) {
+        return getMovesForCell(moveableCell, null, isDefensive);
     }
 
-    private Set<PointDTO> getFilteredMovesForCell(CellDTO moveableCell, FilterData filterData) {
-        Set<PointDTO> moves = new HashSet<>();
-        addFilteredMovesForCell(moves, moveableCell, filterData);
-
-        Debug.incrementAvailablePointsFound(moves.size());
-        return moves;
-    }
-
-    private void addUnfilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell) {
-        addMovesForCell(moves, moveableCell, null);
-    }
-
-    private void addFilteredMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, FilterData filterData) {
-        addMovesForCell(moves, moveableCell, Objects.requireNonNull(filterData));
+    private Set<PointDTO> getFilteredMovesForCell(CellDTO moveableCell, FilterData filterData, boolean isDefensive) {
+        return getMovesForCell(moveableCell, Objects.requireNonNull(filterData), isDefensive);
     }
 
     /**
      * Не вызывай этот метод ниоткуда, кроме addUnfilteredMovesForCell()/addFilteredMovesForCell(), ладно?
      */
-    private void addMovesForCell(Set<PointDTO> moves, CellDTO moveableCell, FilterData filterData) {
-        new InternalMoveHelper(moves, moveableCell, filterData)
-                .addAnyPieceMoves();
+    private Set<PointDTO> getMovesForCell(CellDTO moveableCell, FilterData filterData, boolean isDefensive) {
+        Set<PointDTO> moves = new InternalMoveHelper(moveableCell, filterData, isDefensive)
+                .getAnyPieceMoves();
 
         Debug.incrementAddMovesForCallsCount();
+        Debug.incrementAvailablePointsFound(moves.size());
+
+        return moves;
     }
 
     @SuppressWarnings({"PointlessArithmeticExpression"})
     private class InternalMoveHelper {
 
         private final CellDTO movableCell;
-        private final boolean checkFilterEnabled;
-        private final Set<PointDTO> enemyPoints;
-        private final Map<PointDTO, UnmovableData> unmovablePointsMap;
         private final Set<PointDTO> moves;
+        private final FilterData filterData;
         private final Side allySide;
-        private final Set<CellDTO> checkSourcesSet;
+        private final Side expectedSide;
+        private final boolean isDefensive;
 
-        private InternalMoveHelper(Set<PointDTO> moves, CellDTO movableCell, FilterData filterData) {
+        private InternalMoveHelper(CellDTO movableCell, FilterData filterData, boolean isDefensive) {
+            this.isDefensive = isDefensive;
             movableCell.requireNotEmpty();
+
+            this.filterData = filterData;
             this.movableCell = movableCell;
-            this.moves = moves;
+            this.moves = new HashSet<>();
             this.allySide = movableCell.getSide();
 
-
-            this.checkFilterEnabled = filterData != null;
-            if (checkFilterEnabled) {
-                this.unmovablePointsMap = filterData.getUnmovablePointsMap();
-                this.enemyPoints = filterData.getEnemyPoints();
-                this.checkSourcesSet = filterData.getCheckSourcesSet();
-            } else {
-                this.unmovablePointsMap = null;
-                this.enemyPoints = null;
-                this.checkSourcesSet = null;
+            if (!isDefensive) { //normal
+                expectedSide = allySide.reverse();
+            } else {            //defensive
+                expectedSide = allySide;
             }
         }
 
-        private void addAnyPieceMoves() {
-            if (checkFilterEnabled) {
-                UnmovableData unmovableData = unmovablePointsMap.get(movableCell.getPoint());
+        private Set<PointDTO> getAnyPieceMoves() {
+            PieceType movablePieceType = movableCell.getPieceType();
+
+            if (isCheckFilterEnabled() && movablePieceType != PieceType.KING) {
+                if (filterData.isMultiCheck) {
+                    return moves;
+                }
+
+                UnmovableData unmovableData = filterData.unmovablePointsMap.get(movableCell.getPoint());
                 if (unmovableData != null) {
                     Set<PointDTO> availablePoints = unmovableData.getAvailablePoints();
                     if (availablePoints != null) {
                         moves.addAll(availablePoints);
                     }
-                    return;
-                }
-
-                PointDTO kingPoint = originalMatrix.getKingPoint(allySide);
-                if (enemyPoints.contains(kingPoint)) {
-
+                    return moves;
                 }
             }
 
-            switch (movableCell.getPieceType()) {
+            switch (movablePieceType) {
                 case PAWN:
                     addMovesForPawn();
                     break;
@@ -381,6 +352,26 @@ public class OptimizedMoveHelper {
                     addMovesForKing();
                     break;
             }
+
+            if (isCheckFilterEnabled() && movablePieceType != PieceType.KING) {
+                CellDTO sourceOfCheck = filterData.sourceOfCheck;
+                if (sourceOfCheck != null) {                        //значит нам шах
+                    if (filterData.shieldPoints != null) {          //шах от слона/ладьи/ферзя -> значит можно или срубить или закрыться
+                        moves.retainAll(filterData.shieldPoints);   //в moves - теперь пересечение moves и shieldPoints
+                        return moves;
+                    }
+
+                    Set<PointDTO> result = new HashSet<>();
+                    PointDTO sourcePoint = sourceOfCheck.getPoint();
+
+                    if (moves.contains(sourcePoint)) {
+                        result.add(sourcePoint);
+                    }
+                    return result;
+                }
+            }
+
+            return moves;
         }
 
         private void addMovesForKnight() {
@@ -448,6 +439,12 @@ public class OptimizedMoveHelper {
             int vector = allySide.getPawnMoveVector();
             Side enemySide = allySide.reverse();
 
+            addPawnAttackMoves(vector);
+
+            if (isDefensive) {
+                return;
+            }
+
             boolean isAdded = addMove(1 * vector, 0);
             if (isAdded) {
                 boolean isFirstMove = currentRow == 1 || currentRow == 6;
@@ -455,8 +452,6 @@ public class OptimizedMoveHelper {
                     addMove(2 * vector, 0);
                 }
             }
-
-            addPawnAttackMoves(enemySide, vector);
 
             Integer enemyLongMoveColumnIndex = fakeGame.getPawnLongMoveColumnIndex(enemySide);
             if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
@@ -478,7 +473,7 @@ public class OptimizedMoveHelper {
          */
         private boolean addMove(int rowIndexOffset, int columnIndexOffset) {
             CellDTO cell = getCellByOffsets(rowIndexOffset, columnIndexOffset);
-            if (cell != null && cell.getSide() != allySide) {
+            if (cell != null && (cell.isEmpty() || cell.getSide() == expectedSide)) {
                 moves.add(cell.getPoint());
                 return true;
             }
@@ -496,15 +491,22 @@ public class OptimizedMoveHelper {
 
         private void addKingMove(int rowIndexOffset, int columnIndexOffset) {
             CellDTO cell = getCellByOffsets(rowIndexOffset, columnIndexOffset);
-            if (cell != null && cell.getSide() != allySide) {
+            if (cell != null && (cell.isEmpty() || cell.getSide() == expectedSide)) {
                 PointDTO point = cell.getPoint();
 
-                if (checkFilterEnabled) {
-                    if (!enemyPoints.contains(point)) {
+                if (!isCheckFilterEnabled()) {
+                    moves.add(point);
+                    return;
+                }
+
+                if (cell.isEmpty()) {
+                    if (!filterData.enemyPoints.contains(point)) {
                         moves.add(point);
                     }
                 } else {
-                    moves.add(point);
+                    if (!filterData.enemyDefensivePoints.contains(point)) {
+                        moves.add(point);
+                    }
                 }
             }
         }
@@ -512,19 +514,19 @@ public class OptimizedMoveHelper {
         private boolean isSafeCrossPointForCastling(int columnIndexOffset) {
             PointDTO crossPoint = getPointByOffsets(0, columnIndexOffset);
             if (crossPoint != null) {
-                return checkFilterEnabled && !enemyPoints.contains(crossPoint);
+                return isCheckFilterEnabled() && !filterData.enemyPoints.contains(crossPoint);
             }
             return false;
         }
 
-        private void addPawnAttackMoves(Side enemySide, int vector) {
+        private void addPawnAttackMoves(int vector) {
             CellDTO cell = getCellByOffsets(1 * vector, 1);
-            if (cell != null && cell.getSide() == enemySide) {
+            if (cell != null && cell.getSide() == expectedSide) {
                 moves.add(cell.getPoint());
             }
 
             cell = getCellByOffsets(1 * vector, -1);
-            if (cell != null && cell.getSide() == enemySide) {
+            if (cell != null && cell.getSide() == expectedSide) {
                 moves.add(cell.getPoint());
             }
         }
@@ -558,6 +560,10 @@ public class OptimizedMoveHelper {
             }
             return null;
         }
+
+        private boolean isCheckFilterEnabled() {
+            return filterData != null;
+        }
     }
 
     private CellDTO getCell(int rowIndex, int columnIndex) {
@@ -569,5 +575,35 @@ public class OptimizedMoveHelper {
 
     private CellDTO getCellByKingPoint(PointDTO kingPoint, int rowIndexOffset, int columnIndexOffset) {
         return getCell(kingPoint.getRowIndex() + rowIndexOffset, kingPoint.getColumnIndex() + columnIndexOffset);
+    }
+
+    private class FilterData {
+        private final Set<PointDTO> enemyPoints;
+        private final Set<PointDTO> enemyDefensivePoints;
+        private final Map<PointDTO, UnmovableData> unmovablePointsMap;
+
+        private CellDTO sourceOfCheck = null;
+        private boolean isMultiCheck = false;   //only king can move;
+        private Set<PointDTO> shieldPoints;     //if sourceOfCheck == BISHOP, ROOK, QUEEN
+
+        private FilterData(Set<PointDTO> enemyDefensivePoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
+            this.enemyPoints = new HashSet<>();
+            this.enemyDefensivePoints = enemyDefensivePoints;
+            this.unmovablePointsMap = unmovablePointsMap;
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    private class UnmovableData {
+        private PointDTO unmovableCellPoint;
+        private Set<PointDTO> availablePoints;
+    }
+
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    private class BetweenParams {
+        private int rayLength;
+        private int rowVector;
+        private int columnVector;
     }
 }

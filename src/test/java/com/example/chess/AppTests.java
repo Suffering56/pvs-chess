@@ -6,10 +6,8 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -18,27 +16,39 @@ import java.util.stream.IntStream;
 @SpringBootTest
 public class AppTests {
 
+    private static List<Person> personList = new ArrayList<Person>() {{
+        add(new Person("Victoria", 12, Gender.FEMALE));
+        add(new Person("Kate", 31, Gender.FEMALE));
+        add(new Person("John", 10, Gender.MALE));
+        add(new Person("Elizabeth", 16, Gender.FEMALE));
+        add(new Person("Jack", 41, Gender.MALE));
+        add(new Person("Tom", 25, Gender.MALE));
+        add(new Person("Lucas", 17, Gender.MALE));
+        add(new Person("Robert", 18, Gender.MALE));
+        add(new Person("Jessica", 32, Gender.FEMALE));
+        add(new Person("Sarah", 43, Gender.FEMALE));
+        add(new Person("Ted", 23, Gender.MALE));
+    }};
+
     @Test
     public void contextLoads() {
-        streamTest();
+//        streamTest();
+        streamTest2();
+    }
+
+    private void streamTest2() {
+        Map<Integer, Long> collect = personList
+                .stream()
+                .flatMap(person -> getAnniversariesSet(person.age).stream())
+//                .sorted()
+//                .peek(System.out::println)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+        System.out.println("-------------");
+        collect.forEach((age, count) -> System.out.println(age + "->" + count));
     }
 
     private void streamTest() {
-        List<Person> personList = new ArrayList<Person>() {{
-            add(new Person("Victoria", 12, Gender.FEMALE));
-            add(new Person("Kate", 31, Gender.FEMALE));
-            add(new Person("John", 10, Gender.MALE));
-            add(new Person("Elizabeth", 16, Gender.FEMALE));
-            add(new Person("Jack", 41, Gender.MALE));
-            add(new Person("Tom", 25, Gender.MALE));
-            add(new Person("Lucas", 17, Gender.MALE));
-            add(new Person("Robert", 18, Gender.MALE));
-            add(new Person("Jessica", 32, Gender.FEMALE));
-            add(new Person("Sarah", 43, Gender.FEMALE));
-            add(new Person("Ted", 23, Gender.MALE));
-        }};
-
-
         Map<Gender, List<Person>> map = personList.stream()
                 .sorted(Comparator.comparingInt(Person::getAge))
                 .collect(Collectors.groupingBy(Person::getGender));
@@ -85,7 +95,18 @@ public class AppTests {
         });
     }
 
-    private class Person {
+
+    private Set<Integer> getAnniversariesSet(int age) {
+        Set<Integer> result = new HashSet<>();
+
+        for (int i = 10; i <= age; i += 5) {
+            result.add(i);
+        }
+
+        return result;
+    }
+
+    private static class Person {
         private String name;
         private int age;
         private Gender gender;
