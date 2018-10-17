@@ -199,7 +199,7 @@ public class MoveHelper {
                         availablePoints = findBetweenPoints(kingPoint, betweenParams, unmovableCell.getPoint());
 
                     } else if (unmovablePieceType == PieceType.PAWN) {
-                        availablePoints = findAvailablePointsForPawn(unmovableCell, enemyPossibleAttackerCell);
+                        availablePoints = findAvailablePointsForPawn(kingPoint, betweenParams, unmovableCell, enemyPossibleAttackerCell);
                     }
 
                     return new UnmovableData(unmovableCell.getPoint(), availablePoints);
@@ -208,22 +208,31 @@ public class MoveHelper {
                 .collect(Collectors.toMap(UnmovableData::getUnmovableCellPoint, Function.identity()));
     }
 
-    private Set<PointDTO> findAvailablePointsForPawn(CellDTO unmovableCell, CellDTO enemyPossibleAttackerCell) {
-        int pawnVector = unmovableCell.getSide().getPawnMoveVector();
-        int rowIndex = unmovableCell.getRowIndex() + pawnVector;
+    private Set<PointDTO> findAvailablePointsForPawn(PointDTO kingPoint, BetweenParams betweenParams, CellDTO unmovablePawn, CellDTO enemyCell) {
+        Set<PointDTO> pawnUnfilteredMoves = getUnfilteredMovesForCell(unmovablePawn, false);
 
-        for (int columnOffset : new int[]{-1, +1}) {
-            int columnIndex = unmovableCell.getColumnIndex() + columnOffset;
+        if (pawnUnfilteredMoves.contains(enemyCell.getPoint())) {
+            return new HashSet<PointDTO>() {{
+                add(enemyCell.getPoint());
+            }};
+        }
 
-            if (PointDTO.isCorrectIndex(rowIndex, columnIndex)) {
-                PointDTO pawnAttackPoint = PointDTO.valueOf(rowIndex, columnIndex);
-                if (pawnAttackPoint.equals(enemyPossibleAttackerCell.getPoint())) {
-                    return new HashSet<PointDTO>() {{
-                        add(pawnAttackPoint);
-                    }};
+        if (!betweenParams.isDiagonal) {
+            findBetweenPoints(kingPoint, betweenParams, unmovablePawn.getPoint());
+
+            Set<PointDTO> result = new HashSet<>();
+            if (unmovablePawn.getColumnIndex().equals(enemyCell.getColumnIndex())) {
+                for (PointDTO pawnMove : pawnUnfilteredMoves) {
+                    if (unmovablePawn.getColumnIndex().equals(pawnMove.getColumnIndex())) {
+                        result.add(pawnMove);
+                    }
                 }
             }
+            if (!result.isEmpty()) {
+                return result;
+            }
         }
+
         return null;
     }
 
@@ -261,7 +270,7 @@ public class MoveHelper {
         }
 
         int rayLength = Math.abs(diff) - 1;
-        return new BetweenParams(rayLength, rowVector, columnVector);
+        return new BetweenParams(rayLength, rowVector, columnVector, false);
     }
 
     private BetweenParams createBetweenParamsForBishop(PointDTO kingPoint, CellDTO cell) {
@@ -273,7 +282,7 @@ public class MoveHelper {
 
             int rowVector = rowDiff > 0 ? -1 : 1;
             int columnVector = columnDiff > 0 ? -1 : 1;
-            return new BetweenParams(rayLength, rowVector, columnVector);
+            return new BetweenParams(rayLength, rowVector, columnVector, true);
         }
 
         return null;
@@ -691,5 +700,6 @@ public class MoveHelper {
         private int rayLength;
         private int rowVector;
         private int columnVector;
+        private boolean isDiagonal;
     }
 }
