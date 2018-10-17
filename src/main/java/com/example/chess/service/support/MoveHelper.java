@@ -85,19 +85,21 @@ public class MoveHelper {
         originalMatrix
                 .allPiecesBySideStream(enemySide)
                 .forEach(enemyCell -> {
+                    Set<PointDTO> enemyMoves;
                     if (enemyCell.getPieceType() == PieceType.PAWN) {
-                        addPawnDiagonalMoves(filterData.enemyPoints, enemyCell, enemySide);
+                        enemyMoves = getPawnDiagonalMoves(enemyCell, enemySide);
                     } else {
-                        Set<PointDTO> enemyMoves = getUnfilteredMovesForCell(enemyCell, false);
-                        filterData.enemyPoints.addAll(enemyMoves);
+                        enemyMoves = getUnfilteredMovesForCell(enemyCell, false);
+                    }
 
-                        if (enemyMoves.contains(kingPoint)) {
-                            //нам УЖЕ шах! => мы далеко не каждой фигурой можем ходить
-                            if (filterData.sourceOfCheck == null) {
-                                filterData.sourceOfCheck = enemyCell;
-                            } else {
-                                filterData.isMultiCheck = true;
-                            }
+                    filterData.enemyPoints.addAll(enemyMoves);
+
+                    if (enemyMoves.contains(kingPoint)) {
+                        //нам УЖЕ шах! => мы далеко не каждой фигурой можем ходить
+                        if (filterData.sourceOfCheck == null) {
+                            filterData.sourceOfCheck = enemyCell;
+                        } else {
+                            filterData.isMultiCheck = true;
                         }
                     }
                 });
@@ -300,7 +302,9 @@ public class MoveHelper {
         return null;
     }
 
-    private void addPawnDiagonalMoves(Set<PointDTO> moves, CellDTO movableCell, Side enemySide) {
+    private Set<PointDTO> getPawnDiagonalMoves(CellDTO movableCell, Side enemySide) {
+        Set<PointDTO> moves = new HashSet<>();
+
         PointDTO point = movableCell.getPoint();
         int vector = enemySide.getPawnMoveVector();
         int rowIndex = point.getRowIndex() + vector;
@@ -311,6 +315,8 @@ public class MoveHelper {
         if (PointDTO.isCorrectIndex(rowIndex, point.getColumnIndex() - 1)) {
             moves.add(PointDTO.valueOf(rowIndex, point.getColumnIndex() - 1));
         }
+
+        return moves;
     }
 
     private Set<PointDTO> getUnfilteredMovesForCell(CellDTO moveableCell, boolean isDefensive) {
@@ -658,7 +664,7 @@ public class MoveHelper {
     }
 
     private class FilterData {
-        private final Set<PointDTO> enemyPoints;
+        private final Set<PointDTO> enemyPoints = new HashSet<>();
         private final Set<PointDTO> enemyDefensivePoints;
         private final Map<PointDTO, UnmovableData> unmovablePointsMap;
 
@@ -668,7 +674,6 @@ public class MoveHelper {
         private Set<PointDTO> excludePoints;    //if sourceOfCheck == BISHOP, ROOK, QUEEN
 
         private FilterData(Set<PointDTO> enemyDefensivePoints, Map<PointDTO, UnmovableData> unmovablePointsMap) {
-            this.enemyPoints = new HashSet<>();
             this.enemyDefensivePoints = enemyDefensivePoints;
             this.unmovablePointsMap = unmovablePointsMap;
         }
