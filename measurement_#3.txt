@@ -48,3 +48,39 @@ move #2(d4):
     availablePointsFound = 3207850
     addMovesForCallsCount = 1396587
     findBestMove executed in : 18356ms
+
+========================================================
+3)
+MAX_TIME(first release)
+DEEP=true
+
+move #1(e4):
+    moveHelpersCount = 110776
+    movesExecuted = 2759267
+    availablePointsFound = 36398235
+    getUnfilteredMovesCallsCount = 20765757
+    findBestMove executed in : 329982ms
+move #2(d4):
+    moveHelpersCount = 300646
+    movesExecuted = 9470277
+    availablePointsFound = 189462100
+    getUnfilteredMovesCallsCount = 69933159
+    findBestMove executed in : 1159701ms
+
+4)
+MAX_TIME(first release)
+DEEP=true
+OptimizedMoveHelperReworked = true && parallel = true;
+
+move #1(e4):
+    moveHelpersCount = 85257
+    movesExecuted = 32413
+    availablePointsFound = 5648698
+    addMovesForCallsCount = 3057475
+    findBestMove executed in : 1509ms
+move #2(d4):
+    moveHelpersCount = 235640
+    movesExecuted = 102340
+    availablePointsFound = 19880174
+    addMovesForCallsCount = 8542851
+    findBestMove executed in : 3465ms
