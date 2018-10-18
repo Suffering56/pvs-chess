@@ -195,7 +195,10 @@ public class MoveHelper {
                     Set<PointDTO> availablePoints = null;
                     PieceType unmovablePieceType = unmovableCell.getPieceType();
 
-                    if (unmovablePieceType == PieceType.QUEEN || unmovablePieceType == enemyPossibleAttackerCell.getPieceType()) {
+                    if (unmovablePieceType == PieceType.QUEEN
+                            || (betweenParams.isDiagonal && unmovablePieceType == PieceType.BISHOP)
+                            || (!betweenParams.isDiagonal && unmovablePieceType == PieceType.ROOK)) {
+
                         availablePoints = findBetweenPoints(kingPoint, betweenParams, unmovableCell.getPoint());
 
                     } else if (unmovablePieceType == PieceType.PAWN) {
