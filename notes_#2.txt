@@ -1,0 +1,23 @@
+getMovesForCell:
+    -getUnfilteredMovesForCell:
+        -isKingUnderAttack:                                 max = 15 calls
+            applyMove!                                      x1
+            calculateRating->consumer->getCheckRating!
+        -createFilterData                                   max = 16 calls + 8 calls
+            -getFilteredAvailablePoints                     x1
+            -getStandardMovesStream                         x1
+        -findAvailablePointsForPawn                         max = 1
+            - getUnmovablePointsMap                         x0-x1 (x2-x5 hardly ever)
+                - createFilterData                          x1
+                    -getFilteredAvailablePoints             x1
+                    -getStandardMovesStream                 x1
+
+    -getFilteredMovesForCell:
+        -getFilteredAvailablePoints                         x1
+        -getStandardMovesStream                             x16
+
+
+getStandardMovesStream:                                     total:  16 + 8 + 1 + 16 = 41 call (new InternalMoveHelper)
+    -createFilterData                                       x1
+        -getUnfilteredMovesForCell                          max = 16 calls + 8 calls + 1 call (x0-x1)
+    -getFilteredMovesForCell                                x16

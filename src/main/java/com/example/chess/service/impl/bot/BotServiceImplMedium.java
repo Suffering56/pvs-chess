@@ -9,6 +9,7 @@ import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -73,25 +74,75 @@ public class BotServiceImplMedium extends AbstractBotService {
 //            на каждый ход противника -> список всех доступных для бота вариантов ответа
 
 
-            if (isExternalCall) {
-                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-                        .getStandardMovesStream(playerSide)
-                        .parallel()
-                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
-                        .map(move -> {
-                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-                            ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
-                            if (bestExtendedMove != null) {
-                                return bestExtendedMove.getTotal();
-                            }
-                            return -ChessConstants.CHECKMATE_VALUE;
-                        })
-                        .mapToInt(Integer::intValue)
-                        .min().orElse(0);
+//            if (isExternalCall) {
+//                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                        .getStandardMovesStream(playerSide)
+//                        .parallel()
+//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
+//                        .map(move -> {
+//                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                            ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
+//                            if (bestExtendedMove != null) {
+//                                return bestExtendedMove.getTotal();
+//                            }
+//                            return -ChessConstants.CHECKMATE_VALUE;
+//                        })
+//                        .mapToInt(Integer::intValue)
+//                        .min().orElse(0);
+//
+//                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
+//            }
 
-                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
-            }
 
+//            if (isExternalCall) {
+//                MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                        .getStandardMovesStream(playerSide)
+//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
+//                        .map(move -> {
+//
+//                            CellsMatrix nextMatrix = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                            ExtendedMove bestMove = findBestExtendedMove(fakeGame, nextMatrix, playerSide, false);
+//
+//                            int moveTotal = ChessConstants.CHECKMATE_VALUE;
+//                            if (bestMove != null) {
+//                                moveTotal = bestMove.getTotal();
+//                            }
+//
+//                            return Pair.of(nextMatrix, moveTotal);
+//                        })
+////                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
+//                        .map(pair -> {
+//                            CellsMatrix secondMatrixBotNext = pair.getFirst();
+//                            ExtendedMove bestBotMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
+//                            if (bestBotMove != null) {
+//                                return bestBotMove.getTotal();
+//                            }
+//                            return -ChessConstants.CHECKMATE_VALUE;
+//                        });
+//
+//            }
+//
+//            List<ExtendedMove> playerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+//                    .getStandardMovesStream(playerSide)
+//                    .filter(move -> move.hasDifferentPointTo(analyzedMove))
+//                    .collect(Collectors.toList());
+//
+//
+//            calculateRating(fakeGame, firstMatrixPlayerNext, playerMoves, playerSide, false);
+
+
+//            CellsMatrix nextMatrix = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//            ExtendedMove bestMove = findBestExtendedMove(fakeGame, nextMatrix, playerSide, false);
+
+//            .map(move -> {
+//                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+//                ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
+//                if (bestExtendedMove != null) {
+//                    return bestExtendedMove.getTotal();
+//                }
+//                return -ChessConstants.CHECKMATE_VALUE;
+//            })
+//
 
             //pawn promotion
             //fork (вилка)
@@ -129,7 +180,8 @@ public class BotServiceImplMedium extends AbstractBotService {
      * 2) Он пытается убрать пешки с вертикалей A,H чтобы как можно раньше вывести ладьи (тем самым исключая собственную рокировку)
      * 3) Можно попасть под троекратное повторение одной и той же позиции (было такое, правда до внедрения INVERTED_AVAILABLE_MOVES_COUNT)
      */
-    private Rating getAvailableMovesCountRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, List<ExtendedMove> movesBefore, Side expectedSide, boolean isInverted) {
+    private Rating getAvailableMovesCountRating(FakeGame fakeGame, CellsMatrix
+            firstMatrixPlayerNext, List<ExtendedMove> movesBefore, Side expectedSide, boolean isInverted) {
         movesBefore = movesBefore.stream()
                 .filter(move -> move.getPieceFrom() != PieceType.KING)
                 .collect(Collectors.toList());
@@ -157,7 +209,8 @@ public class BotServiceImplMedium extends AbstractBotService {
      * <p>
      * Некрасиво, но если переименовать botSide и playerSide во что-то более абстрактное - легко будет запутаться.
      */
-    private Rating getMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side botSide, int maxDeep) {
+    private Rating getMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove
+            analyzedMove, Side botSide, int maxDeep) {
         List<Integer> exchangeValues = generateExchangeValuesList(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, maxDeep);
 
         int exchangeDeep = exchangeValues.size();
@@ -178,7 +231,8 @@ public class BotServiceImplMedium extends AbstractBotService {
      * И анализирует этот самый размен вплоть до максимальной глубины.
      * Если показатель положительный (для игрока), значит текущий сделанный ход - плохой и получит отрицательный рейтинг.
      */
-    private Rating getInvertedMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove analyzedMove, Side playerSide, int maxDeep) {
+    private Rating getInvertedMaterialRating(FakeGame fakeGame, CellsMatrix firstMatrixPlayerNext, ExtendedMove
+            analyzedMove, Side playerSide, int maxDeep) {
         List<ExtendedMove> playerHarmfulMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
                 .getStandardMovesStream(playerSide)
                 .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
@@ -217,7 +271,8 @@ public class BotServiceImplMedium extends AbstractBotService {
         return Rating.builder().build(RatingParam.CHECK, 0);
     }
 
-    private List<Integer> generateExchangeValuesList(FakeGame fakeGame, CellsMatrix afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
+    private List<Integer> generateExchangeValuesList(FakeGame fakeGame, CellsMatrix
+            afterFirstMoveMatrix, ExtendedMove alreadyExecutedMove, Side botSide, int maxDeep) {
         Side playerSide = botSide.reverse();
 
         int targetCellValue = alreadyExecutedMove.getValueTo(0);
