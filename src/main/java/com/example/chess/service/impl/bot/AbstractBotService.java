@@ -60,10 +60,6 @@ public abstract class AbstractBotService implements BotService {
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
-        if (resultMove == null) {
-            throw new RuntimeException("Checkmate by player!!!");
-        }
-
         System.out.println("resultMove = " + resultMove);
 
         if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
@@ -87,125 +83,153 @@ public abstract class AbstractBotService implements BotService {
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
+//
+//    //FIXME: pieceFromPawn can be not null
+//    public MoveData executeMove(ExtendedMove move, int deep) {
+//        MoveResult moveResult = executeMove(move.toMoveDTO(), null);
+//        return new MoveData(move, moveResult, deep);
+//    }
 
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
         Side playerSide = botSide.reverse();
 
-        List<ExtendedMove> botMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
+        List<ExtendedMove> botAvailableMovesDeep1 = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
-//        Stream<ExtendedMove> botMovesStream;
-//        if (Debug.IS_PARALLEL) {
-//            botMovesStream = botMovesByOriginal.parallelStream();
-//        } else {
-//            botMovesStream = botMovesByOriginal.stream();
+//        if (botAvailableMovesDeep1.isEmpty()) {
+//            throw new RuntimeException("Checkmate by player!!!");
 //        }
+
 //
-//        List<MoveData> rootMoveData = botMovesStream
+//        botAvailableMovesDeep1
+//                .parallelStream()
+//                .peek(calculateRating(fakeGame, originalMatrix, botAvailableMovesDeep1, botSide, false))
+//                .map(analyzedMove -> {
+//                    CellsMatrix matrixDeep1 = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null).getNewMatrix();
+//
+//                    List<ExtendedMove> playerAvailableMovesDeep2 = MoveHelper.valueOf(fakeGame, matrixDeep1)
+//                            .getStandardMovesStream(playerSide)
+//                            .collect(Collectors.toList());
+//
+//                    List<ExtendedMove> playerMovesWithRatingDeep2 = playerAvailableMovesDeep2
+//                            .stream()
+//                            .peek(calculateRating(fakeGame, originalMatrix, playerAvailableMovesDeep2, playerSide, false))
+//                            .collect(Collectors.toList());
+//
+//                    int playerMaxByDeep2 = playerMovesWithRatingDeep2
+//                            .stream()
+//                            .mapToInt(ExtendedMove::getTotal)
+//                            .max()
+//                            .orElse(ChessConstants.CHECKMATE_VALUE);
+//
+//                    int botMaxByDeep3 = playerMovesWithRatingDeep2
+//                            .stream()
+//                            .map(playerMove -> {
+//                                CellsMatrix matrixDeep2 = matrixDeep1.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
+//
+//                                List<ExtendedMove> botAvailableMovesDeep3 = MoveHelper.valueOf(fakeGame, matrixDeep2)
+//                                        .getStandardMovesStream(playerSide)
+//                                        .collect(Collectors.toList());
+//
+//                                if (botAvailableMovesDeep3.isEmpty()) {
+//                                    throw new RuntimeException("Checkmate by player deep 3!!!");
+//                                }
+//
+//                                OptionalInt positiveMaxDeep3 = botAvailableMovesDeep3
+//                                        .stream()
+//                                        .peek(calculateRating(fakeGame, matrixDeep2, botAvailableMovesDeep3, botSide, false))
+//                                        .mapToInt(ExtendedMove::getTotal)
+//                                        .max();
+//
+//                                return positiveMaxDeep3.orElse(-ChessConstants.CHECKMATE_VALUE);
+//                            })
+//                            .mapToInt(Integer::intValue)
+//                            .max()
+//                            .orElse(ChessConstants.CHECKMATE_VALUE);
+//
+//
+//                })
+
 //                .map(botMove -> {
 //                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
 //                    fillDeeperMoves(fakeGame, moveData, 4);
 //                    return moveData;
-//                })
+//                });
 //                .collect(Collectors.toList());
 
+        botAvailableMovesDeep1.forEach(calculateRating(fakeGame, originalMatrix, botAvailableMovesDeep1, botSide, isExternalCall));
 
-        botMovesByOriginal.forEach(calculateRating(fakeGame, originalMatrix, botMovesByOriginal, botSide, isExternalCall));
+        ExtendedMove bestMove = botAvailableMovesDeep1.stream()
+                .reduce((m1, m2) -> m1.getTotal() >= m2.getTotal() ? m1 : m2)
+                .orElse(null);
 
-
-//        List<MoveData> collect = botMovesByOriginal.stream()
-//                .map(botMove -> {
-//                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
-//                    CellsMatrix firstMatrixPlayerNext = moveData.getNextMatrix();
-//
-//                    //FIXME: update FakeGame(need new instance)
-//                    Map<PointDTO, MoveData> moreDeepPlayerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                            .getStandardMovesStream(playerSide)
-//                            .collect(Collectors.toMap(ExtendedMove::getPointTo,
-//                                    playerMove -> firstMatrixPlayerNext.executeMove(playerMove, 2)));
-//
-//                    moveData.setMoreDeepMoves(moreDeepPlayerMoves);
-//
-//                    moreDeepPlayerMoves
-//                            .values()
-//                            .forEach(playerMoveData -> {
-//                                CellsMatrix secondMatrixBotNext = playerMoveData.getNextMatrix();
-//
-//                                //FIXME: update FakeGame(need new instance)
-//                                Map<PointDTO, MoveData> moreDeepBotMoves = MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
-//                                        .getStandardMovesStream(botSide)
-//                                        .collect(Collectors.toMap(ExtendedMove::getPointTo,
-//                                                deepBotMove -> secondMatrixBotNext.executeMove(deepBotMove, 3)));
-//
-//                                playerMoveData.setMoreDeepMoves(moreDeepBotMoves);
-//                            });
-//
-//                    return moveData;
-//                })
-//                .collect(Collectors.toList());
-
-        OptionalInt maxTotal = botMovesByOriginal.stream()
-                .mapToInt(ExtendedMove::getTotal)
-                .max();
-
-        if (!maxTotal.isPresent()) {    //TODO: checkmate
-            return null;
-        }
-
-        List<ExtendedMove> topMovesList = botMovesByOriginal.stream()
-                .filter(extendedMove -> extendedMove.getTotal() == maxTotal.getAsInt())
-                .collect(Collectors.toList());
-
-        ExtendedMove resultMove = getRandomMove(topMovesList);
+//        ExtendedMove bestMove = getBestMove(botAvailableMovesDeep1, originalMatrix.getPosition());
 
         enter(LoggerParam.COMMON, 50);
-        botMovesByOriginal.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
+//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
         logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
 
         enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + resultMove);
+        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + bestMove);
         logDoubleSeparator(LoggerParam.COMMON, 3);
 
-        return resultMove;
+        return bestMove;
     }
 
-    private void fillDeeperMoves(FakeGame fakeGame, MoveData moveData, int maxDeep) {
-        CellsMatrix matrixAfterMove = moveData.getNextMatrix();
+//    private ExtendedMove getBestMove(List<ExtendedMove> movesWithRating) {
+//        OptionalInt maxTotal = movesWithRating.stream()
+//                .mapToInt(ExtendedMove::getTotal)
+//                .max();
+//
+//        if (!maxTotal.isPresent()) {    //TODO: checkmate
+//            return null;
+//        }
+//
+//        List<ExtendedMove> topMovesList = movesWithRating.stream()
+//                .filter(extendedMove -> extendedMove.getTotal() == maxTotal.getAsInt())
+//                .collect(Collectors.toList());
+//
+//
+//        return getRandomMove(topMovesList);
+//    }
 
-        Side nextSide = moveData.getExecutedMoveSide().reverse();
-        int nextDeep = moveData.getDeep() + 1; //2
-
-        //FIXME: update FakeGame(need new instance)\
-        //FIXME: toMap replace by Collectors.groupingBy
-//        Map<PointDTO, MoveData> moreDeepMoves = MoveHelper.valueOf(fakeGame, matrixAfterMove)
-//                .getStandardMovesStream(nextSide)
-//                .collect(Collectors.toMap(ExtendedMove::getPointTo,
-//                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
-
-
-        Stream<ExtendedMove> movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
-                .getStandardMovesStream(nextSide);
-
-        if (Debug.IS_PARALLEL) {
-            movesStream = movesStream.parallel();
-        }
-
-        List<MoveData> moreDeepMoves = movesStream
-                .map(deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep))
-                .collect(Collectors.toList());
-
-        moveData.setMoreDeepMoves(moreDeepMoves);
-
-        if (nextDeep + 1 > maxDeep) {
-            return;
-        }
-
-        moreDeepMoves
-//                .values()
-                .forEach(nextMoveData -> fillDeeperMoves(fakeGame, nextMoveData, maxDeep));
-    }
+//    private void fillDeeperMoves(FakeGame fakeGame, MoveData moveData, int maxDeep) {
+//        CellsMatrix matrixAfterMove = moveData.getNextMatrix();
+//
+//        Side nextSide = moveData.getExecutedMoveSide().reverse();
+//        int nextDeep = moveData.getDeep() + 1; //2
+//
+//        //FIXME: update FakeGame(need new instance)\
+//        //FIXME: toMap replace by Collectors.groupingBy
+////        Map<PointDTO, MoveData> moreDeepMoves = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+////                .getStandardMovesStream(nextSide)
+////                .collect(Collectors.toMap(ExtendedMove::getPointTo,
+////                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
+//
+//
+//        Stream<ExtendedMove> movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
+//                .getStandardMovesStream(nextSide);
+//
+//        if (Debug.IS_PARALLEL) {
+//            movesStream = movesStream.parallel();
+//        }
+//
+//        List<MoveData> moreDeepMoves = movesStream
+//                .map(deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep))
+//                .collect(Collectors.toList());
+//
+//        moveData.setMoreDeepMoves(moreDeepMoves);
+//
+//        if (nextDeep + 1 > maxDeep) {
+//            return;
+//        }
+//
+//        moreDeepMoves
+////                .values()
+//                .forEach(nextMoveData -> fillDeeperMoves(fakeGame, nextMoveData, maxDeep));
+//    }
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
         int i = (int) (movesList.size() * Math.random());

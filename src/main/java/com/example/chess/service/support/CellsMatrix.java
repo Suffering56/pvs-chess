@@ -10,6 +10,7 @@ import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
+import com.example.chess.utils.CommonUtils;
 import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -75,12 +76,6 @@ public final class CellsMatrix implements Immutable {
     private void checkPoint(int rowIndex, int columnIndex) {
         Preconditions.checkElementIndex(rowIndex, BOARD_SIZE, "Out of board point");
         Preconditions.checkElementIndex(columnIndex, BOARD_SIZE, "Out of board point");
-    }
-
-    //FIXME: pieceFromPawn can be not null
-    public MoveData executeMove(ExtendedMove move, int deep) {
-        MoveResult moveResult = executeMove(move.toMoveDTO(), null);
-        return new MoveData(move, moveResult, deep);
     }
 
     /**
@@ -311,20 +306,33 @@ public final class CellsMatrix implements Immutable {
     public PointDTO getKingPoint(Side side) throws KingNotFoundException {
         PointDTO kingPoint = kingPoints.get(side);
         if (kingPoint == null) {
-            System.out.println("KingNotFoundException.side = " + side);
-            print();
-            throw new KingNotFoundException();
+            throw new KingNotFoundException(this, side);
         }
 
         return kingPoint;
     }
 
     public void print() {
-        for (List<CellDTO> rows : cellsMatrix) {
-            for (CellDTO cell : rows) {
-                System.out.print(cell + "\t");
+        for (int i = 7; i >= 0; i--) {
+            List<CellDTO> rows = cellsMatrix.get(i);
+            for (int j = 7; j >= 0; j--) {
+                System.out.print(cellToStr(rows.get(j)) + "\t");
             }
             System.out.println();
+        }
+    }
+
+    private String cellToStr(CellDTO cell) {
+        return cell.getPoint() + ": " + CommonUtils.getPieceName(cell.getPieceType(), true) + sideToStr(cell.getSide());
+    }
+
+    private String sideToStr(Side side) {
+        if (side == null) {
+            return "( )";
+        } else if (side == Side.WHITE) {
+            return "(W)";
+        } else {
+            return "(B)";
         }
     }
 }

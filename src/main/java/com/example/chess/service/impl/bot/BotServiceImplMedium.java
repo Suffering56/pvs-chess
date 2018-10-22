@@ -4,6 +4,7 @@ import com.example.chess.ChessConstants;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.KingNotFoundException;
 import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
@@ -47,11 +48,17 @@ public class BotServiceImplMedium extends AbstractBotService {
             MoveResult moveResult = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null);     //n == 0 -> n == 1
             CellsMatrix firstMatrixPlayerNext = moveResult.getNewMatrix();
 
-            Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
-            analyzedMove.updateRating(materialRating);
+            try {
+                Rating materialRating = getMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, botSide, -1);
+                analyzedMove.updateRating(materialRating);
 
-            Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide, -1);
-            analyzedMove.updateRating(invertedMaterialRating);
+                Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide, -1);
+                analyzedMove.updateRating(invertedMaterialRating);
+            } catch (KingNotFoundException e) {
+                e.setAnalyzedMove(analyzedMove);
+                e.setOriginalMatrix(originalMatrix);
+                throw e;
+            }
 
             Rating checkRating = getCheckRating(fakeGame, firstMatrixPlayerNext, playerSide);
             analyzedMove.updateRating(checkRating);
@@ -74,24 +81,29 @@ public class BotServiceImplMedium extends AbstractBotService {
 //            на каждый ход противника -> список всех доступных для бота вариантов ответа
 
 
-//            if (isExternalCall) {
-//                int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                        .getStandardMovesStream(playerSide)
-//                        .parallel()
-//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
-//                        .map(move -> {
-//                            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//                            ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
-//                            if (bestExtendedMove != null) {
-//                                return bestExtendedMove.getTotal();
-//                            }
-//                            return -ChessConstants.CHECKMATE_VALUE;
-//                        })
-//                        .mapToInt(Integer::intValue)
-//                        .min().orElse(0);
-//
-//                analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
-//            }
+            try {
+                if (isExternalCall) {
+                    int val = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+                            .getStandardMovesStream(playerSide)
+                            .parallel()
+                            .filter(move -> move.hasDifferentPointTo(analyzedMove))
+                            .map(move -> {
+                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+                                ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
+                                if (bestExtendedMove != null) {
+                                    return bestExtendedMove.getTotal();
+                                }
+                                return -ChessConstants.CHECKMATE_VALUE;
+                            })
+                            .mapToInt(Integer::intValue)
+                            .min().orElse(0);
+
+                    analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP, val));
+                }
+            } catch (KingNotFoundException e) {
+                e.print();
+                System.exit(0);
+            }
 
 
 //            if (isExternalCall) {
@@ -283,29 +295,43 @@ public class BotServiceImplMedium extends AbstractBotService {
         int exchangeValue = targetCellValue;
         exchangeValues.add(exchangeValue);
 
-        ExtendedMove minPlayerMove = getMinMove(fakeGame, afterFirstMoveMatrix, targetPoint, playerSide);
-        CellsMatrix afterBotMoveMatrix = afterFirstMoveMatrix;
+        CellsMatrix prevMatrix = afterFirstMoveMatrix;
+        ExtendedMove prevMove = alreadyExecutedMove;
 
-        while (true) {
-            if (minPlayerMove == null || exchangeValues.size() == maxDeep) break;
-            /*
-             * EXECUTE PLAYER MOVE
-             */
-            CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
-            ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide);
+        try {
+            ExtendedMove minPlayerMove = getMinMove(fakeGame, afterFirstMoveMatrix, targetPoint, playerSide);
+            CellsMatrix afterBotMoveMatrix = afterFirstMoveMatrix;
 
-            exchangeValue -= minPlayerMove.getValueTo();
-            exchangeValues.add(exchangeValue);
 
-            if (minBotMove == null || exchangeValues.size() == maxDeep) break;
-            /*
-             * EXECUTE BOT MOVE
-             */
-            afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
-            minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide);
+            while (true) {
+                if (minPlayerMove == null || exchangeValues.size() == maxDeep) break;
+                /*
+                 * EXECUTE PLAYER MOVE
+                 */
+                CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
+                ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide);
+                prevMatrix = afterBotMoveMatrix;
+                prevMove = minPlayerMove;
 
-            exchangeValue += minBotMove.getValueTo();
-            exchangeValues.add(exchangeValue);
+                exchangeValue -= minPlayerMove.getValueTo();
+                exchangeValues.add(exchangeValue);
+
+                if (minBotMove == null || exchangeValues.size() == maxDeep) break;
+                /*
+                 * EXECUTE BOT MOVE
+                 */
+                afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
+                minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide);
+                prevMatrix = afterPlayerMoveMatrix;
+                prevMove = minBotMove;
+
+                exchangeValue += minBotMove.getValueTo();
+                exchangeValues.add(exchangeValue);
+            }
+        } catch (KingNotFoundException e) {
+            e.setPrevMatrix(prevMatrix);
+            e.setPrevMove(prevMove);
+            throw e;
         }
 
         return exchangeValues;

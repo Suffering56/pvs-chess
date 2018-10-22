@@ -86,7 +86,7 @@ public class CommonUtils {
     }};
 
     private static Map<PieceType, String> pieceNamesMap = new HashMap<PieceType, String>() {{
-        put(PieceType.PAWN, "");
+        put(PieceType.PAWN, " ");
         put(PieceType.KNIGHT, "N");
         put(PieceType.BISHOP, "B");
         put(PieceType.ROOK, "R");
@@ -113,13 +113,13 @@ public class CommonUtils {
 
     public static String getPieceName(PieceType pieceType, boolean printPawnName) {
         if (pieceType == null) {
-            return "";
+            return " ";
         }
         if (pieceType == PieceType.PAWN) {
             if (printPawnName) {
                 return "P";
             } else {
-                return "";
+                return " ";
             }
         }
 
