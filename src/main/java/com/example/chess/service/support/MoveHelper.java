@@ -391,7 +391,15 @@ public class MoveHelper {
                 if (unmovableData != null) {
                     Set<PointDTO> availablePoints = unmovableData.getAvailablePoints();
                     if (availablePoints != null) {
-                        moves.addAll(availablePoints);
+                        if (filterData.sourceOfCheck != null) {
+                            //нам шах
+                            PointDTO sourcePoint = filterData.sourceOfCheck.getPoint();
+                            if (availablePoints.contains(sourcePoint)) {
+                                moves.add(sourcePoint);
+                            }
+                        } else {
+                            moves.addAll(availablePoints);
+                        }
                     }
                     return moves;
                 }
