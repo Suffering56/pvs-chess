@@ -3,24 +3,28 @@ package com.example.chess.service.impl.bot;
 import com.example.chess.ChessConstants;
 import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
-import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
-import com.example.chess.exceptions.KingNotFoundException;
+import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.*;
+import com.example.chess.service.support.CellsMatrix;
+import com.example.chess.service.support.ExtendedMove;
+import com.example.chess.service.support.FakeGame;
+import com.example.chess.service.support.MoveHelper;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 @Log4j2
@@ -83,13 +87,6 @@ public abstract class AbstractBotService implements BotService {
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
     }
 
-//
-//    //FIXME: pieceFromPawn can be not null
-//    public MoveData executeMove(ExtendedMove move, int deep) {
-//        MoveResult moveResult = executeMove(move.toMoveDTO(), null);
-//        return new MoveData(move, moveResult, deep);
-//    }
-
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
         Side playerSide = botSide.reverse();
 
@@ -98,9 +95,35 @@ public abstract class AbstractBotService implements BotService {
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
-//        if (botAvailableMovesDeep1.isEmpty()) {
-//            throw new RuntimeException("Checkmate by player!!!");
-//        }
+        if (botAvailableMovesDeep1.isEmpty()) {
+            return null;
+        }
+
+        botAvailableMovesDeep1.forEach(calculateRating(fakeGame, originalMatrix, botAvailableMovesDeep1, botSide, isExternalCall));
+
+        int max = botAvailableMovesDeep1
+                .stream()
+                .mapToInt(ExtendedMove::getTotal)
+                .max().orElseThrow(UnattainablePointException::new);
+
+        List<ExtendedMove> topMovesList = botAvailableMovesDeep1
+                .stream()
+                .filter(move -> move.getTotal() == max)
+                .collect(Collectors.toList());
+
+        ExtendedMove bestMove = getRandomMove(topMovesList);
+
+        enter(LoggerParam.COMMON, 50);
+//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
+        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+
+        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + bestMove);
+        logDoubleSeparator(LoggerParam.COMMON, 3);
+
+        return bestMove;
+    }
+
 
 //
 //        botAvailableMovesDeep1
@@ -152,97 +175,18 @@ public abstract class AbstractBotService implements BotService {
 //
 //                })
 
-//                .map(botMove -> {
+    //                .map(botMove -> {
 //                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
 //                    fillDeeperMoves(fakeGame, moveData, 4);
 //                    return moveData;
 //                });
 //                .collect(Collectors.toList());
 
-        botAvailableMovesDeep1.forEach(calculateRating(fakeGame, originalMatrix, botAvailableMovesDeep1, botSide, isExternalCall));
 
-        ExtendedMove bestMove = botAvailableMovesDeep1.stream()
-                .reduce((m1, m2) -> m1.getTotal() >= m2.getTotal() ? m1 : m2)
-                .orElse(null);
-
-//        ExtendedMove bestMove = getBestMove(botAvailableMovesDeep1, originalMatrix.getPosition());
-
-        enter(LoggerParam.COMMON, 50);
-//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
-        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-
-        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + bestMove);
-        logDoubleSeparator(LoggerParam.COMMON, 3);
-
-        return bestMove;
-    }
-
-//    private ExtendedMove getBestMove(List<ExtendedMove> movesWithRating) {
-//        OptionalInt maxTotal = movesWithRating.stream()
-//                .mapToInt(ExtendedMove::getTotal)
-//                .max();
-//
-//        if (!maxTotal.isPresent()) {    //TODO: checkmate
-//            return null;
-//        }
-//
-//        List<ExtendedMove> topMovesList = movesWithRating.stream()
-//                .filter(extendedMove -> extendedMove.getTotal() == maxTotal.getAsInt())
-//                .collect(Collectors.toList());
-//
-//
-//        return getRandomMove(topMovesList);
-//    }
-
-//    private void fillDeeperMoves(FakeGame fakeGame, MoveData moveData, int maxDeep) {
-//        CellsMatrix matrixAfterMove = moveData.getNextMatrix();
-//
-//        Side nextSide = moveData.getExecutedMoveSide().reverse();
-//        int nextDeep = moveData.getDeep() + 1; //2
-//
-//        //FIXME: update FakeGame(need new instance)\
-//        //FIXME: toMap replace by Collectors.groupingBy
-////        Map<PointDTO, MoveData> moreDeepMoves = MoveHelper.valueOf(fakeGame, matrixAfterMove)
-////                .getStandardMovesStream(nextSide)
-////                .collect(Collectors.toMap(ExtendedMove::getPointTo,
-////                        deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep)));
-//
-//
-//        Stream<ExtendedMove> movesStream = MoveHelper.valueOf(fakeGame, matrixAfterMove)
-//                .getStandardMovesStream(nextSide);
-//
-//        if (Debug.IS_PARALLEL) {
-//            movesStream = movesStream.parallel();
-//        }
-//
-//        List<MoveData> moreDeepMoves = movesStream
-//                .map(deeperMove -> matrixAfterMove.executeMove(deeperMove, nextDeep))
-//                .collect(Collectors.toList());
-//
-//        moveData.setMoreDeepMoves(moreDeepMoves);
-//
-//        if (nextDeep + 1 > maxDeep) {
-//            return;
-//        }
-//
-//        moreDeepMoves
-////                .values()
-//                .forEach(nextMoveData -> fillDeeperMoves(fakeGame, nextMoveData, maxDeep));
-//    }
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
         int i = (int) (movesList.size() * Math.random());
         return movesList.get(i);
-    }
-
-    protected boolean isAttackedByCheaperPiece(CellDTO victimCell, List<ExtendedMove> harmfulMove) {
-        for (ExtendedMove playerMove : harmfulMove) {
-            if (playerMove.getValueFrom() < victimCell.getValue()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @Autowired

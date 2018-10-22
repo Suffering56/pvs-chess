@@ -54,20 +54,21 @@ public class BotServiceImplMedium extends AbstractBotService {
 
                 Rating invertedMaterialRating = getInvertedMaterialRating(fakeGame, firstMatrixPlayerNext, analyzedMove, playerSide, -1);
                 analyzedMove.updateRating(invertedMaterialRating);
+
+                Rating checkRating = getCheckRating(fakeGame, firstMatrixPlayerNext, playerSide);
+                analyzedMove.updateRating(checkRating);
+
+                Rating movesCountRating = getAvailableMovesCountRating(fakeGame, firstMatrixPlayerNext, botMovesByOriginal, botSide, false);
+                analyzedMove.updateRating(movesCountRating);
+
+                Rating invertedMovesCountRating = getAvailableMovesCountRating(fakeGame, firstMatrixPlayerNext, playerMovesByOriginal, playerSide, true);
+                analyzedMove.updateRating(invertedMovesCountRating);
             } catch (KingNotFoundException e) {
                 e.setAnalyzedMove(analyzedMove);
                 e.setOriginalMatrix(originalMatrix);
                 throw e;
             }
 
-            Rating checkRating = getCheckRating(fakeGame, firstMatrixPlayerNext, playerSide);
-            analyzedMove.updateRating(checkRating);
-
-            Rating movesCountRating = getAvailableMovesCountRating(fakeGame, firstMatrixPlayerNext, botMovesByOriginal, botSide, false);
-            analyzedMove.updateRating(movesCountRating);
-
-            Rating invertedMovesCountRating = getAvailableMovesCountRating(fakeGame, firstMatrixPlayerNext, playerMovesByOriginal, playerSide, true);
-            analyzedMove.updateRating(invertedMovesCountRating);
 
 
 
@@ -106,55 +107,6 @@ public class BotServiceImplMedium extends AbstractBotService {
             }
 
 
-//            if (isExternalCall) {
-//                MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                        .getStandardMovesStream(playerSide)
-//                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
-//                        .map(move -> {
-//
-//                            CellsMatrix nextMatrix = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//                            ExtendedMove bestMove = findBestExtendedMove(fakeGame, nextMatrix, playerSide, false);
-//
-//                            int moveTotal = ChessConstants.CHECKMATE_VALUE;
-//                            if (bestMove != null) {
-//                                moveTotal = bestMove.getTotal();
-//                            }
-//
-//                            return Pair.of(nextMatrix, moveTotal);
-//                        })
-////                        .filter(move -> move.hasDifferentPointTo(analyzedMove))
-//                        .map(pair -> {
-//                            CellsMatrix secondMatrixBotNext = pair.getFirst();
-//                            ExtendedMove bestBotMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
-//                            if (bestBotMove != null) {
-//                                return bestBotMove.getTotal();
-//                            }
-//                            return -ChessConstants.CHECKMATE_VALUE;
-//                        });
-//
-//            }
-//
-//            List<ExtendedMove> playerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-//                    .getStandardMovesStream(playerSide)
-//                    .filter(move -> move.hasDifferentPointTo(analyzedMove))
-//                    .collect(Collectors.toList());
-//
-//
-//            calculateRating(fakeGame, firstMatrixPlayerNext, playerMoves, playerSide, false);
-
-
-//            CellsMatrix nextMatrix = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//            ExtendedMove bestMove = findBestExtendedMove(fakeGame, nextMatrix, playerSide, false);
-
-//            .map(move -> {
-//                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
-//                ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
-//                if (bestExtendedMove != null) {
-//                    return bestExtendedMove.getTotal();
-//                }
-//                return -ChessConstants.CHECKMATE_VALUE;
-//            })
-//
 
             //pawn promotion
             //fork (вилка)
