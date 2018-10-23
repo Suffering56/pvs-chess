@@ -247,7 +247,7 @@ public class BotServiceImplMedium extends AbstractBotService {
             if (MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext).isKingUnderAttack(playerSide)) {
 
                 if (playerMoves.isEmpty()) {
-                    return Rating.builder().build(RatingParam.CHECKMATE);   ////TODO: checkmate
+                    return Rating.builder().build(RatingParam.CHECKMATE_BY_BOT);   ////TODO: checkmate
                 }
                 return Rating.builder().build(RatingParam.CHECK);
             }
@@ -304,6 +304,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                 e.setAnalyzedMove(analyzedMove);
                 e.setPrevMatrix(prevMatrix);
                 e.setPrevMove(prevMove);
+                e.print();
                 throw e;
             }
 

@@ -76,12 +76,11 @@ public class ExtendedMove {
     }
 
     public void updateRating(Rating rating) {
-        if (ratingMap.containsKey(rating.getParam())) {
-            throw new RuntimeException("Rating already exist");
-        }
-        ratingMap.put(rating.getParam(), rating);
+        if (!ratingMap.containsKey(rating.getParam())) {
+            ratingMap.put(rating.getParam(), rating);
 
-        total += rating.getValue() * rating.getParam().getFactor();
+            total += rating.getValue() * rating.getParam().getFactor();
+        }
     }
 
     public boolean hasDifferentPointTo(ExtendedMove otherMove) {

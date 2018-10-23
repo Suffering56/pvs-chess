@@ -497,17 +497,19 @@ public class MoveHelper {
 
             Integer kingRowIndex = movableCell.getRowIndex();
 
-            if (fakeGame.isShortCastlingAvailable(allySide)) {
-                if (isEmptyCellsOnRow(kingRowIndex, 1, 2)) {
-                    if (isSafeCrossPointForCastling(-1)) {
-                        addKingMove(0, -2);
+            if (!isCheckFilterEnabled() || filterData.sourceOfCheck == null) {
+                if (fakeGame.isShortCastlingAvailable(allySide)) {
+                    if (isEmptyCellsOnRow(kingRowIndex, 1, 2)) {
+                        if (isSafeCrossPointForCastling(-1)) {
+                            addKingMove(0, -2);
+                        }
                     }
                 }
-            }
-            if (fakeGame.isLongCastlingAvailable(allySide)) {
-                if (isEmptyCellsOnRow(kingRowIndex, 4, 5, 6)) {
-                    if (isSafeCrossPointForCastling(1)) {
-                        addKingMove(0, 2);
+                if (fakeGame.isLongCastlingAvailable(allySide)) {
+                    if (isEmptyCellsOnRow(kingRowIndex, 4, 5, 6)) {
+                        if (isSafeCrossPointForCastling(1)) {
+                            addKingMove(0, 2);
+                        }
                     }
                 }
             }

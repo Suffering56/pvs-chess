@@ -56,7 +56,11 @@ public enum RatingParam {
     /**
      * А мат - еще лучше
      */
-    CHECKMATE(ChessConstants.CHECKMATE_VALUE);
+    CHECKMATE_BY_BOT(ChessConstants.CHECKMATE_VALUE),
+    CHECKMATE_BY_PLAYER(-ChessConstants.CHECKMATE_VALUE),
+    DEEP_2_BY_PLAYER(-1),
+    DEEP_3_BY_BOT(1);
+
 
     private static final int MATERIAL_FACTOR = 100;
     private final int factor;

@@ -10,14 +10,12 @@ import com.example.chess.enums.Side;
 import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.CellsMatrix;
-import com.example.chess.service.support.ExtendedMove;
-import com.example.chess.service.support.FakeGame;
-import com.example.chess.service.support.MoveHelper;
+import com.example.chess.service.support.*;
 import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.util.Pair;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -88,22 +86,71 @@ public abstract class AbstractBotService implements BotService {
     }
 
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
-        List<ExtendedMove> botAvailableMovesDeep1 = MoveHelper.valueOf(fakeGame, originalMatrix)
+        List<ExtendedMove> botAvailableMoves = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
-                .peek(calculateRating(fakeGame, originalMatrix, botSide, isExternalCall))
                 .collect(Collectors.toList());
 
-        if (botAvailableMovesDeep1.isEmpty()) {
+        if (botAvailableMoves.isEmpty()) {
             return null;
         }
 
-        int max = botAvailableMovesDeep1
+        Side playerSide = botSide.reverse();
+
+        botAvailableMoves = botAvailableMoves
+                .stream()
+                .peek(calculateRating(fakeGame, originalMatrix, botSide, false))
+                .peek(analyzedMove -> {
+                    CellsMatrix firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null).getNewMatrix();
+
+
+                    List<ExtendedMove> playerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
+                            .getStandardMovesStream(playerSide)
+                            .collect(Collectors.toList());
+
+
+                    Pair<Integer, Integer> maxPair = playerMoves
+                            .stream()
+                            .peek(calculateRating(fakeGame, firstMatrixPlayerNext, playerSide, false))
+                            .map(playerMove -> {
+                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
+
+                                int maxByBot = MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
+                                        .getStandardMovesStream(botSide)
+                                        .peek(calculateRating(fakeGame, secondMatrixBotNext, botSide, false))
+                                        .mapToInt(ExtendedMove::getTotal)
+                                        .max().orElse(-ChessConstants.CHECKMATE_VALUE);
+
+//                                return -playerMove.getTotal() + maxByBot;
+
+                                return Pair.of(playerMove.getTotal(), maxByBot);
+                            })
+                            .reduce((p1, p2) -> {
+                                int max1 = -p1.getFirst() + p1.getSecond();
+                                int max2 = -p2.getFirst() + p2.getSecond();
+
+                                return max1 >= max2 ? p1 : p2;
+                            })
+                            .orElse(null);
+
+                    if (maxPair == null) {
+                        //checkmate by bot
+                        analyzedMove.updateRating(Rating.builder().build(RatingParam.CHECKMATE_BY_BOT));
+                        return;
+                    }
+
+                    analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP_2_BY_PLAYER, maxPair.getFirst()));
+                    analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP_3_BY_BOT, maxPair.getSecond()));
+                })
+                .collect(Collectors.toList());
+
+
+        int max = botAvailableMoves
                 .stream()
                 .mapToInt(ExtendedMove::getTotal)
                 .max().orElseThrow(UnattainablePointException::new);
 
-        List<ExtendedMove> topMovesList = botAvailableMovesDeep1
+        List<ExtendedMove> topMovesList = botAvailableMoves
                 .stream()
                 .filter(move -> move.getTotal() == max)
                 .collect(Collectors.toList());
@@ -120,65 +167,6 @@ public abstract class AbstractBotService implements BotService {
 
         return bestMove;
     }
-
-
-//
-//        botAvailableMovesDeep1
-//                .parallelStream()
-//                .peek(calculateRating(fakeGame, originalMatrix, botAvailableMovesDeep1, botSide, false))
-//                .map(analyzedMove -> {
-//                    CellsMatrix matrixDeep1 = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null).getNewMatrix();
-//
-//                    List<ExtendedMove> playerAvailableMovesDeep2 = MoveHelper.valueOf(fakeGame, matrixDeep1)
-//                            .getStandardMovesStream(playerSide)
-//                            .collect(Collectors.toList());
-//
-//                    List<ExtendedMove> playerMovesWithRatingDeep2 = playerAvailableMovesDeep2
-//                            .stream()
-//                            .peek(calculateRating(fakeGame, originalMatrix, playerAvailableMovesDeep2, playerSide, false))
-//                            .collect(Collectors.toList());
-//
-//                    int playerMaxByDeep2 = playerMovesWithRatingDeep2
-//                            .stream()
-//                            .mapToInt(ExtendedMove::getTotal)
-//                            .max()
-//                            .orElse(ChessConstants.CHECKMATE_VALUE);
-//
-//                    int botMaxByDeep3 = playerMovesWithRatingDeep2
-//                            .stream()
-//                            .map(playerMove -> {
-//                                CellsMatrix matrixDeep2 = matrixDeep1.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
-//
-//                                List<ExtendedMove> botAvailableMovesDeep3 = MoveHelper.valueOf(fakeGame, matrixDeep2)
-//                                        .getStandardMovesStream(playerSide)
-//                                        .collect(Collectors.toList());
-//
-//                                if (botAvailableMovesDeep3.isEmpty()) {
-//                                    throw new RuntimeException("Checkmate by player deep 3!!!");
-//                                }
-//
-//                                OptionalInt positiveMaxDeep3 = botAvailableMovesDeep3
-//                                        .stream()
-//                                        .peek(calculateRating(fakeGame, matrixDeep2, botAvailableMovesDeep3, botSide, false))
-//                                        .mapToInt(ExtendedMove::getTotal)
-//                                        .max();
-//
-//                                return positiveMaxDeep3.orElse(-ChessConstants.CHECKMATE_VALUE);
-//                            })
-//                            .mapToInt(Integer::intValue)
-//                            .max()
-//                            .orElse(ChessConstants.CHECKMATE_VALUE);
-//
-//
-//                })
-
-    //                .map(botMove -> {
-//                    MoveData moveData = originalMatrix.executeMove(botMove, 1);
-//                    fillDeeperMoves(fakeGame, moveData, 4);
-//                    return moveData;
-//                });
-//                .collect(Collectors.toList());
-
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
         int i = (int) (movesList.size() * Math.random());
