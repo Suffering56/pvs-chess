@@ -56,7 +56,7 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, List<ExtendedMove> botMovesByOriginal, Side botSide, boolean isExternalCall);
+    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall);
 
     protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide) {
         long start = System.currentTimeMillis();
@@ -64,7 +64,7 @@ public abstract class AbstractBotService implements BotService {
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
-        System.out.println("resultMove = " + resultMove);
+        System.out.println("resultMove[pos=" + originalMatrix.getPosition() + "] = " + resultMove);
 
         if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
             System.out.println("Bot want checkmate you!!!");
@@ -88,18 +88,15 @@ public abstract class AbstractBotService implements BotService {
     }
 
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
-        Side playerSide = botSide.reverse();
-
         List<ExtendedMove> botAvailableMovesDeep1 = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
+                .peek(calculateRating(fakeGame, originalMatrix, botSide, isExternalCall))
                 .collect(Collectors.toList());
 
         if (botAvailableMovesDeep1.isEmpty()) {
             return null;
         }
-
-        botAvailableMovesDeep1.forEach(calculateRating(fakeGame, originalMatrix, botAvailableMovesDeep1, botSide, isExternalCall));
 
         int max = botAvailableMovesDeep1
                 .stream()
@@ -181,7 +178,6 @@ public abstract class AbstractBotService implements BotService {
 //                    return moveData;
 //                });
 //                .collect(Collectors.toList());
-
 
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {

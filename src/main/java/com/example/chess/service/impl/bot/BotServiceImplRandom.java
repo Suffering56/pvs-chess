@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 public class BotServiceImplRandom extends AbstractBotService {
 
     @Override
-    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, List<ExtendedMove> botMovesByOriginal, Side botSide, boolean isExternalCall) {
+    protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
         return move -> {
         };
     }

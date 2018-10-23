@@ -64,13 +64,6 @@ public class ExtendedMove {
         return Objects.requireNonNull(getPieceFrom()).getValue();
     }
 
-    public int getValueFrom(int defaultValue) {
-        if (isEmptyFrom()) {
-            return defaultValue;
-        }
-        return getValueFrom();
-    }
-
     public int getValueTo() {
         return Objects.requireNonNull(getPieceTo()).getValue();
     }
@@ -80,13 +73,6 @@ public class ExtendedMove {
             return defaultValue;
         }
         return getValueTo();
-    }
-
-    public int getExchangeDiff() {
-        if (isEmptyTo()) {
-            return 0;
-        }
-        return getValueTo() - getValueFrom();
     }
 
     public void updateRating(Rating rating) {
@@ -117,10 +103,6 @@ public class ExtendedMove {
     public MoveDTO toMoveDTO() {
         //TODO: promotionPieceType can be not null
         return MoveDTO.valueOf(from.getPoint(), to.getPoint(), null);
-    }
-
-    public boolean isVertical() {
-        return from.getColumnIndex().equals(to.getColumnIndex());
     }
 
     public Side getSide() {
