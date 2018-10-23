@@ -95,9 +95,42 @@ public abstract class AbstractBotService implements BotService {
             return null;
         }
 
+        botAvailableMoves = executeFirstVariation(fakeGame, originalMatrix, botSide, botAvailableMoves, isExternalCall);
+//        botAvailableMoves = executeSecondVariation(fakeGame, originalMatrix, botSide, botAvailableMoves);
+
+
+        int max = botAvailableMoves
+                .stream()
+                .mapToInt(ExtendedMove::getTotal)
+                .max().orElseThrow(UnattainablePointException::new);
+
+        List<ExtendedMove> topMovesList = botAvailableMoves
+                .stream()
+                .filter(move -> move.getTotal() == max)
+                .collect(Collectors.toList());
+
+        ExtendedMove bestMove = getRandomMove(topMovesList);
+
+        enter(LoggerParam.COMMON, 50);
+//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
+        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+
+        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + bestMove);
+        logDoubleSeparator(LoggerParam.COMMON, 3);
+
+        return bestMove;
+    }
+
+    private List<ExtendedMove> executeFirstVariation(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, List<ExtendedMove> botAvailableMoves, boolean isExternalCall) {
+        botAvailableMoves.forEach(calculateRating(fakeGame, originalMatrix, botSide, isExternalCall));
+        return botAvailableMoves;
+    }
+
+    private List<ExtendedMove> executeSecondVariation(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, List<ExtendedMove> botAvailableMoves) {
         Side playerSide = botSide.reverse();
 
-        botAvailableMoves = botAvailableMoves
+        return botAvailableMoves
                 .stream()
                 .peek(calculateRating(fakeGame, originalMatrix, botSide, false))
                 .peek(analyzedMove -> {
@@ -143,29 +176,6 @@ public abstract class AbstractBotService implements BotService {
                     analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP_3_BY_BOT, maxPair.getSecond()));
                 })
                 .collect(Collectors.toList());
-
-
-        int max = botAvailableMoves
-                .stream()
-                .mapToInt(ExtendedMove::getTotal)
-                .max().orElseThrow(UnattainablePointException::new);
-
-        List<ExtendedMove> topMovesList = botAvailableMoves
-                .stream()
-                .filter(move -> move.getTotal() == max)
-                .collect(Collectors.toList());
-
-        ExtendedMove bestMove = getRandomMove(topMovesList);
-
-        enter(LoggerParam.COMMON, 50);
-//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
-        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-
-        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + bestMove);
-        logDoubleSeparator(LoggerParam.COMMON, 3);
-
-        return bestMove;
     }
 
     protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
