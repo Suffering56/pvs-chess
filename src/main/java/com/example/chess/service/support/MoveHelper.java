@@ -28,7 +28,7 @@ public class MoveHelper {
     }
 
     public static MoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
-        Debug.incrementMoveHelpersCount();
+        Debug.moveHelpersCount.incrementAndGet();
         return new MoveHelper(fakeGame, originalMatrix);
     }
 
@@ -224,9 +224,9 @@ public class MoveHelper {
             findBetweenPoints(kingPoint, betweenParams, unmovablePawn.getPoint());
 
             Set<PointDTO> result = new HashSet<>();
-            if (unmovablePawn.getColumnIndex().equals(enemyCell.getColumnIndex())) {
+            if (unmovablePawn.getColumnIndex() == enemyCell.getColumnIndex()) {
                 for (PointDTO pawnMove : pawnUnfilteredMoves) {
-                    if (unmovablePawn.getColumnIndex().equals(pawnMove.getColumnIndex())) {
+                    if (unmovablePawn.getColumnIndex() == pawnMove.getColumnIndex()) {
                         result.add(pawnMove);
                     }
                 }
@@ -346,8 +346,8 @@ public class MoveHelper {
         Set<PointDTO> moves = new InternalMoveHelper(moveableCell, filterData, isDefensive)
                 .getAnyPieceMoves();
 
-        Debug.incrementAddMovesForCallsCount();
-        Debug.incrementAvailablePointsFound(moves.size());
+        Debug.addMovesForCallsCount.incrementAndGet();
+        Debug.addMovesForCallsCount.addAndGet(moves.size());
 
         return moves;
     }
@@ -495,7 +495,7 @@ public class MoveHelper {
             addKingMove(-1, 1);
             addKingMove(-1, -1);
 
-            Integer kingRowIndex = movableCell.getRowIndex();
+            int kingRowIndex = movableCell.getRowIndex();
 
             if (!isCheckFilterEnabled() || filterData.sourceOfCheck == null) {
                 if (fakeGame.isShortCastlingAvailable(allySide)) {

@@ -20,12 +20,12 @@ import java.util.Objects;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CellDTO implements Immutable {
 
-    private final Integer rowIndex;
-    private final Integer columnIndex;
+    private final int rowIndex;
+    private final int columnIndex;
     private final Piece piece;
 
     @JsonCreator
-    public static CellDTO valueOf(@JsonProperty Integer rowIndex, @JsonProperty Integer columnIndex, @JsonProperty Piece piece) {
+    public static CellDTO valueOf(@JsonProperty int rowIndex, @JsonProperty int columnIndex, @JsonProperty Piece piece) {
         return new CellDTO(rowIndex, columnIndex, piece);
     }
 

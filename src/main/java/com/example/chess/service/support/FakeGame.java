@@ -7,14 +7,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FakeGame implements Gameplay, Immutable {
 
-    private final Map<Side, Features> featuresMap = new HashMap<Side, Features>() {{
+    private final Map<Side, Features> featuresMap = new EnumMap<Side, Features>(Side.class) {{
         put(Side.WHITE, new Features());
         put(Side.BLACK, new Features());
     }};

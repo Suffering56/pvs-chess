@@ -7,6 +7,8 @@ import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
@@ -17,10 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,7 @@ public abstract class AbstractBotService implements BotService {
         COMMON, PRINT_SORTED_BOT_MOVES_LIST, PRINT_RESULT_MOVE, MATERIAL;
     }
 
-    private Map<LoggerParam, Boolean> loggerSettings = new HashMap<LoggerParam, Boolean>() {{
+    private Map<LoggerParam, Boolean> loggerSettings = new EnumMap<LoggerParam, Boolean>(LoggerParam.class) {{
         put(LoggerParam.COMMON, false);
         put(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, false);
         put(LoggerParam.PRINT_RESULT_MOVE, false);
@@ -46,11 +48,17 @@ public abstract class AbstractBotService implements BotService {
     @Profile
     @Override
     public void applyBotMove(Game game) {
-        CommonUtils.executeInSecondaryThread(() -> {
-            CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
-            Side botSide = game.getReadyToMoveSide();
-            MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, botSide);
-            gameService.applyMove(game, moveDTO);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(() -> {
+            try {
+                CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
+                Side botSide = game.getReadyToMoveSide();
+                MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, botSide);
+                gameService.applyMove(game, moveDTO);
+                TimeUnit.SECONDS.sleep(1);
+            } catch (HistoryNotFoundException | GameNotFoundException | InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
         });
     }
 

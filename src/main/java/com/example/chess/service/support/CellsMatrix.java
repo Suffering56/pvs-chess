@@ -32,7 +32,7 @@ public final class CellsMatrix implements Immutable {
     @Getter
     private final int position;
     private final List<List<CellDTO>> cellsMatrix;
-    private Map<Side, PointDTO> kingPoints = new HashMap<>();
+    private Map<Side, PointDTO> kingPoints = new EnumMap<>(Side.class);
 
     private CellsMatrix(int position, Function<Integer, Function<Integer, Piece>> pieceGenerator) {
         this.position = position;
@@ -91,7 +91,7 @@ public final class CellsMatrix implements Immutable {
      * @return MoveResult (contains new matrix with updated state)
      */
     public MoveResult executeMove(MoveDTO move, Piece pieceFromPawn) {
-        Debug.incrementMovesExecuted();
+        Debug.movesExecuted.incrementAndGet();
         CellDTO cellFrom = getCell(move.getFrom());
         CellDTO cellTo = getCell(move.getTo());
 
@@ -119,7 +119,7 @@ public final class CellsMatrix implements Immutable {
         CellDTO kingCellTo = getCell(move.getTo());
 
         int rookRowIndex = move.getFrom().getRowIndex();
-        Integer kingColumnIndex = move.getFrom().getColumnIndex();
+        int kingColumnIndex = move.getFrom().getColumnIndex();
 
         CellDTO rookCellFrom;
         int rookColumnIndexTo;

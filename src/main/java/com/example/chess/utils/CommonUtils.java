@@ -59,21 +59,6 @@ public class CommonUtils {
         return StringUtils.join(collect);
     }
 
-    public static void executeInSecondaryThread(Executor executor) {
-        new Thread(() -> {
-            try {
-                executor.execute();
-            } catch (InterruptedException | GameNotFoundException | HistoryNotFoundException e) {
-                log.error(e.getMessage(), e);
-            }
-        }).start();
-    }
-
-
-    public interface Executor {
-        void execute() throws InterruptedException, GameNotFoundException, HistoryNotFoundException;
-    }
-
     private static Map<Integer, String> columnNamesMap = new HashMap<Integer, String>() {{
         put(0, "h");
         put(1, "g");
@@ -85,7 +70,7 @@ public class CommonUtils {
         put(7, "a");
     }};
 
-    private static Map<PieceType, String> pieceNamesMap = new HashMap<PieceType, String>() {{
+    private static Map<PieceType, String> pieceNamesMap = new EnumMap<PieceType, String>(PieceType.class) {{
         put(PieceType.PAWN, " ");
         put(PieceType.KNIGHT, "N");
         put(PieceType.BISHOP, "B");

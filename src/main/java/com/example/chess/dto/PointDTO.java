@@ -45,11 +45,11 @@ public final class PointDTO implements Immutable {
         return true;
     }
 
-    public PointDTO setRowIndex(Integer rowIndex) {
+    public PointDTO setRowIndex(int rowIndex) {
         return new PointDTO(rowIndex, this.columnIndex);
     }
 
-    public PointDTO setColumnIndex(Integer columnIndex) {
+    public PointDTO setColumnIndex(int columnIndex) {
         return new PointDTO(this.rowIndex, columnIndex);
     }
 

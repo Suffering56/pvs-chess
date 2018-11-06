@@ -12,41 +12,10 @@ public class Debug {
     private static final boolean DESTINY_ENABLED = false;
     public static final boolean IS_PARALLEL = false;
 
-    private static final AtomicLong availablePointsFound = new AtomicLong(0);
-    private static final AtomicLong addMovesForCallsCount = new AtomicLong(0);
-    private static final AtomicLong moveHelpersCount = new AtomicLong(0);
-    private static final AtomicLong movesExecuted = new AtomicLong(0);
-
-    public static void incrementAvailablePointsFound(int pointsCount) {
-        increment(availablePointsFound, pointsCount);
-    }
-
-    public static void incrementAddMovesForCallsCount() {
-        increment(addMovesForCallsCount);
-    }
-
-    public static void incrementMoveHelpersCount() {
-        increment(moveHelpersCount);
-    }
-
-
-    public static void incrementMovesExecuted() {
-        increment(movesExecuted);
-    }
-
-    private static void increment(AtomicLong atomicLong) {
-        increment(atomicLong, 1);
-    }
-
-    private static void increment(AtomicLong atomicLong, int value) {
-        while (true) {
-            long existingValue = atomicLong.get();
-            long newValue = existingValue + value;
-            if (atomicLong.compareAndSet(existingValue, newValue)) {
-                return;
-            }
-        }
-    }
+    public static final AtomicLong availablePointsFound = new AtomicLong(0);
+    public static final AtomicLong addMovesForCallsCount = new AtomicLong(0);
+    public static final AtomicLong moveHelpersCount = new AtomicLong(0);
+    public static final AtomicLong movesExecuted = new AtomicLong(0);
 
     public static void resetCounters() {
         availablePointsFound.set(0);

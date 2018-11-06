@@ -9,6 +9,7 @@ import com.example.chess.utils.CommonUtils;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -20,7 +21,7 @@ public class ExtendedMove {
     private CellDTO from;
     private CellDTO to;
 
-    private final Map<RatingParam, Rating> ratingMap = new HashMap<>();
+    private final Map<RatingParam, Rating> ratingMap = new EnumMap<>(RatingParam.class);
     private int total = 0;
 
     public ExtendedMove(CellDTO from, CellDTO to) {
