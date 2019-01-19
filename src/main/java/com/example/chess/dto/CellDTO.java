@@ -1,6 +1,6 @@
 package com.example.chess.dto;
 
-import com.example.chess.entity.Piece;
+import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.service.support.Immutable;

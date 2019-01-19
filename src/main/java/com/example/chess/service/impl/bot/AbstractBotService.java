@@ -5,7 +5,7 @@ import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
-import com.example.chess.entity.Piece;
+import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
@@ -21,8 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 
-import javax.annotation.PostConstruct;
-import java.util.*;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -36,13 +38,6 @@ public abstract class AbstractBotService implements BotService {
     protected GameService gameService;
     protected Long botMoveDelay;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private Map<Side, Piece> pieceFromPawnMap = new EnumMap<>(Side.class);
-
-    @PostConstruct
-    private void init () {
-        pieceFromPawnMap.put(Side.WHITE, gameService.findPieceBySideAndType(Side.WHITE, PieceType.QUEEN));
-        pieceFromPawnMap.put(Side.BLACK, gameService.findPieceBySideAndType(Side.BLACK, PieceType.QUEEN));
-    }
 
     protected enum LoggerParam {
         COMMON, PRINT_SORTED_BOT_MOVES_LIST, PRINT_RESULT_MOVE, MATERIAL;
@@ -89,7 +84,7 @@ public abstract class AbstractBotService implements BotService {
         MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
                 .peek(potentialMove -> {
-                    Piece pieceFromPawn = pieceFromPawnMap.get(botSide);
+                    Piece pieceFromPawn = Piece.of(botSide, PieceType.QUEEN);
                     if (potentialMove.isPawnTransformation());
                     //TODO: piece from pawn
 //                    originalMatrix.executeMove(potentialMove, )

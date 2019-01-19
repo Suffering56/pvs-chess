@@ -1,6 +1,7 @@
 package com.example.chess.entity;
 
 import com.example.chess.dto.CellDTO;
+import com.example.chess.enums.Piece;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
@@ -28,8 +29,8 @@ public class History {
     @Column(nullable = false, name = "piece_id")
     private Integer pieceId;
 
-    @ManyToOne
-    @JoinColumn(name = "piece_id", nullable = false, insertable = false, updatable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Piece piece;
 
     @Column(nullable = false)

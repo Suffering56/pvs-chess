@@ -7,9 +7,9 @@
              ng-repeat="rowIndex in cellsMatrix | chessboardReverse:params.side">
             <div class="chessboard-cell"
                  ng-repeat="cell in rowIndex | chessboardReverse:params.side"
-                 ng-class="getCellClass(cell)">
+                 ng-class="getCellColorClass(cell)">
                 <div class="chessboard-cell inner"
-                     ng-class="getInnerCellClass(cell)"
+                     ng-class="getCellPieceClass(cell)"
                      ng-click="doClick(cell)"></div>
             </div>
         </div>

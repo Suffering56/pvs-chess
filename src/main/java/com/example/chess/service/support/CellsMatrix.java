@@ -6,7 +6,7 @@ import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.History;
-import com.example.chess.entity.Piece;
+import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;

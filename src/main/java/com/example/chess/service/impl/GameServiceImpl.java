@@ -6,34 +6,27 @@ import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
-import com.example.chess.entity.Piece;
+import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
-import com.example.chess.repository.PieceRepository;
 import com.example.chess.service.GameService;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.service.support.MoveHelper;
 import com.example.chess.service.support.MoveResult;
-import com.google.common.collect.Iterables;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static com.example.chess.ChessConstants.BOARD_SIZE;
-import static java.util.function.Function.identity;
 
 @Log4j2
 @Service
@@ -41,27 +34,10 @@ public class GameServiceImpl implements GameService {
 
     private final GameRepository gameRepository;
     private final HistoryRepository historyRepository;
-    private final PieceRepository pieceRepository;
-    private Map<Side, Map<PieceType, Piece>> piecesBySideAndTypeMap;
 
-
-    public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository, PieceRepository pieceRepository) {
+    public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository) {
         this.gameRepository = gameRepository;
         this.historyRepository = historyRepository;
-        this.pieceRepository = pieceRepository;
-    }
-
-    @PostConstruct
-    private void init() {
-        Iterable<Piece> pieces = pieceRepository.findAll();
-        if (Iterables.isEmpty(pieces)) {
-            throw new RuntimeException("pieces not found");
-        }
-
-        piecesBySideAndTypeMap = StreamSupport
-                .stream(pieces.spliterator(), false)
-                .collect(Collectors.groupingBy(Piece::getSide,
-                        Collectors.toMap(Piece::getType, identity())));
     }
 
     @Override
@@ -153,7 +129,7 @@ public class GameServiceImpl implements GameService {
         }
 
         CellDTO cellFrom = matrix.getCell(move.getFrom());
-        return findPieceBySideAndType(cellFrom.getSide(), move.getPromotionPieceType());
+        return Piece.of(cellFrom.getSide(), move.getPromotionPieceType());
     }
 
     private List<History> getHistoryByGame(Game game, int position) throws HistoryNotFoundException {
@@ -205,7 +181,7 @@ public class GameServiceImpl implements GameService {
                 }
 
                 if (side != null) {
-                    Piece piece = findPieceBySideAndType(side, pieceType);
+                    Piece piece = Piece.of(side, pieceType);
 
                     History item = History.builder()
                             .gameId(gameId)
@@ -223,10 +199,5 @@ public class GameServiceImpl implements GameService {
         }
 
         return historyList;
-    }
-
-    @Override
-    public Piece findPieceBySideAndType(Side side, PieceType type) {
-        return piecesBySideAndTypeMap.get(side).get(type);
     }
 }

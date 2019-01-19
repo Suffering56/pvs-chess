@@ -4,8 +4,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     $scope.verticalLabels = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
     $scope.doClick = doClick;
-    $scope.getCellClass = getCellClass;
-    $scope.getInnerCellClass = getInnerCellClass;
+    $scope.getCellColorClass = getCellColorClass;
+    $scope.getCellPieceClass = getCellPieceClass;
 
     var params = $rootScope.params;
     var game = params.game;
@@ -165,7 +165,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
         }
     }
 
-    function getCellClass(cell) {
+    function getCellColorClass(cell) {
         //cell = cellDTO
         if ((cell.rowIndex + cell.columnIndex) % 2 === 0) {
             return "white";
@@ -174,7 +174,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
         }
     }
 
-    function getInnerCellClass(cell) {
+    function getCellPieceClass(cell) {
         //cell = cellDTO
         var result = [];
 
