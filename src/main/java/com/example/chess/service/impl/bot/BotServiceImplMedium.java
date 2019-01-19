@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 @Qualifier(BotMode.MEDIUM)
 public class BotServiceImplMedium extends AbstractBotService {
 
-
     @Override
     protected Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
 

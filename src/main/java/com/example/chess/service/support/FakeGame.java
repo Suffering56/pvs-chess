@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Accessors;
+import lombok.experimental.FieldDefaults;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -34,10 +36,6 @@ public class FakeGame implements Gameplay, Immutable {
         return featuresMap.get(side).getPawnLongMoveColumnIndex();
     }
 
-    public Builder copy() {
-        return builder(this);
-    }
-
     public static Builder builder(Game game) {
         return builder((Gameplay) game);
     }
@@ -56,21 +54,17 @@ public class FakeGame implements Gameplay, Immutable {
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public class Builder {
 
-        public Builder setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
-            Objects.requireNonNull(side);
+        private Builder setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
             featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
-            featuresMap.get(side.reverse()).setPawnLongMoveColumnIndex(null);
             return this;
         }
 
-        public Builder setShortCastlingAvailable(Side side, boolean isAvailable) {
-            Objects.requireNonNull(side);
+        private Builder setShortCastlingAvailable(Side side, boolean isAvailable) {
             featuresMap.get(side).setShortCastlingAvailable(isAvailable);
             return this;
         }
 
-        public Builder setLongCastlingAvailable(Side side, boolean isAvailable) {
-            Objects.requireNonNull(side);
+        private Builder setLongCastlingAvailable(Side side, boolean isAvailable) {
             featuresMap.get(side).setLongCastlingAvailable(isAvailable);
             return this;
         }
@@ -80,12 +74,13 @@ public class FakeGame implements Gameplay, Immutable {
         }
     }
 
+    @FieldDefaults(level = AccessLevel.PRIVATE)
     @Getter(AccessLevel.PRIVATE)
     @Setter(AccessLevel.PRIVATE)
     private class Features {
-        private boolean longCastlingAvailable = false;
-        private boolean shortCastlingAvailable = false;
-        private Integer pawnLongMoveColumnIndex = null;
-        private boolean isUnderCheck = false;
+        boolean longCastlingAvailable = false;
+        boolean shortCastlingAvailable = false;
+        Integer pawnLongMoveColumnIndex = null;
+        boolean isUnderCheck = false;
     }
 }

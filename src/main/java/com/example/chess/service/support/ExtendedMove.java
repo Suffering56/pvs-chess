@@ -6,23 +6,26 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.utils.CommonUtils;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldDefaults;
 
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 @Getter
 @Setter
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@SuppressWarnings("WeakerAccess")
 public class ExtendedMove {
 
-    private CellDTO from;
-    private CellDTO to;
+    CellDTO from;
+    CellDTO to;
 
-    private final Map<RatingParam, Rating> ratingMap = new EnumMap<>(RatingParam.class);
-    private int total = 0;
+    final Map<RatingParam, Rating> ratingMap = new EnumMap<>(RatingParam.class);
+    int total = 0;
 
     public ExtendedMove(CellDTO from, CellDTO to) {
         this.from = from;
@@ -77,11 +80,10 @@ public class ExtendedMove {
     }
 
     public void updateRating(Rating rating) {
-        if (!ratingMap.containsKey(rating.getParam())) {
-            ratingMap.put(rating.getParam(), rating);
-
+        ratingMap.computeIfAbsent(rating.getParam(), key -> {
             total += rating.getValue() * rating.getParam().getFactor();
-        }
+            return rating;
+        });
     }
 
     public boolean hasDifferentPointTo(ExtendedMove otherMove) {
@@ -96,8 +98,9 @@ public class ExtendedMove {
         return total;
     }
 
-    public void applyGreedyMode() {
-        total = getPieceTo() != null ? getPieceTo().getValue() : 0;
+    public void updateTotalByGreedy() {
+        int value = getPieceTo() != null ? getPieceTo().getValue() : 0;
+        updateRating(Rating.builder().build(RatingParam.GREEDY, value));
     }
 
     public MoveDTO toMoveDTO() {
@@ -111,7 +114,7 @@ public class ExtendedMove {
 
     @Override
     public String toString() {
-        StringBuilder result = new StringBuilder("Move[" + CommonUtils.moveToString(this) + "].total = " + total + "\r\n");
+        StringBuilder result = new StringBuilder("Move[" + CommonUtils.moveToString(this) + "].total = " + getTotal() + "\r\n");
         for (Rating rating : ratingMap.values()) {
             result.append(rating);
         }
@@ -119,4 +122,7 @@ public class ExtendedMove {
         return result.toString();
     }
 
+    public boolean isPawnTransformation() {
+        return getPieceFrom() == PieceType.PAWN && (getPointTo().getRowIndex() == 0 || getPointTo().getRowIndex() == 7);
+    }
 }

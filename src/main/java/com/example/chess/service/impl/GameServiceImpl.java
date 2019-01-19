@@ -112,7 +112,7 @@ public class GameServiceImpl implements GameService {
         game.setPosition(nextMatrix.getPosition());
 
         Side enemySide = sideFrom.reverse();
-        if (MoveHelper.valueOf(game.toFake(), nextMatrix).isKingUnderAttack(enemySide)) {
+        if (MoveHelper.valueOf(game.toFakeBuilder().build(), nextMatrix).isKingUnderAttack(enemySide)) {
             /*
                 Если данный ход объявил шах вражескому королю, то нужно подсветить вражеского короля на доске.
                 А еще этот параметр (game.underCheckSide) используется при вычислении доступных ходов,
@@ -138,7 +138,7 @@ public class GameServiceImpl implements GameService {
     public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException, HistoryNotFoundException {
         Game game = findAndCheckGame(gameId);
         CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
-        return MoveHelper.valueOf(game.toFake(), matrix).getFilteredAvailablePoints(point);
+        return MoveHelper.valueOf(game.toFakeBuilder().build(), matrix).getFilteredAvailablePoints(point);
     }
 
     @Override
@@ -225,7 +225,8 @@ public class GameServiceImpl implements GameService {
         return historyList;
     }
 
-    private Piece findPieceBySideAndType(Side side, PieceType type) {
+    @Override
+    public Piece findPieceBySideAndType(Side side, PieceType type) {
         return piecesBySideAndTypeMap.get(side).get(type);
     }
 }

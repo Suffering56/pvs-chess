@@ -5,6 +5,7 @@ import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
+import com.example.chess.entity.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
@@ -13,12 +14,14 @@ import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import com.example.chess.service.support.*;
-import com.example.chess.utils.CommonUtils;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,7 +35,14 @@ public abstract class AbstractBotService implements BotService {
 
     protected GameService gameService;
     protected Long botMoveDelay;
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private Map<Side, Piece> pieceFromPawnMap = new EnumMap<>(Side.class);
 
+    @PostConstruct
+    private void init () {
+        pieceFromPawnMap.put(Side.WHITE, gameService.findPieceBySideAndType(Side.WHITE, PieceType.QUEEN));
+        pieceFromPawnMap.put(Side.BLACK, gameService.findPieceBySideAndType(Side.BLACK, PieceType.QUEEN));
+    }
 
     protected enum LoggerParam {
         COMMON, PRINT_SORTED_BOT_MOVES_LIST, PRINT_RESULT_MOVE, MATERIAL;
@@ -45,15 +55,16 @@ public abstract class AbstractBotService implements BotService {
         put(LoggerParam.MATERIAL, false);
     }};
 
+    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall);
+
     @Profile
     @Override
     public void applyBotMove(Game game) {
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
         executorService.execute(() -> {
             try {
-                CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
-                Side botSide = game.getReadyToMoveSide();
-                MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, botSide);
+                CellsMatrix actualMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
+                Side botSide = game.getActiveSide();
+                MoveDTO moveDTO = findBestMove(game.toFakeBuilder().build(), actualMatrix, botSide);
                 gameService.applyMove(game, moveDTO);
                 TimeUnit.SECONDS.sleep(1);
             } catch (HistoryNotFoundException | GameNotFoundException | InterruptedException e) {
@@ -62,11 +73,30 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall);
+    @NoArgsConstructor
+    @AllArgsConstructor
+    class PositionNode {
+        int position;
+        CellsMatrix matrix;
+        ExtendedMove lastMove;
+    }
 
-    protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide) {
+    private MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide) {
         long start = System.currentTimeMillis();
         Debug.resetCounters();
+
+
+        MoveHelper.valueOf(fakeGame, originalMatrix)
+                .getStandardMovesStream(botSide)
+                .peek(potentialMove -> {
+                    Piece pieceFromPawn = pieceFromPawnMap.get(botSide);
+                    if (potentialMove.isPawnTransformation());
+                    //TODO: piece from pawn
+//                    originalMatrix.executeMove(potentialMove, )
+                });
+
+
+
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);

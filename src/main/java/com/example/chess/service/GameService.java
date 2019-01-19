@@ -1,6 +1,9 @@
 package com.example.chess.service;
 
 import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.entity.Piece;
+import com.example.chess.enums.PieceType;
+import com.example.chess.enums.Side;
 import com.example.chess.service.support.CellsMatrix;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.dto.MoveDTO;
@@ -22,4 +25,6 @@ public interface GameService {
 
 
     CellsMatrix createCellsMatrixByGame(Game game, int position) throws HistoryNotFoundException;
+
+    Piece findPieceBySideAndType(Side side, PieceType type);
 }

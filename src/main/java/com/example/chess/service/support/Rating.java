@@ -50,7 +50,6 @@ public class Rating {
         }
     }
 
-
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder("\tRating[" + param + "(" + param.getFactor() + ")] = " + value + " :\r\n");

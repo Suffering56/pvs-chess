@@ -149,12 +149,12 @@ public class Game implements Gameplay {
      */
     @Transient
     @JsonIgnore
-    public Side getReadyToMoveSide() {
+    public Side getActiveSide() {
         return getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
     }
 
     @Transient
-    public FakeGame toFake() {
-        return FakeGame.builder(this).build();
+    public FakeGame.Builder toFakeBuilder() {
+        return FakeGame.builder(this);
     }
 }
