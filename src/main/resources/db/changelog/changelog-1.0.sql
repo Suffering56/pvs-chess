@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset Magic:1
-create table game
+create table if not exists game
 (
 	id bigint not null
 		constraint game_pkey
@@ -10,10 +10,10 @@ create table game
 	position integer default 0 not null
 );
 alter table game owner to postgres;
-create sequence game_features_id_seq;
-alter sequence game_features_id_seq owner to postgres;
+create sequence game_id_seq;
+alter sequence game_id_seq owner to postgres;
 
-create table game_features
+create table if not exists game_features
 (
 	id bigint not null
 		constraint game_features_pkey
@@ -30,22 +30,23 @@ create table game_features
 			references game
 );
 alter table game_features owner to postgres;
-create sequence game_id_seq;
-alter sequence game_id_seq owner to postgres;
+create sequence game_features_id_seq;
+alter sequence game_features_id_seq owner to postgres;
 
-create table history
+create table if not exists history
 (
 	id bigint not null
 		constraint history_pkey
 			primary key,
-	column_index integer not null,
+	column_index_from integer not null,
+	column_index_to integer not null,
+	description varchar(255),
 	game_id bigint not null,
-	piece varchar(255) not null,
-	piece_id integer not null,
+	piece_from_pawn integer,
 	position integer not null,
-	row_index integer not null
+	row_index_from integer not null,
+	row_index_to integer not null
 );
 alter table history owner to postgres;
 create sequence history_id_seq;
 alter sequence history_id_seq owner to postgres;
-

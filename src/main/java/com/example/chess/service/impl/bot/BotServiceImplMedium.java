@@ -73,7 +73,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                             .parallelStream()
                             .filter(move -> move.hasDifferentPointTo(analyzedMove))
                             .map(move -> {
-                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move.toMoveDTO(), null).getNewMatrix();
+                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(move).getNewMatrix();
                                 ExtendedMove bestExtendedMove = findBestExtendedMove(fakeGame, secondMatrixBotNext, botSide, false);
                                 if (bestExtendedMove != null) {
                                     return bestExtendedMove.getTotal();
@@ -135,7 +135,7 @@ public class BotServiceImplMedium extends AbstractBotService {
             this.botSide = botSide;
             playerSide = botSide.reverse();
 
-            firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null).getNewMatrix();
+            firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove).getNewMatrix();
 
             playerMoves = MoveHelper.valueOf(originalFakeGame, firstMatrixPlayerNext)
                     .getStandardMovesStream(playerSide)
@@ -229,7 +229,7 @@ public class BotServiceImplMedium extends AbstractBotService {
             int maxPlayerMoveValue = 0;
 
             for (ExtendedMove playerMove : playerHarmfulMoves) {
-                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
+                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove).getNewMatrix();
 
                 Rating playerMoveRating = getMaterialRating(secondMatrixBotNext, playerMove, playerSide, maxDeep);
 
@@ -278,7 +278,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                     /*
                      * EXECUTE PLAYER MOVE
                      */
-                    CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove.toMoveDTO(), null).getNewMatrix();
+                    CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove).getNewMatrix();
                     ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide);
                     prevMatrix = afterBotMoveMatrix;
                     prevMove = minPlayerMove;
@@ -290,7 +290,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                     /*
                      * EXECUTE BOT MOVE
                      */
-                    afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove.toMoveDTO(), null).getNewMatrix();
+                    afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove).getNewMatrix();
                     minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide);
                     prevMatrix = afterPlayerMoveMatrix;
                     prevMove = minBotMove;

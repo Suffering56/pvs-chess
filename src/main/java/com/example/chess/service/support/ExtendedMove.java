@@ -19,10 +19,10 @@ import java.util.Objects;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @SuppressWarnings("WeakerAccess")
-public class ExtendedMove {
+public class ExtendedMove extends AbstractMove {
 
-    CellDTO from;
-    CellDTO to;
+    final CellDTO from;
+    final CellDTO to;
 
     final Map<RatingParam, Rating> ratingMap = new EnumMap<>(RatingParam.class);
     int total = 0;
@@ -32,20 +32,47 @@ public class ExtendedMove {
         this.to = to;
     }
 
+    @Override
+    public PointDTO getPointFrom() {
+        return from.getPoint();
+    }
+
+    @Override
+    public PointDTO getPointTo() {
+        return to.getPoint();
+    }
+
+    @Override
+    public PieceType getPieceFromPawn() {
+        throw new UnsupportedOperationException();  // stub = QUEEN?
+    }
+
+    @Override
+    public int getRowIndexFrom() {
+        return from.getRowIndex();
+    }
+
+    @Override
+    public int getColumnIndexFrom() {
+        return from.getColumnIndex();
+    }
+
+    @Override
+    public int getRowIndexTo() {
+        return to.getRowIndex();
+    }
+
+    @Override
+    public int getColumnIndexTo() {
+        return to.getColumnIndex();
+    }
+
     public PieceType getPieceFrom() {
         return from.getPieceType();
     }
 
     public PieceType getPieceTo() {
         return to.getPieceType();
-    }
-
-    public PointDTO getPointFrom() {
-        return from.getPoint();
-    }
-
-    public PointDTO getPointTo() {
-        return to.getPoint();
     }
 
     public boolean isEmptyFrom() {
@@ -104,7 +131,7 @@ public class ExtendedMove {
     }
 
     public MoveDTO toMoveDTO() {
-        //TODO: promotionPieceType can be not null
+        //TODO: pieceFromPawn can be not null
         return MoveDTO.valueOf(from.getPoint(), to.getPoint(), null);
     }
 

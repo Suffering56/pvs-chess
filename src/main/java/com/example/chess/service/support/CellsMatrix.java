@@ -3,13 +3,14 @@ package com.example.chess.service.support;
 import com.example.chess.Debug;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.History;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
+import com.example.chess.utils.BiIntFunction;
+import com.example.chess.utils.ChessUtils;
 import com.example.chess.utils.CommonUtils;
 import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
@@ -17,15 +18,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.*;
-import java.util.List;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.example.chess.ChessConstants.BOARD_SIZE;
-import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
-import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
+import static com.example.chess.ChessConstants.*;
 
 public final class CellsMatrix implements Immutable {
 
@@ -34,7 +31,7 @@ public final class CellsMatrix implements Immutable {
     private final List<List<CellDTO>> cellsMatrix;
     private Map<Side, PointDTO> kingPoints = new EnumMap<>(Side.class);
 
-    private CellsMatrix(int position, Function<Integer, Function<Integer, Piece>> pieceGenerator) {
+    private CellsMatrix(int position, BiIntFunction<Piece> pieceGenerator) {
         this.position = position;
         this.cellsMatrix = new ArrayList<>(BOARD_SIZE);
 
@@ -44,9 +41,9 @@ public final class CellsMatrix implements Immutable {
 
             //A-H
             for (int columnIndex = 0; columnIndex < BOARD_SIZE; columnIndex++) {
-                Piece piece = pieceGenerator.apply(rowIndex).apply(columnIndex);
-                CellDTO cell = CellDTO.valueOf(rowIndex, columnIndex, piece);
-                rowCells.add(cell);
+
+                Piece piece = pieceGenerator.apply(rowIndex, columnIndex);
+                rowCells.add(CellDTO.valueOf(rowIndex, columnIndex, piece));
 
                 if (piece != null && piece.getType() == PieceType.KING) {
                     kingPoints.put(piece.getSide(), PointDTO.valueOf(rowIndex, columnIndex));
@@ -65,101 +62,16 @@ public final class CellsMatrix implements Immutable {
         return getCell(point.getRowIndex(), point.getColumnIndex());
     }
 
-    public CellDTO getCell(History historyItem) {
-        return getCell(historyItem.getRowIndex(), historyItem.getColumnIndex());
-    }
-
-    public boolean isEmptyCell(int rowIndex, int columnIndex) {
-        return getCell(rowIndex, columnIndex).isEmpty();
-    }
-
     private void checkPoint(int rowIndex, int columnIndex) {
         Preconditions.checkElementIndex(rowIndex, BOARD_SIZE, "Out of board point");
         Preconditions.checkElementIndex(columnIndex, BOARD_SIZE, "Out of board point");
     }
 
-    /**
-     * Обычный ход.
-     * <p>
-     * description:
-     * - Перемещаем фигуру из положения #from(X.Y) в положение #to(X.Y).
-     * - Убираем фигуру из #from.
-     * - В #to ставим ту фигуру, которой ходим (кроме случаев превращения пешки)
-     * <p>
-     * Условие: это не рокировка и не взятие на проходе.
-     *
-     * @return MoveResult (contains new matrix with updated state)
-     */
-    public MoveResult executeMove(MoveDTO move, Piece pieceFromPawn) {
+    public MoveResult executeMove(Move move) {
         Debug.movesExecuted.incrementAndGet();
-        CellDTO cellFrom = getCell(move.getFrom());
-        CellDTO cellTo = getCell(move.getTo());
 
-        Piece pieceTo = cellFrom.getPiece();
-        if (pieceFromPawn != null) {
-            pieceTo = pieceFromPawn;
-        }
-
-        CellsMatrix newMatrix = CellsMatrix
-                .builder(this, position + 1)
-                //move any piece
-                .setPiece(cellTo.getPoint(), pieceTo)
-                .cutDownPiece(cellFrom.getPoint())
-                .build();
-
-        return MoveResult.valueOf(this, newMatrix);
-    }
-
-    /**
-     * Рокировка
-     * Условие: король передвинулся на две клетки
-     */
-    public MoveResult executeCastling(MoveDTO move) {
-        CellDTO kingCellFrom = getCell(move.getFrom());
-        CellDTO kingCellTo = getCell(move.getTo());
-
-        int rookRowIndex = move.getFrom().getRowIndex();
-        int kingColumnIndex = move.getFrom().getColumnIndex();
-
-        CellDTO rookCellFrom;
-        int rookColumnIndexTo;
-
-        if (move.isShortCastling()) {
-            rookCellFrom = getCell(rookRowIndex, ROOK_SHORT_COLUMN_INDEX);
-            rookColumnIndexTo = kingColumnIndex - 1;
-        } else {
-            rookCellFrom = getCell(rookRowIndex, ROOK_LONG_COLUMN_INDEX);
-            rookColumnIndexTo = kingColumnIndex + 1;
-        }
-
-        CellsMatrix newMatrix = CellsMatrix
-                .builder(this, position + 1)
-                //move king
-                .setPiece(kingCellTo.getPoint(), kingCellFrom.getPiece())
-                .cutDownPiece(kingCellFrom.getPoint())
-                //move rook
-                .setPiece(rookRowIndex, rookColumnIndexTo, rookCellFrom.getPiece())
-                .cutDownPiece(rookCellFrom.getPoint())
-                .build();
-
-        return MoveResult.valueOf(this, newMatrix);
-    }
-
-    /**
-     * Взятие на проходе
-     * Условие: пешка покинула свою вертикаль, но при этом встала на пустую клетку
-     */
-    public MoveResult executeEnPassant(MoveDTO move) {
-        CellDTO cellFrom = getCell(move.getFrom());
-        CellDTO cellTo = getCell(move.getTo());
-
-        CellsMatrix newMatrix = CellsMatrix
-                .builder(this, position + 1)
-                //move pawn
-                .setPiece(cellTo.getPoint(), cellFrom.getPiece())
-                .cutDownPiece(cellFrom.getPoint())
-                //cut down enemy pawn
-                .cutDownPiece(move.getFrom().getRowIndex(), move.getTo().getColumnIndex())
+        CellsMatrix newMatrix = builder(position + 1, this)
+                .executeMove(move)
                 .build();
 
         return MoveResult.valueOf(this, newMatrix);
@@ -169,55 +81,119 @@ public final class CellsMatrix implements Immutable {
         return new ArrangementDTO(position, cellsMatrix, underCheckSide);
     }
 
-    public static Builder builder(List<History> historyList, int position) {
-        return CellsMatrix.ofHistory(historyList, position).new Builder();
+    public static CellsMatrix ofMatrix(int newPosition, CellsMatrix prevMatrix) {
+        return builder(newPosition, prevMatrix).build();
     }
 
-    private static CellsMatrix ofHistory(List<History> historyList, int position) {
-        Map<Integer, Map<Integer, Piece>> historyMap = historyList
-                .stream()
-                .collect(Collectors.groupingBy(History::getRowIndex,
-                        Collectors.toMap(History::getColumnIndex, History::getPiece)));
-
-        return new CellsMatrix(position, rowIndex -> columnIndex -> {
-            Map<Integer, Piece> subMap = historyMap.get(rowIndex);
-            if (subMap != null) {
-                return subMap.get(columnIndex);
-            }
-            return null;
-        });
-    }
-
-    public static Builder builder(CellsMatrix prevMatrix, int position) {
-        return CellsMatrix.ofOtherMatrix(prevMatrix, position).new Builder();
-    }
-
-    private static CellsMatrix ofOtherMatrix(CellsMatrix prevMatrix, int position) {
-        return new CellsMatrix(position, rowIndex -> columnIndex -> {
+    private static Builder builder(int position, CellsMatrix prevMatrix) {
+        return new CellsMatrix(position, (rowIndex, columnIndex) -> {
             CellDTO cell = prevMatrix.getCell(rowIndex, columnIndex);
             return cell.getPiece();
-        });
+        }).new Builder();
+    }
+
+    public static CellsMatrix ofHistory(int newPosition, List<History> historyList) {
+        return builder(newPosition, historyList).build();
+    }
+
+    private static Builder builder(int position, List<History> historyList) {
+        Builder builder = new CellsMatrix(position, ChessUtils.START_ARRANGEMENT_GENERATOR).new Builder();
+        historyList.forEach(builder::executeMove);
+        return builder;
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public class Builder {
 
-        public Builder setPiece(int rowIndex, int columnIndex, Piece piece) {
+        private Builder executeMove(Move move) {
+            Piece pieceFrom = getCell(move.getPointFrom()).getPiece();
+
+            if (isCastling(move, pieceFrom)) {
+                return executeCastling(move, pieceFrom);
+            } else if (isEnPassant(move, pieceFrom)) {
+                return executeEnPassant(move, pieceFrom);
+            } else {
+                if (isPawnTransformation(move, pieceFrom)) {
+                    Preconditions.checkNotNull(move.getPieceFromPawn(), "Piece from pawn can't be null");
+                    pieceFrom = Piece.of(pieceFrom.getSide(), move.getPieceFromPawn());
+                }
+                return executeSimpleMove(move, pieceFrom);
+            }
+        }
+
+        /**
+         * Обычный ход.
+         * <p>
+         * description:
+         * - Перемещаем фигуру из положения #from(X.Y) в положение #to(X.Y).
+         * - Убираем фигуру из #from.
+         * - В #to ставим ту фигуру, которой ходим (кроме случаев превращения пешки)
+         * <p>
+         * Условие: это не рокировка и не взятие на проходе.
+         *
+         * @return MoveResult (contains new matrix with updated state)
+         */
+        private Builder executeSimpleMove(Move move, Piece pieceFrom) {
+            return cutPiece(move.getRowIndexFrom(), move.getColumnIndexFrom())              //убираем свою фигуру
+                    .setPiece(move.getRowIndexTo(), move.getColumnIndexTo(), pieceFrom);    //убираем свою фигуру на новое место (не зависимо от того, занята была ячейка или нет)
+        }
+
+        /**
+         * Рокировка
+         * Условие: король передвинулся на две клетки
+         */
+        private Builder executeCastling(Move move, Piece king) {
+            int kingColumnIndexFrom = move.getColumnIndexFrom();
+            int rookColumnIndexFrom;
+            int rookColumnIndexTo;
+
+            if (move.isLongCastling()) {
+                rookColumnIndexFrom = ROOK_LONG_COLUMN_INDEX;
+                rookColumnIndexTo = kingColumnIndexFrom + 1;
+            } else {
+                rookColumnIndexFrom = ROOK_SHORT_COLUMN_INDEX;
+                rookColumnIndexTo = kingColumnIndexFrom - 1;
+            }
+
+            Piece rook = getCell(move.getRowIndexFrom(), rookColumnIndexFrom).getPiece();
+
+            return cutPiece(move.getRowIndexFrom(), rookColumnIndexFrom)        //убираем ладью
+                    .setPiece(move.getRowIndexFrom(), rookColumnIndexTo, rook)  //ставим ладью на новое место
+                    .executeSimpleMove(move, king);                             //перемещаем короля
+        }
+
+        /**
+         * Взятие на проходе
+         * Условие: пешка покинула свою вертикаль, но при этом встала на пустую клетку
+         */
+        private Builder executeEnPassant(Move move, Piece pieceFrom) {
+            return cutPiece(move.getRowIndexFrom(), move.getColumnIndexTo())    //убираем вражескую пешку взятую на проходе
+                    .executeSimpleMove(move, pieceFrom);                        //перемещаем свою пешку
+        }
+
+        private boolean isCastling(Move move, Piece pieceFrom) {
+            return pieceFrom.isKing() && move.isCastling();
+        }
+
+        private boolean isEnPassant(Move move, Piece pieceFrom) {
+            if (pieceFrom.isPawn() && move.isPawnAttacks()) {
+                return getCell(move.getRowIndexFrom(), move.getColumnIndexTo()) != null;
+            }
+            return false;
+        }
+
+        private boolean isPawnTransformation(Move move, Piece pieceFrom) {
+            return pieceFrom.isPawn() && (move.getRowIndexTo() == 0 || move.getRowIndexTo() == 7);
+        }
+
+        private Builder setPiece(int rowIndex, int columnIndex, Piece piece) {
             CellDTO cell = getCell(rowIndex, columnIndex);
             CellsMatrix.this.cellsMatrix.get(rowIndex).set(columnIndex, cell.switchPiece(piece));
             return this;
         }
 
-        public Builder setPiece(PointDTO point, Piece piece) {
-            return setPiece(point.getRowIndex(), point.getColumnIndex(), piece);
-        }
-
-        public Builder cutDownPiece(int rowIndex, int columnIndex) {
+        private Builder cutPiece(int rowIndex, int columnIndex) {
             return setPiece(rowIndex, columnIndex, null);
-        }
-
-        public Builder cutDownPiece(PointDTO point) {
-            return setPiece(point, null);
         }
 
         public CellsMatrix build() {
@@ -288,13 +264,6 @@ public final class CellsMatrix implements Immutable {
 
     private Predicate<CellDTO> containsSide(Side side) {
         return cell -> cell.getSide() == side;
-    }
-
-    public List<History> generateHistory(Long gameId, int position) {
-        return allPiecesStream()
-                .filter(cell -> cell.getPiece() != null)
-                .map(cell -> History.ofCell(cell, gameId, position))
-                .collect(Collectors.toList());
     }
 
     public Set<PointDTO> findPiecesCoords(Side side, PieceType... pieceTypes) {

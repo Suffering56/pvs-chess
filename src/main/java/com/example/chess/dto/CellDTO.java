@@ -11,18 +11,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.experimental.FieldDefaults;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.Objects;
 
 @Getter
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CellDTO implements Immutable {
 
-    private final int rowIndex;
-    private final int columnIndex;
-    private final Piece piece;
+    int rowIndex;
+    int columnIndex;
+    Piece piece;
 
     @JsonCreator
     public static CellDTO valueOf(@JsonProperty int rowIndex, @JsonProperty int columnIndex, @JsonProperty Piece piece) {

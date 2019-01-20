@@ -6,15 +6,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 import java.util.Objects;
 
 @Getter
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PointDTO implements Immutable {
 
-    private final int rowIndex;
-    private final int columnIndex;
+    int rowIndex;
+    int columnIndex;
 
     private static PointDTO[][] pointsArray = new PointDTO[8][8];
 

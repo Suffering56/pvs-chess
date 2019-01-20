@@ -9,7 +9,6 @@ import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.exceptions.UnattainablePointException;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
@@ -62,7 +61,7 @@ public abstract class AbstractBotService implements BotService {
                 MoveDTO moveDTO = findBestMove(game.toFakeBuilder().build(), actualMatrix, botSide);
                 gameService.applyMove(game, moveDTO);
                 TimeUnit.SECONDS.sleep(1);
-            } catch (HistoryNotFoundException | GameNotFoundException | InterruptedException e) {
+            } catch (GameNotFoundException | InterruptedException e) {
                 log.error(e.getMessage(), e);
             }
         });
@@ -85,13 +84,10 @@ public abstract class AbstractBotService implements BotService {
                 .getStandardMovesStream(botSide)
                 .peek(potentialMove -> {
                     Piece pieceFromPawn = Piece.of(botSide, PieceType.QUEEN);
-                    if (potentialMove.isPawnTransformation());
+                    if (potentialMove.isPawnTransformation()) ;
                     //TODO: piece from pawn
 //                    originalMatrix.executeMove(potentialMove, )
                 });
-
-
-
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
@@ -105,9 +101,9 @@ public abstract class AbstractBotService implements BotService {
         Debug.printCounters();
         System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
 
-        PieceType promotionPieceType = null;
+        PieceType pieceFromPawn = null;
         if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
-            promotionPieceType = PieceType.QUEEN;
+            pieceFromPawn = PieceType.QUEEN;
         }
 
         MoveDTO predestinedMove = Debug.getPredestinedMove(originalMatrix.getPosition());
@@ -115,7 +111,7 @@ public abstract class AbstractBotService implements BotService {
             return predestinedMove;
         }
 
-        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
+        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
     }
 
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
@@ -167,7 +163,7 @@ public abstract class AbstractBotService implements BotService {
                 .stream()
                 .peek(calculateRating(fakeGame, originalMatrix, botSide, false))
                 .peek(analyzedMove -> {
-                    CellsMatrix firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null).getNewMatrix();
+                    CellsMatrix firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove).getNewMatrix();
 
 
                     List<ExtendedMove> playerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
@@ -179,7 +175,7 @@ public abstract class AbstractBotService implements BotService {
                             .stream()
                             .peek(calculateRating(fakeGame, firstMatrixPlayerNext, playerSide, false))
                             .map(playerMove -> {
-                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
+                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove).getNewMatrix();
 
                                 int maxByBot = MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
                                         .getStandardMovesStream(botSide)

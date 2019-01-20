@@ -3,8 +3,6 @@ package com.example.chess.utils;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
-import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.exceptions.HistoryNotFoundException;
 import com.example.chess.service.support.ExtendedMove;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -102,7 +100,7 @@ public class CommonUtils {
         }
         if (pieceType == PieceType.PAWN) {
             if (printPawnName) {
-                return "P";
+                return "p";
             } else {
                 return " ";
             }
