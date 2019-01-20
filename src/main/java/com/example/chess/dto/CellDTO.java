@@ -3,8 +3,8 @@ package com.example.chess.dto;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
-import com.example.chess.service.support.Immutable;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.utils.Immutable;
+import com.example.chess.logic.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,8 +18,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import java.util.Objects;
 
 @Getter
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public final class CellDTO implements Immutable {
 
     int rowIndex;
@@ -54,11 +54,6 @@ public final class CellDTO implements Immutable {
             return null;
         }
         return piece.getType();
-    }
-
-    @JsonIgnore
-    public Side getEnemySide() {
-        return piece.getSide().reverse();
     }
 
     @JsonIgnore

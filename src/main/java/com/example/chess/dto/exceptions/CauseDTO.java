@@ -1,6 +1,6 @@
 package com.example.chess.dto.exceptions;
 
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.utils.CommonUtils;
 import lombok.Getter;
 import lombok.Setter;
 

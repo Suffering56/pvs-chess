@@ -1,6 +1,6 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects;
 
-import com.example.chess.Debug;
+import com.example.chess.logic.debug.Debug;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
@@ -9,9 +9,12 @@ import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
-import com.example.chess.utils.BiIntFunction;
-import com.example.chess.utils.ChessUtils;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.utils.Immutable;
+import com.example.chess.logic.objects.move.Move;
+import com.example.chess.logic.objects.move.MoveResult;
+import com.example.chess.logic.utils.BiIntFunction;
+import com.example.chess.logic.utils.ChessUtils;
+import com.example.chess.logic.utils.CommonUtils;
 import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -22,7 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.example.chess.ChessConstants.*;
+import static com.example.chess.logic.ChessConstants.*;
 
 public final class CellsMatrix implements Immutable {
 

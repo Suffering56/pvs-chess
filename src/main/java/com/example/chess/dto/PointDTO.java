@@ -1,14 +1,17 @@
 package com.example.chess.dto;
 
-import com.example.chess.service.support.Immutable;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.utils.Immutable;
+import com.example.chess.logic.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 
 import java.util.Objects;
+
+import static com.example.chess.logic.ChessConstants.BOARD_SIZE;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -18,11 +21,11 @@ public final class PointDTO implements Immutable {
     int rowIndex;
     int columnIndex;
 
-    private static PointDTO[][] pointsArray = new PointDTO[8][8];
+    private static PointDTO[][] pointsArray = new PointDTO[BOARD_SIZE][BOARD_SIZE];
 
     static {
-        for (int rowIndex = 0; rowIndex < 8; rowIndex++) {
-            for (int columnIndex = 0; columnIndex < 8; columnIndex++) {
+        for (int rowIndex = 0; rowIndex < BOARD_SIZE; rowIndex++) {
+            for (int columnIndex = 0; columnIndex < BOARD_SIZE; columnIndex++) {
                 pointsArray[rowIndex][columnIndex] = new PointDTO(rowIndex, columnIndex);
             }
         }
@@ -33,10 +36,6 @@ public final class PointDTO implements Immutable {
         return pointsArray[rowIndex][columnIndex];
     }
 
-    public static boolean isCorrectIndex(int index) {
-        return index >= 0 && index < 8;
-    }
-
     public static boolean isCorrectIndex(int... indexes) {
         for (int index : indexes) {
             if (index < 0 || index >= 8) {
@@ -45,31 +44,6 @@ public final class PointDTO implements Immutable {
         }
 
         return true;
-    }
-
-    public PointDTO setRowIndex(int rowIndex) {
-        return new PointDTO(rowIndex, this.columnIndex);
-    }
-
-    public PointDTO setColumnIndex(int columnIndex) {
-        return new PointDTO(this.rowIndex, columnIndex);
-    }
-
-    @JsonIgnore
-    public boolean isNotBorderedBy(PointDTO other) {
-        if (equals(other)) {
-            throw new RuntimeException("invoked: isNotBorderedBy(SELF!!!)");
-        }
-
-        int rowDiff = Math.abs(rowIndex - other.rowIndex);
-        int columnDiff = Math.abs(columnIndex - other.columnIndex);
-        int diff = rowDiff + columnDiff;
-
-        if (diff == 1) {
-            return false;
-        } else {
-            return diff != 2 || rowDiff != columnDiff;
-        }
     }
 
     /**

@@ -1,7 +1,7 @@
 package com.example.chess;
 
-import com.example.chess.service.support.BotMode;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.debug.BotMode;
+import com.example.chess.logic.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -27,6 +27,5 @@ public class App implements CommandLineRunner {
     public static String getVersion() {
         return CommonUtils.readGradleProperty("project.version");
     }
-
 
 }

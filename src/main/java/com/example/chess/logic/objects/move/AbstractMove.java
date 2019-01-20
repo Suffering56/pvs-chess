@@ -1,4 +1,4 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects.move;
 
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;

@@ -1,17 +1,22 @@
-package com.example.chess.service.support;
+package com.example.chess.logic;
 
-import com.example.chess.Debug;
+import com.example.chess.logic.debug.Debug;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
-import com.example.chess.exceptions.UnattainablePointException;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.objects.game.FakeGame;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -123,7 +128,7 @@ public class MoveHelper {
                     filterData.excludePoints = calculateExcludePoints(source, kingPoint);
                     break;
                 case KING:
-                    throw new UnattainablePointException();
+                    throw new UnsupportedOperationException();
             }
         }
     }
@@ -252,7 +257,7 @@ public class MoveHelper {
                 }
                 return betweenParams;
             default:
-                throw new UnattainablePointException();
+                throw new UnsupportedOperationException();
         }
     }
 

@@ -1,8 +1,7 @@
-package com.example.chess.utils;
+package com.example.chess.logic.utils;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 
 public class CustomResponse extends ResponseEntity<String> {
 

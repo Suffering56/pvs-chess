@@ -5,7 +5,7 @@ import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.service.support.CellsMatrix;
+import com.example.chess.logic.objects.CellsMatrix;
 
 import java.util.Set;
 

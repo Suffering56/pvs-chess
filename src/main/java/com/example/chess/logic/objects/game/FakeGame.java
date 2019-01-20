@@ -1,17 +1,16 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects.game;
 
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Side;
+import com.example.chess.logic.utils.Immutable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FakeGame implements Gameplay, Immutable {

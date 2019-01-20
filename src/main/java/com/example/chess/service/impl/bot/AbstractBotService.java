@@ -1,18 +1,22 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.ChessConstants;
-import com.example.chess.Debug;
+import com.example.chess.logic.ChessConstants;
+import com.example.chess.logic.debug.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
+import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.exceptions.UnattainablePointException;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.Rating;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.objects.game.FakeGame;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.*;
+import com.example.chess.logic.*;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -131,7 +135,7 @@ public abstract class AbstractBotService implements BotService {
         int max = botAvailableMoves
                 .stream()
                 .mapToInt(ExtendedMove::getTotal)
-                .max().orElseThrow(UnattainablePointException::new);
+                .max().orElseThrow(UnsupportedOperationException::new);
 
         List<ExtendedMove> topMovesList = botAvailableMoves
                 .stream()

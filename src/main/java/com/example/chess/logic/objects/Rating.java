@@ -1,5 +1,6 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects;
 
+import com.example.chess.enums.RatingParam;
 import lombok.Getter;
 
 import java.util.LinkedHashMap;

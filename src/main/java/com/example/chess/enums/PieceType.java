@@ -1,22 +1,23 @@
 package com.example.chess.enums;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 
 @Getter
-@NoArgsConstructor
+@AllArgsConstructor
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public enum PieceType {
-    PAWN(1), KNIGHT(3), BISHOP(3), ROOK(5), QUEEN(9, 4), KING(9999, 3);
+    PAWN(1),
+    KNIGHT(3),
+    BISHOP(3),
+    ROOK(5),
+    QUEEN(9, 4),
+    KING(9999, 3);
 
-    private int value;
-    private int startColumnIndex;
-
-    PieceType(int value, int startColumnIndex) {
-        this.startColumnIndex = startColumnIndex;
-        this.value = value;
-    }
-
-    PieceType(int value) {
-        this.value = value;
-    }
+    final int value;
+    int startColumnIndex;
 }

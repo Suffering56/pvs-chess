@@ -1,11 +1,13 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects.move;
 
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.objects.Rating;
+import com.example.chess.enums.RatingParam;
+import com.example.chess.logic.utils.CommonUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;

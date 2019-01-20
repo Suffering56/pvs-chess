@@ -11,9 +11,10 @@ import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.CellsMatrix;
-import com.example.chess.service.support.MoveHelper;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.MoveHelper;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final HistoryRepository historyRepository;
 
+    @Autowired
     public GameServiceImpl(GameRepository gameRepository, HistoryRepository historyRepository) {
         this.gameRepository = gameRepository;
         this.historyRepository = historyRepository;

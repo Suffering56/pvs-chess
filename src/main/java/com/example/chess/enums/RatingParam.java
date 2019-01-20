@@ -1,6 +1,6 @@
-package com.example.chess.service.support;
+package com.example.chess.enums;
 
-import com.example.chess.ChessConstants;
+import com.example.chess.logic.ChessConstants;
 import lombok.Getter;
 
 @Getter

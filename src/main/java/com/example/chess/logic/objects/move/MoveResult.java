@@ -1,5 +1,7 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects.move;
 
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.utils.Immutable;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

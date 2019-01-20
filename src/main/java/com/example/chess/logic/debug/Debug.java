@@ -1,12 +1,14 @@
-package com.example.chess;
+package com.example.chess.logic.debug;
 
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
+import lombok.experimental.UtilityClass;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+@UtilityClass
 public class Debug {
 
     private static final boolean DESTINY_ENABLED = false;

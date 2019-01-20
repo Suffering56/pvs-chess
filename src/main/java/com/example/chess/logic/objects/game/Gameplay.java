@@ -1,4 +1,4 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects.game;
 
 import com.example.chess.enums.Side;
 

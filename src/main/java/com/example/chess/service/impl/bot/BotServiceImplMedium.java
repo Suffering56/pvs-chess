@@ -1,13 +1,18 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.ChessConstants;
+import com.example.chess.logic.ChessConstants;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
+import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
-import com.example.chess.exceptions.UnattainablePointException;
-import com.example.chess.service.support.*;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.*;
+import com.example.chess.logic.debug.BotMode;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.Rating;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.objects.game.FakeGame;
+import com.example.chess.logic.utils.CommonUtils;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -430,7 +435,7 @@ public class BotServiceImplMedium extends AbstractBotService {
             }
 
             //ситуации, когда код доберется сюда быть не должно. по крайней мере я такую придумать не смог
-            throw new UnattainablePointException();
+            throw new UnsupportedOperationException();
         }
 
         //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой

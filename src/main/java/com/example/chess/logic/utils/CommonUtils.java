@@ -1,9 +1,10 @@
-package com.example.chess.utils;
+package com.example.chess.logic.utils;
 
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
-import com.example.chess.service.support.ExtendedMove;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.CharacterPredicates;
@@ -15,6 +16,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Log4j2
+@UtilityClass
 public class CommonUtils {
 
     private static final String GRADLE_PROPERTIES_PATH = System.getProperty("user.dir") + "/gradle.properties";

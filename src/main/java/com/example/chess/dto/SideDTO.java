@@ -2,31 +2,30 @@ package com.example.chess.dto;
 
 import com.example.chess.enums.Side;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class SideDTO {
 
-	public static String VIEWER = "VIEWER";
+    public static final String VIEWER = "VIEWER";
 
-	private String side;
+    String side;
 
-	public SideDTO(Side side) {
-		this.side = side.name();
-	}
+    public SideDTO(Side side) {
+        this.side = side.name();
+    }
 
-	@JsonIgnore
-	public Side getSideAsEnum() {
-		return Side.valueOf(side);
-	}
+    @JsonIgnore
+    public Side getSideAsEnum() {
+        return Side.valueOf(side);
+    }
 
-	public static SideDTO createUnselected() {
-		return new SideDTO();
-	}
+    public static SideDTO createUnselected() {
+        return new SideDTO();
+    }
 }

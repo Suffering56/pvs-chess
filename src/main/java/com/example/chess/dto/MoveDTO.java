@@ -3,9 +3,9 @@ package com.example.chess.dto;
 import com.example.chess.entity.History;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
-import com.example.chess.service.support.AbstractMove;
-import com.example.chess.service.support.Immutable;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.objects.move.AbstractMove;
+import com.example.chess.logic.utils.Immutable;
+import com.example.chess.logic.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -17,8 +17,8 @@ import lombok.experimental.FieldDefaults;
 
 @Getter
 @ToString
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public final class MoveDTO extends AbstractMove implements Immutable {
 
     PointDTO from;

@@ -1,15 +1,14 @@
 package com.example.chess.service.impl.bot;
 
 import com.example.chess.enums.Side;
-import com.example.chess.service.support.BotMode;
-import com.example.chess.service.support.CellsMatrix;
-import com.example.chess.service.support.ExtendedMove;
-import com.example.chess.service.support.FakeGame;
+import com.example.chess.logic.debug.BotMode;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.objects.game.FakeGame;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 @Log4j2

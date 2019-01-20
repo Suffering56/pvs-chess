@@ -1,4 +1,4 @@
-package com.example.chess.utils;
+package com.example.chess.logic.utils;
 
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;

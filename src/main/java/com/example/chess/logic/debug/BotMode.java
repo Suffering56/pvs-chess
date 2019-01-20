@@ -1,5 +1,8 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.debug;
 
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
 public class BotMode {
     public static final String RANDOM = "RANDOM";
     public static final String GREEDY = "GREEDY";

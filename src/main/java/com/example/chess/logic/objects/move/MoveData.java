@@ -1,6 +1,7 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects.move;
 
 import com.example.chess.enums.Side;
+import com.example.chess.logic.objects.CellsMatrix;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;

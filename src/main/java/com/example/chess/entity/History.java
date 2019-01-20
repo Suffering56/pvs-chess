@@ -2,7 +2,7 @@ package com.example.chess.entity;
 
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
-import com.example.chess.service.support.AbstractMove;
+import com.example.chess.logic.objects.move.AbstractMove;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 

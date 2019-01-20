@@ -1,4 +1,4 @@
-package com.example.chess.utils;
+package com.example.chess.logic.utils;
 
 @FunctionalInterface
 public interface BiIntFunction<T> {

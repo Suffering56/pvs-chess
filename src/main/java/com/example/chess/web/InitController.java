@@ -12,7 +12,7 @@ import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.utils.CustomResponse;
+import com.example.chess.logic.utils.CustomResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
