@@ -28,34 +28,29 @@ public final class CellsMatrix implements Immutable {
 
     @Getter
     private final int position;
-    private final List<List<CellDTO>> cellsMatrix;
+    private final CellDTO[][] matrix = new CellDTO[BOARD_SIZE][BOARD_SIZE];
     private Map<Side, PointDTO> kingPoints = new EnumMap<>(Side.class);
 
     private CellsMatrix(int position, BiIntFunction<Piece> pieceGenerator) {
         this.position = position;
-        this.cellsMatrix = new ArrayList<>(BOARD_SIZE);
-
         //1-8
         for (int rowIndex = 0; rowIndex < BOARD_SIZE; rowIndex++) {
-            List<CellDTO> rowCells = new ArrayList<>(BOARD_SIZE);
-
             //A-H
             for (int columnIndex = 0; columnIndex < BOARD_SIZE; columnIndex++) {
 
                 Piece piece = pieceGenerator.apply(rowIndex, columnIndex);
-                rowCells.add(CellDTO.valueOf(rowIndex, columnIndex, piece));
+                matrix[rowIndex][columnIndex] = CellDTO.valueOf(rowIndex, columnIndex, piece);
 
                 if (piece != null && piece.getType() == PieceType.KING) {
                     kingPoints.put(piece.getSide(), PointDTO.valueOf(rowIndex, columnIndex));
                 }
             }
-            cellsMatrix.add(rowCells);
         }
     }
 
     public CellDTO getCell(int rowIndex, int columnIndex) {
         checkPoint(rowIndex, columnIndex);
-        return cellsMatrix.get(rowIndex).get(columnIndex);
+        return matrix[rowIndex][columnIndex];
     }
 
     public CellDTO getCell(PointDTO point) {
@@ -78,11 +73,7 @@ public final class CellsMatrix implements Immutable {
     }
 
     public ArrangementDTO generateArrangement(Side underCheckSide) {
-        return new ArrangementDTO(position, cellsMatrix, underCheckSide);
-    }
-
-    public static CellsMatrix ofMatrix(int newPosition, CellsMatrix prevMatrix) {
-        return builder(newPosition, prevMatrix).build();
+        return new ArrangementDTO(position, matrix, underCheckSide);
     }
 
     private static Builder builder(int position, CellsMatrix prevMatrix) {
@@ -188,7 +179,7 @@ public final class CellsMatrix implements Immutable {
 
         private Builder setPiece(int rowIndex, int columnIndex, Piece piece) {
             CellDTO cell = getCell(rowIndex, columnIndex);
-            CellsMatrix.this.cellsMatrix.get(rowIndex).set(columnIndex, cell.switchPiece(piece));
+            CellsMatrix.this.matrix[rowIndex][columnIndex] = cell.switchPiece(piece);
             return this;
         }
 
@@ -206,9 +197,9 @@ public final class CellsMatrix implements Immutable {
      */
     public Stream<CellDTO> allPiecesStream() {
         if (Debug.IS_PARALLEL) {
-            return cellsMatrix.parallelStream().flatMap(List::stream);
+            return Arrays.stream(matrix).parallel().flatMap(Arrays::stream);
         } else {
-            return cellsMatrix.stream().flatMap(List::stream);
+            return Arrays.stream(matrix).flatMap(Arrays::stream);
         }
     }
 
@@ -283,9 +274,8 @@ public final class CellsMatrix implements Immutable {
 
     public void print() {
         for (int i = 7; i >= 0; i--) {
-            List<CellDTO> rows = cellsMatrix.get(i);
             for (int j = 7; j >= 0; j--) {
-                System.out.print(cellToStr(rows.get(j)) + "\t");
+                System.out.print(cellToStr(matrix[i][j]) + "\t");
             }
             System.out.println();
         }
