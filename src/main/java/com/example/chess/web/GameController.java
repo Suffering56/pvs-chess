@@ -7,8 +7,10 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.GameMode;
 import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
@@ -38,15 +40,15 @@ public class GameController {
 
     @PostMapping("/{gameId}/move")
     public ArrangementDTO applyMove(@PathVariable("gameId") long gameId,
-                                    @RequestBody MoveDTO dto) throws GameNotFoundException {
+                                    @RequestBody MoveDTO move) throws GameNotFoundException {
 
         Game game = gameService.findAndCheckGame(gameId);
-        ArrangementDTO arrangementDTO = gameService.applyMove(game, dto);
+        Pair<CellsMatrix, ArrangementDTO> pair = gameService.applyMove(game, move);
 
         if (game.getMode() == GameMode.AI) {
-            botService.applyBotMove(game);
+            botService.applyBotMove(game, move.toExtendedMove(pair.getKey()));
         }
-        return arrangementDTO;
+        return pair.getValue();
     }
 
     @GetMapping("/{gameId}/listen")

@@ -1,12 +1,11 @@
 package com.example.chess.logic.objects.move;
 
 import com.example.chess.dto.CellDTO;
-import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
+import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
 import com.example.chess.logic.objects.Rating;
-import com.example.chess.enums.RatingParam;
 import com.example.chess.logic.utils.CommonUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -46,7 +45,10 @@ public class ExtendedMove extends AbstractMove {
 
     @Override
     public PieceType getPieceFromPawn() {
-        throw new UnsupportedOperationException();  // stub = QUEEN?
+        if (isPawnTransformation()) {
+            return PieceType.QUEEN;
+        }
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -93,6 +95,10 @@ public class ExtendedMove extends AbstractMove {
         return isEmptyTo();
     }
 
+    private boolean isPawnTransformation() {
+        return getPieceFrom() == PieceType.PAWN && (getPointTo().getRowIndex() == 0 || getPointTo().getRowIndex() == 7);
+    }
+
     public int getValueFrom() {
         return Objects.requireNonNull(getPieceFrom()).getValue();
     }
@@ -123,22 +129,17 @@ public class ExtendedMove extends AbstractMove {
         return this.getPointTo().equals(pointTo);
     }
 
-    public int getTotal() {
-        return total;
-    }
-
     public void updateTotalByGreedy() {
         int value = getPieceTo() != null ? getPieceTo().getValue() : 0;
         updateRating(Rating.builder().build(RatingParam.GREEDY, value));
     }
 
-    public MoveDTO toMoveDTO() {
-        //TODO: pieceFromPawn can be not null
-        return MoveDTO.valueOf(from.getPoint(), to.getPoint(), null);
-    }
-
     public Side getSide() {
         return from.getSide();
+    }
+
+    public int getTotal() {
+        return total;
     }
 
     @Override
@@ -149,9 +150,5 @@ public class ExtendedMove extends AbstractMove {
         }
 
         return result.toString();
-    }
-
-    public boolean isPawnTransformation() {
-        return getPieceFrom() == PieceType.PAWN && (getPointTo().getRowIndex() == 0 || getPointTo().getRowIndex() == 7);
     }
 }

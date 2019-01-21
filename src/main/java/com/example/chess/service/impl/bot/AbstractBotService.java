@@ -1,24 +1,23 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.logic.ChessConstants;
-import com.example.chess.logic.debug.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
-import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.logic.ChessConstants;
+import com.example.chess.logic.MoveHelper;
+import com.example.chess.logic.debug.Debug;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.Rating;
-import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.logic.objects.game.FakeGame;
+import com.example.chess.logic.objects.game.GameState;
+import com.example.chess.logic.objects.game.RootGameState;
+import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.logic.*;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 @Log4j2
@@ -57,13 +57,17 @@ public abstract class AbstractBotService implements BotService {
 
     @Profile
     @Override
-    public void applyBotMove(Game game) {
+    public void applyBotMove(Game game, ExtendedMove playerLastMove) {
         executorService.execute(() -> {
             try {
-                CellsMatrix actualMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
                 Side botSide = game.getActiveSide();
-                MoveDTO moveDTO = findBestMove(game.toFakeBuilder().build(), actualMatrix, botSide);
-                gameService.applyMove(game, moveDTO);
+                CellsMatrix originalMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
+
+                RootGameState rootNode = RootGameState.of(game.toFakeBuilder().build(), originalMatrix, playerLastMove, botSide);
+
+                MoveDTO nextBotMove = findBestMove(rootNode);
+                gameService.applyMove(game, nextBotMove);
+
                 TimeUnit.SECONDS.sleep(1);
             } catch (GameNotFoundException | InterruptedException e) {
                 log.error(e.getMessage(), e);
@@ -71,27 +75,16 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-    @NoArgsConstructor
-    @AllArgsConstructor
-    class PositionNode {
-        int position;
-        CellsMatrix matrix;
-        ExtendedMove lastMove;
-    }
-
-    private MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide) {
+    private MoveDTO findBestMove(RootGameState rootNode) {
         long start = System.currentTimeMillis();
         Debug.resetCounters();
+        CellsMatrix originalMatrix = rootNode.getMatrix();
+        Side botSide = rootNode.getBotSide();
+        FakeGame fakeGame = rootNode.getGame();
 
-
-        MoveHelper.valueOf(fakeGame, originalMatrix)
+        Stream<GameState> gameStateStream = MoveHelper.valueOf(fakeGame, originalMatrix)
                 .getStandardMovesStream(botSide)
-                .peek(potentialMove -> {
-                    Piece pieceFromPawn = Piece.of(botSide, PieceType.QUEEN);
-                    if (potentialMove.isPawnTransformation()) ;
-                    //TODO: piece from pawn
-//                    originalMatrix.executeMove(potentialMove, )
-                });
+                .map(rootNode::executeMove);
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
@@ -167,7 +160,7 @@ public abstract class AbstractBotService implements BotService {
                 .stream()
                 .peek(calculateRating(fakeGame, originalMatrix, botSide, false))
                 .peek(analyzedMove -> {
-                    CellsMatrix firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove).getNewMatrix();
+                    CellsMatrix firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove);
 
 
                     List<ExtendedMove> playerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
@@ -179,7 +172,7 @@ public abstract class AbstractBotService implements BotService {
                             .stream()
                             .peek(calculateRating(fakeGame, firstMatrixPlayerNext, playerSide, false))
                             .map(playerMove -> {
-                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove).getNewMatrix();
+                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove);
 
                                 int maxByBot = MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
                                         .getStandardMovesStream(botSide)

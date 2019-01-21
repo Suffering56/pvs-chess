@@ -6,6 +6,7 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.objects.CellsMatrix;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Set;
 
@@ -15,7 +16,7 @@ public interface GameService {
 
     ArrangementDTO createArrangementByGame(Game game, int position);
 
-    ArrangementDTO applyMove(Game gameId, MoveDTO dto) throws GameNotFoundException;
+    Pair<CellsMatrix, ArrangementDTO> applyMove(Game gameId, MoveDTO dto) throws GameNotFoundException;
 
     Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException;
 

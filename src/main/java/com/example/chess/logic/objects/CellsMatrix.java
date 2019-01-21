@@ -11,7 +11,6 @@ import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
 import com.example.chess.logic.utils.Immutable;
 import com.example.chess.logic.objects.move.Move;
-import com.example.chess.logic.objects.move.MoveResult;
 import com.example.chess.logic.utils.BiIntFunction;
 import com.example.chess.logic.utils.ChessUtils;
 import com.example.chess.logic.utils.CommonUtils;
@@ -65,14 +64,12 @@ public final class CellsMatrix implements Immutable {
         Preconditions.checkElementIndex(columnIndex, BOARD_SIZE, "Out of board point");
     }
 
-    public MoveResult executeMove(Move move) {
+    public CellsMatrix executeMove(Move move) {
         Debug.movesExecuted.incrementAndGet();
 
-        CellsMatrix newMatrix = builder(position + 1, this)
+        return builder(position + 1, this)
                 .executeMove(move)
                 .build();
-
-        return MoveResult.valueOf(this, newMatrix);
     }
 
     public ArrangementDTO generateArrangement(Side underCheckSide) {

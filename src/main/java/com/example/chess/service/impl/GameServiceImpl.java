@@ -8,12 +8,13 @@ import com.example.chess.entity.History;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.logic.MoveHelper;
+import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.GameService;
-import com.example.chess.logic.objects.CellsMatrix;
-import com.example.chess.logic.MoveHelper;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +43,7 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public ArrangementDTO applyMove(Game game, MoveDTO move) {
+    public Pair<CellsMatrix, ArrangementDTO> applyMove(Game game, MoveDTO move) {
         CellsMatrix prevMatrix = createCellsMatrixByGame(game, game.getPosition());
 
         Piece pieceFrom = prevMatrix.getCell(move.getFrom()).getPiece();
@@ -68,7 +69,7 @@ public class GameServiceImpl implements GameService {
         }
 
         Side enemySide = sideFrom.reverse();
-        CellsMatrix nextMatrix = prevMatrix.executeMove(move).getNewMatrix();
+        CellsMatrix nextMatrix = prevMatrix.executeMove(move);
 
         if (MoveHelper.valueOf(game.toFakeBuilder().build(), nextMatrix).isKingUnderAttack(enemySide)) {
             /*
@@ -85,7 +86,8 @@ public class GameServiceImpl implements GameService {
         historyRepository.save(move.toHistory(game.getId(), nextMatrix.getPosition(), pieceFrom));
         gameRepository.save(game);
 
-        return nextMatrix.generateArrangement(game.getUnderCheckSide());
+        ArrangementDTO arrangement = nextMatrix.generateArrangement(game.getUnderCheckSide());
+        return Pair.of(prevMatrix, arrangement);
     }
 
     @Override

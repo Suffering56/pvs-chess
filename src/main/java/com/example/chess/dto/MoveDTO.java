@@ -3,7 +3,9 @@ package com.example.chess.dto;
 import com.example.chess.entity.History;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
+import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.move.AbstractMove;
+import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.logic.utils.Immutable;
 import com.example.chess.logic.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -83,5 +85,10 @@ public final class MoveDTO extends AbstractMove implements Immutable {
         String description = CommonUtils.getPieceName(pieceFrom.getType(), true);
         description += String.format(": %s -> %s (%s)", from, to, pieceFrom.getSide());
         return description;
+    }
+
+    @JsonIgnore
+    public ExtendedMove toExtendedMove(CellsMatrix matrix) {
+        return new ExtendedMove(matrix.getCell(from), matrix.getCell(to));
     }
 }
