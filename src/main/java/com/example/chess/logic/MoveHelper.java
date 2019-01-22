@@ -1,14 +1,14 @@
 package com.example.chess.logic;
 
-import com.example.chess.logic.debug.Debug;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
+import com.example.chess.logic.debug.Debug;
 import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.game.IGame;
 import com.example.chess.logic.objects.move.ExtendedMove;
-import com.example.chess.logic.objects.game.FakeGame;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,15 +24,15 @@ import java.util.stream.Stream;
 @SuppressWarnings({"ConstantConditions", "Duplicates"})
 public class MoveHelper {
 
-    private final FakeGame fakeGame;
+    private final IGame game;
     private final CellsMatrix originalMatrix;
 
-    private MoveHelper(FakeGame fakeGame, CellsMatrix originalMatrix) {
-        this.fakeGame = fakeGame;
+    private MoveHelper(IGame game, CellsMatrix originalMatrix) {
+        this.game = game;
         this.originalMatrix = originalMatrix;
     }
 
-    public static MoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
+    public static MoveHelper valueOf(IGame fakeGame, CellsMatrix originalMatrix) {
         Debug.moveHelpersCount.incrementAndGet();
         return new MoveHelper(fakeGame, originalMatrix);
     }
@@ -503,14 +503,14 @@ public class MoveHelper {
             int kingRowIndex = movableCell.getRowIndex();
 
             if (!isCheckFilterEnabled() || filterData.sourceOfCheck == null) {
-                if (fakeGame.isShortCastlingAvailable(allySide)) {
+                if (game.isShortCastlingAvailable(allySide)) {
                     if (isEmptyCellsOnRow(kingRowIndex, 1, 2)) {
                         if (isSafeCrossPointForCastling(-1)) {
                             addKingMove(0, -2);
                         }
                     }
                 }
-                if (fakeGame.isLongCastlingAvailable(allySide)) {
+                if (game.isLongCastlingAvailable(allySide)) {
                     if (isEmptyCellsOnRow(kingRowIndex, 4, 5, 6)) {
                         if (isSafeCrossPointForCastling(1)) {
                             addKingMove(0, 2);
@@ -540,7 +540,7 @@ public class MoveHelper {
                 }
             }
 
-            Integer enemyLongMoveColumnIndex = fakeGame.getPawnLongMoveColumnIndex(enemySide);
+            Integer enemyLongMoveColumnIndex = game.getPawnLongMoveColumnIndex(enemySide);
             if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
 
                 if (Math.abs(enemyLongMoveColumnIndex - currentColumn) == 1) {    //и эта пешка рядом с выделенной (слева или справа)

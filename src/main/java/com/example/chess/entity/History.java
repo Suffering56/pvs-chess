@@ -2,7 +2,7 @@ package com.example.chess.entity;
 
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
-import com.example.chess.logic.objects.move.AbstractMove;
+import com.example.chess.logic.objects.move.Move;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
@@ -14,7 +14,7 @@ import javax.persistence.*;
 @ToString
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class History extends AbstractMove {
+public class History implements Move {
 
     @Id
     @GenericGenerator(name = "history_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "history_id_seq"))

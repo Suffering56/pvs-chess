@@ -1,5 +1,6 @@
 package com.example.chess.logic.objects.game;
 
+import com.example.chess.enums.Piece;
 import com.example.chess.enums.Side;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.move.ExtendedMove;
@@ -14,26 +15,25 @@ import java.util.List;
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class GameState {
+public class GameContext {
 
-    final RootGameState root;
-    final GameState parent;
+    final RootGameContext root;
+    final GameContext parent;
     final FakeGame game;
     final CellsMatrix matrix;
     final ExtendedMove lastMove;
-    List<GameState> children;
+    List<GameContext> children;
 
-    public GameState executeMove(ExtendedMove nextMove) {
-        FakeGame nextGameState = null;
-        if (nextGameState == null) {
-            throw new UnsupportedOperationException();
-        }
+    public GameContext executeMove(ExtendedMove nextMove) {
+        Piece pieceFrom = matrix.getCell(nextMove.getPointFrom()).getPiece();
 
+        FakeGame nextGame = game.executeMove(nextMove, pieceFrom);
         CellsMatrix nextMatrix = matrix.executeMove(nextMove);
-        return addChild(new GameState(root, this, nextGameState, nextMatrix, nextMove));
+
+        return addChild(new GameContext(root, this, nextGame, nextMatrix, nextMove));
     }
 
-    private GameState addChild(GameState childNode) {
+    private GameContext addChild(GameContext childNode) {
         if (children == null) {
             children = new ArrayList<>();
         }
@@ -50,6 +50,10 @@ public class GameState {
     }
 
     public Side lastMoveSide() {
+        if (lastMove == null) {
+            //if bot has first move in game
+            return Side.BLACK;
+        }
         return lastMove.getSide();
     }
 

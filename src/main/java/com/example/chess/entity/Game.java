@@ -2,8 +2,7 @@ package com.example.chess.entity;
 
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
-import com.example.chess.logic.objects.game.FakeGame;
-import com.example.chess.logic.objects.game.Gameplay;
+import com.example.chess.logic.objects.game.IGame;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,7 +20,7 @@ import static com.example.chess.logic.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 @Getter
 @Setter
 @ToString
-public class Game implements Gameplay {
+public class Game implements IGame {
 
     @Id
     @GenericGenerator(name = "game_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "game_id_seq"))
@@ -151,10 +150,5 @@ public class Game implements Gameplay {
     @JsonIgnore
     public Side getActiveSide() {
         return getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
-    }
-
-    @Transient
-    public FakeGame.Builder toFakeBuilder() {
-        return FakeGame.builder(this);
     }
 }

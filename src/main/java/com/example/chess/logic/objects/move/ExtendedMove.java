@@ -16,11 +16,13 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.example.chess.logic.utils.ChessUtils.isPawnTransformation;
+
 @Getter
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @SuppressWarnings("WeakerAccess")
-public class ExtendedMove extends AbstractMove {
+public class ExtendedMove implements Move {
 
     final CellDTO from;
     final CellDTO to;
@@ -45,7 +47,7 @@ public class ExtendedMove extends AbstractMove {
 
     @Override
     public PieceType getPieceFromPawn() {
-        if (isPawnTransformation()) {
+        if (isPawnTransformation(this, getPieceFrom())) {
             return PieceType.QUEEN;
         }
         throw new UnsupportedOperationException();
@@ -93,10 +95,6 @@ public class ExtendedMove extends AbstractMove {
 
     public boolean isHarmless() {
         return isEmptyTo();
-    }
-
-    private boolean isPawnTransformation() {
-        return getPieceFrom() == PieceType.PAWN && (getPointTo().getRowIndex() == 0 || getPointTo().getRowIndex() == 7);
     }
 
     public int getValueFrom() {

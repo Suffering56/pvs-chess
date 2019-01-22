@@ -13,8 +13,8 @@ import com.example.chess.logic.debug.Debug;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.Rating;
 import com.example.chess.logic.objects.game.FakeGame;
-import com.example.chess.logic.objects.game.GameState;
-import com.example.chess.logic.objects.game.RootGameState;
+import com.example.chess.logic.objects.game.GameContext;
+import com.example.chess.logic.objects.game.RootGameContext;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
@@ -32,7 +33,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 @Log4j2
@@ -57,13 +57,13 @@ public abstract class AbstractBotService implements BotService {
 
     @Profile
     @Override
-    public void applyBotMove(Game game, ExtendedMove playerLastMove) {
+    public void applyBotMove(Game game, @Nullable ExtendedMove playerLastMove) {
         executorService.execute(() -> {
             try {
                 Side botSide = game.getActiveSide();
                 CellsMatrix originalMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
 
-                RootGameState rootNode = RootGameState.of(game.toFakeBuilder().build(), originalMatrix, playerLastMove, botSide);
+                RootGameContext rootNode = RootGameContext.of(FakeGame.ofGame(game), originalMatrix, playerLastMove, botSide);
 
                 MoveDTO nextBotMove = findBestMove(rootNode);
                 gameService.applyMove(game, nextBotMove);
@@ -75,16 +75,22 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-    private MoveDTO findBestMove(RootGameState rootNode) {
+    private void executeMoves(GameContext gameContext, int deep) {
+        MoveHelper.valueOf(gameContext.getGame(), gameContext.getMatrix())
+                .getStandardMovesStream(gameContext.nextTurnSide())
+                .map(gameContext::executeMove)
+                .filter(childState -> deep > 1)
+                .forEach(childState -> executeMoves(childState, deep - 1));
+    }
+
+    private MoveDTO findBestMove(RootGameContext rootNode) {
         long start = System.currentTimeMillis();
         Debug.resetCounters();
         CellsMatrix originalMatrix = rootNode.getMatrix();
         Side botSide = rootNode.getBotSide();
         FakeGame fakeGame = rootNode.getGame();
 
-        Stream<GameState> gameStateStream = MoveHelper.valueOf(fakeGame, originalMatrix)
-                .getStandardMovesStream(botSide)
-                .map(rootNode::executeMove);
+        executeMoves(rootNode, 2);
 
 
         ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);

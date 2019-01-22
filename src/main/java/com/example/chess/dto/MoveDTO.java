@@ -4,8 +4,8 @@ import com.example.chess.entity.History;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.logic.objects.CellsMatrix;
-import com.example.chess.logic.objects.move.AbstractMove;
 import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.objects.move.Move;
 import com.example.chess.logic.utils.Immutable;
 import com.example.chess.logic.utils.CommonUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -21,7 +21,7 @@ import lombok.experimental.FieldDefaults;
 @ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public final class MoveDTO extends AbstractMove implements Immutable {
+public final class MoveDTO implements Move, Immutable {
 
     PointDTO from;
     PointDTO to;

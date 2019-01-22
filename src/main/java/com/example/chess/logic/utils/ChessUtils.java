@@ -3,9 +3,12 @@ package com.example.chess.logic.utils;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.Move;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
+@SuppressWarnings("WeakerAccess")
 public class ChessUtils {
 
     public static final BiIntFunction<Piece> START_ARRANGEMENT_GENERATOR = (rowIndex, columnIndex) -> {
@@ -38,4 +41,64 @@ public class ChessUtils {
         }
         return null;
     };
+
+    public static boolean isCastling(Move move, PieceType pieceType) {
+        return pieceType == PieceType.KING && Math.abs(move.getColumnIndexFrom() - move.getColumnIndexTo()) == 2;
+    }
+
+    public static boolean isLongCastling(Move move, PieceType pieceType) {
+        return pieceType == PieceType.KING && move.getColumnIndexFrom() - move.getColumnIndexTo() == -2;
+    }
+
+    public static boolean isShortCastling(Move move, PieceType pieceType) {
+        return pieceType == PieceType.KING && move.getColumnIndexFrom() - move.getColumnIndexTo() == 2;
+    }
+
+    public static boolean isPawnAttacks(Move move, PieceType pieceType) {
+        return pieceType == PieceType.PAWN && move.getColumnIndexFrom() != move.getColumnIndexTo();
+    }
+
+    public static boolean isLongPawnMove(Move move, PieceType pieceType) {
+        return pieceType == PieceType.PAWN && Math.abs(move.getRowIndexFrom() - move.getRowIndexTo()) == 2;
+    }
+
+    public static boolean isPawnTransformation(Move move, PieceType pieceType) {
+        return pieceType == PieceType.PAWN && (move.getRowIndexTo() == 0 || move.getRowIndexTo() == 7);
+    }
+
+    public static boolean isEnPassant(CellsMatrix matrix, Move move, PieceType pieceType) {
+        if (isPawnAttacks(move, pieceType)) {
+            return matrix.getCell(move.getRowIndexFrom(), move.getColumnIndexTo()) != null;
+        }
+        return false;
+    }
+
+
+    public static boolean isCastling(Move move, Piece pieceFrom) {
+        return isCastling(move, pieceFrom.getType());
+    }
+
+    public static boolean isLongCastling(Move move, Piece pieceFrom) {
+        return isLongCastling(move, pieceFrom.getType());
+    }
+
+    public static boolean isShortCastling(Move move, Piece pieceFrom) {
+        return isShortCastling(move, pieceFrom.getType());
+    }
+
+    public static boolean isPawnAttacks(Move move, Piece pieceFrom) {
+        return isPawnAttacks(move, pieceFrom.getType());
+    }
+
+    public static boolean isLongPawnMove(Move move, Piece pieceFrom) {
+        return isLongPawnMove(move, pieceFrom.getType());
+    }
+
+    public static boolean isPawnTransformation(Move move, Piece pieceFrom) {
+        return isPawnTransformation(move, pieceFrom.getType());
+    }
+
+    public static boolean isEnPassant(CellsMatrix matrix, Move move, Piece pieceFrom) {
+        return isEnPassant(matrix, move, pieceFrom.getType());
+    }
 }

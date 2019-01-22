@@ -10,6 +10,7 @@ import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.MoveHelper;
 import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.utils.ChessUtils;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.GameService;
@@ -44,9 +45,9 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public Pair<CellsMatrix, ArrangementDTO> applyMove(Game game, MoveDTO move) {
-        CellsMatrix prevMatrix = createCellsMatrixByGame(game, game.getPosition());
+        CellsMatrix actualMatrix = createCellsMatrixByGame(game, game.getPosition());
 
-        Piece pieceFrom = prevMatrix.getCell(move.getFrom()).getPiece();
+        Piece pieceFrom = actualMatrix.getCell(move.getFrom()).getPiece();
         Side sideFrom = pieceFrom.getSide();
 
         game.setPawnLongMoveColumnIndex(sideFrom, null);
@@ -61,7 +62,7 @@ public class GameServiceImpl implements GameService {
                 game.disableCasting(sideFrom, rookColumnIndex);
                 break;
             case PAWN:
-                if (move.isLongPawnMove()) {
+                if (ChessUtils.isLongPawnMove(move, pieceFrom)) {
                     //it needs for handling of the en-passant
                     game.setPawnLongMoveColumnIndex(sideFrom, move.getFrom().getColumnIndex());
                 }
@@ -69,9 +70,9 @@ public class GameServiceImpl implements GameService {
         }
 
         Side enemySide = sideFrom.reverse();
-        CellsMatrix nextMatrix = prevMatrix.executeMove(move);
+        CellsMatrix nextMatrix = actualMatrix.executeMove(move);
 
-        if (MoveHelper.valueOf(game.toFakeBuilder().build(), nextMatrix).isKingUnderAttack(enemySide)) {
+        if (MoveHelper.valueOf(game, nextMatrix).isKingUnderAttack(enemySide)) {
             /*
                 Если данный ход объявил шах вражескому королю, то нужно подсветить вражеского короля на доске.
                 А еще этот параметр (game.underCheckSide) используется при вычислении доступных ходов,
@@ -87,7 +88,7 @@ public class GameServiceImpl implements GameService {
         gameRepository.save(game);
 
         ArrangementDTO arrangement = nextMatrix.generateArrangement(game.getUnderCheckSide());
-        return Pair.of(prevMatrix, arrangement);
+        return Pair.of(actualMatrix, arrangement);
     }
 
     @Override
@@ -99,7 +100,7 @@ public class GameServiceImpl implements GameService {
     public Set<PointDTO> getAvailableMoves(long gameId, PointDTO point) throws GameNotFoundException {
         Game game = findAndCheckGame(gameId);
         CellsMatrix matrix = createCellsMatrixByGame(game, game.getPosition());
-        return MoveHelper.valueOf(game.toFakeBuilder().build(), matrix).getFilteredAvailablePoints(point);
+        return MoveHelper.valueOf(game, matrix).getFilteredAvailablePoints(point);
     }
 
     @Override

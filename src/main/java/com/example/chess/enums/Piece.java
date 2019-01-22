@@ -90,4 +90,8 @@ public enum Piece {
     public boolean isKing() {
         return type == PieceType.KING;
     }
+
+    public boolean isRook() {
+        return type == PieceType.ROOK;
+    }
 }

@@ -1,6 +1,5 @@
 package com.example.chess.logic.objects;
 
-import com.example.chess.logic.debug.Debug;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
@@ -9,11 +8,11 @@ import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
-import com.example.chess.logic.utils.Immutable;
+import com.example.chess.logic.debug.Debug;
 import com.example.chess.logic.objects.move.Move;
 import com.example.chess.logic.utils.BiIntFunction;
-import com.example.chess.logic.utils.ChessUtils;
 import com.example.chess.logic.utils.CommonUtils;
+import com.example.chess.logic.utils.Immutable;
 import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -25,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.example.chess.logic.ChessConstants.*;
+import static com.example.chess.logic.utils.ChessUtils.*;
 
 public final class CellsMatrix implements Immutable {
 
@@ -88,7 +88,7 @@ public final class CellsMatrix implements Immutable {
     }
 
     private static Builder builder(int position, List<History> historyList) {
-        Builder builder = new CellsMatrix(position, ChessUtils.START_ARRANGEMENT_GENERATOR).new Builder();
+        Builder builder = new CellsMatrix(position, START_ARRANGEMENT_GENERATOR).new Builder();
         historyList.forEach(builder::executeMove);
         return builder;
     }
@@ -101,7 +101,7 @@ public final class CellsMatrix implements Immutable {
 
             if (isCastling(move, pieceFrom)) {
                 return executeCastling(move, pieceFrom);
-            } else if (isEnPassant(move, pieceFrom)) {
+            } else if (isEnPassant(CellsMatrix.this, move, pieceFrom)) {
                 return executeEnPassant(move, pieceFrom);
             } else {
                 if (isPawnTransformation(move, pieceFrom)) {
@@ -138,7 +138,7 @@ public final class CellsMatrix implements Immutable {
             int rookColumnIndexFrom;
             int rookColumnIndexTo;
 
-            if (move.isLongCastling()) {
+            if (isLongCastling(move, king)) {
                 rookColumnIndexFrom = ROOK_LONG_COLUMN_INDEX;
                 rookColumnIndexTo = kingColumnIndexFrom + 1;
             } else {
@@ -160,21 +160,6 @@ public final class CellsMatrix implements Immutable {
         private Builder executeEnPassant(Move move, Piece pieceFrom) {
             return cutPiece(move.getRowIndexFrom(), move.getColumnIndexTo())    //убираем вражескую пешку взятую на проходе
                     .executeSimpleMove(move, pieceFrom);                        //перемещаем свою пешку
-        }
-
-        private boolean isCastling(Move move, Piece pieceFrom) {
-            return pieceFrom.isKing() && move.isCastling();
-        }
-
-        private boolean isEnPassant(Move move, Piece pieceFrom) {
-            if (pieceFrom.isPawn() && move.isPawnAttacks()) {
-                return getCell(move.getRowIndexFrom(), move.getColumnIndexTo()) != null;
-            }
-            return false;
-        }
-
-        private boolean isPawnTransformation(Move move, Piece pieceFrom) {
-            return pieceFrom.isPawn() && (move.getRowIndexTo() == 0 || move.getRowIndexTo() == 7);
         }
 
         private Builder setPiece(int rowIndex, int columnIndex, Piece piece) {

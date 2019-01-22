@@ -1,7 +1,8 @@
 package com.example.chess.logic.objects.game;
 
-import com.example.chess.entity.Game;
+import com.example.chess.enums.Piece;
 import com.example.chess.enums.Side;
+import com.example.chess.logic.objects.move.Move;
 import com.example.chess.logic.utils.Immutable;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,8 +13,12 @@ import lombok.experimental.FieldDefaults;
 import java.util.EnumMap;
 import java.util.Map;
 
+import static com.example.chess.logic.ChessConstants.ROOK_LONG_COLUMN_INDEX;
+import static com.example.chess.logic.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
+import static com.example.chess.logic.utils.ChessUtils.isLongPawnMove;
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class FakeGame implements Gameplay, Immutable {
+public class FakeGame implements IGame, Immutable {
 
     private final Map<Side, Features> featuresMap = new EnumMap<Side, Features>(Side.class) {{
         put(Side.WHITE, new Features());
@@ -35,23 +40,32 @@ public class FakeGame implements Gameplay, Immutable {
         return featuresMap.get(side).getPawnLongMoveColumnIndex();
     }
 
-    public static Builder builder(Game game) {
-        return builder((Gameplay) game);
+    @SuppressWarnings("WeakerAccess")
+    public FakeGame executeMove(Move move, Piece pieceFrom) {
+        return builder(this)
+                .afterMove(move, pieceFrom)
+                .build();
     }
 
-    private static Builder builder(Gameplay gameplay) {
-        Builder builder = new FakeGame().new Builder();
+    public static FakeGame ofGame(IGame game) {
+        return builder(game)
+                .build();
+    }
 
-        for (Side side : Side.values()) {
-            builder.setPawnLongMoveColumnIndex(side, gameplay.getPawnLongMoveColumnIndex(side))
-                    .setLongCastlingAvailable(side, gameplay.isLongCastlingAvailable(side))
-                    .setShortCastlingAvailable(side, gameplay.isShortCastlingAvailable(side));
+    private static Builder builder(IGame game) {
+        return new FakeGame().new Builder(game);
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private class Builder {
+
+        private Builder(IGame game) {
+            for (Side side : Side.values()) {
+                this.setPawnLongMoveColumnIndex(side, game.getPawnLongMoveColumnIndex(side))
+                        .setLongCastlingAvailable(side, game.isLongCastlingAvailable(side))
+                        .setShortCastlingAvailable(side, game.isShortCastlingAvailable(side));
+            }
         }
-        return builder;
-    }
-
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    public class Builder {
 
         private Builder setPawnLongMoveColumnIndex(Side side, Integer columnIndex) {
             featuresMap.get(side).setPawnLongMoveColumnIndex(columnIndex);
@@ -68,14 +82,42 @@ public class FakeGame implements Gameplay, Immutable {
             return this;
         }
 
-        public FakeGame build() {
+        private Builder afterMove(Move move, Piece pieceFrom) {
+            Side side = pieceFrom.getSide();
+
+            int columnIndexFrom = move.getColumnIndexFrom();
+            switch (pieceFrom.getType()) {
+                case KING:
+                    setLongCastlingAvailable(side, false);
+                    setShortCastlingAvailable(side, false);
+                    break;
+                case ROOK:
+                    if (columnIndexFrom == ROOK_SHORT_COLUMN_INDEX) {
+                        setShortCastlingAvailable(side, false);
+                    } else if (columnIndexFrom == ROOK_LONG_COLUMN_INDEX) {
+                        setLongCastlingAvailable(side, false);
+                    }
+                    break;
+                case PAWN:
+                    if (isLongPawnMove(move, pieceFrom)) {
+                        setPawnLongMoveColumnIndex(side, columnIndexFrom);
+                    } else {
+                        setPawnLongMoveColumnIndex(side, null);
+                    }
+                    break;
+            }
+
+            return this;
+        }
+
+        private FakeGame build() {
             return FakeGame.this;
         }
     }
 
-    @FieldDefaults(level = AccessLevel.PRIVATE)
     @Getter(AccessLevel.PRIVATE)
     @Setter(AccessLevel.PRIVATE)
+    @FieldDefaults(level = AccessLevel.PRIVATE)
     private class Features {
         boolean longCastlingAvailable = false;
         boolean shortCastlingAvailable = false;

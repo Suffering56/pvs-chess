@@ -9,16 +9,6 @@ public interface Move {
 
     PointDTO getPointTo();
 
-    boolean isCastling();
-
-    boolean isLongCastling();
-
-    boolean isShortCastling();
-
-    boolean isLongPawnMove();
-
-    boolean isPawnAttacks();
-
     int getRowIndexFrom();
 
     int getColumnIndexFrom();
