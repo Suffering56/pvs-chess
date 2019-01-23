@@ -20,6 +20,7 @@ import static com.example.chess.logic.utils.ChessUtils.isLongPawnMove;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FakeGame implements IGame, Immutable {
 
+    //TODO: optimize -> заменить на более производительную структуру
     private final Map<Side, Features> featuresMap = new EnumMap<Side, Features>(Side.class) {{
         put(Side.WHITE, new Features());
         put(Side.BLACK, new Features());

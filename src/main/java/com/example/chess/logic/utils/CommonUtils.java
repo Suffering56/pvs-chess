@@ -127,4 +127,12 @@ public class CommonUtils {
         String s = "00000";
         return s.contains("0");
     }
+
+    public static String tabs(int count) {
+        StringBuilder prefix = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            prefix.append("\t");
+        }
+        return prefix.toString();
+    }
 }

@@ -7,6 +7,7 @@ import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
 import com.example.chess.logic.debug.Debug;
 import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.game.GameContext;
 import com.example.chess.logic.objects.game.IGame;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import lombok.AccessLevel;
@@ -25,23 +26,28 @@ import java.util.stream.Stream;
 public class MoveHelper {
 
     private final IGame game;
-    private final CellsMatrix originalMatrix;
+    private final CellsMatrix matrix;
 
-    private MoveHelper(IGame game, CellsMatrix originalMatrix) {
+    private MoveHelper(IGame game, CellsMatrix matrix) {
         this.game = game;
-        this.originalMatrix = originalMatrix;
+        this.matrix = matrix;
     }
 
-    public static MoveHelper valueOf(IGame fakeGame, CellsMatrix originalMatrix) {
+    public static MoveHelper valueOf(IGame fakeGame, CellsMatrix matrix) {
         Debug.moveHelpersCount.incrementAndGet();
-        return new MoveHelper(fakeGame, originalMatrix);
+        return new MoveHelper(fakeGame, matrix);
+    }
+
+    public static MoveHelper valueOf(GameContext context) {
+        Debug.moveHelpersCount.incrementAndGet();
+        return new MoveHelper(context.getGame(), context.getMatrix());
     }
 
     public boolean isKingUnderAttack(Side kingSide) {
-        PointDTO kingPoint = originalMatrix.getKingPoint(kingSide);
+        PointDTO kingPoint = matrix.getKingPoint(kingSide);
         Side enemySide = kingSide.reverse();
 
-        Set<PointDTO> enemyMoves = originalMatrix
+        Set<PointDTO> enemyMoves = matrix
                 .excludePiecesStream(enemySide, PieceType.KING)
                 .map(enemyCell -> getUnfilteredMovesForCell(enemyCell, false))
                 .flatMap(Set::stream)
@@ -51,7 +57,7 @@ public class MoveHelper {
     }
 
     public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
-        CellDTO moveableCell = originalMatrix.getCell(pointFrom);
+        CellDTO moveableCell = matrix.getCell(pointFrom);
         FilterData filterData = createFilterData(moveableCell.getSide());
 
         return getFilteredMovesForCell(moveableCell, filterData, false);
@@ -60,20 +66,20 @@ public class MoveHelper {
     public Stream<ExtendedMove> getStandardMovesStream(Side side) throws KingNotFoundException {
         FilterData filterData = createFilterData(side);
 
-        return originalMatrix
+        return matrix
                 .allPiecesBySideStream(side)
                 .flatMap(moveableCell -> {
                     Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, filterData, false);
-                    return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
+                    return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, matrix.getCell(pointTo)));
                 });
     }
 
     private FilterData createFilterData(Side side) {
         Side enemySide = side.reverse();
-        PointDTO kingPoint = originalMatrix.getKingPoint(side);
+        PointDTO kingPoint = matrix.getKingPoint(side);
         Map<PointDTO, UnmovableData> unmovablePointsMap = getUnmovablePointsMap(enemySide, kingPoint);
 
-        Set<PointDTO> enemyDefensivePoints = originalMatrix
+        Set<PointDTO> enemyDefensivePoints = matrix
                 .allPiecesBySideStream(enemySide)
                 .flatMap(enemyCell -> getUnfilteredMovesForCell(enemyCell, true).stream())
                 .collect(Collectors.toSet());
@@ -87,7 +93,7 @@ public class MoveHelper {
 
     private void initFilterData(PointDTO kingPoint, Side enemySide, FilterData filterData) {
 
-        originalMatrix
+        matrix
                 .allPiecesBySideStream(enemySide)
                 .forEach(enemyCell -> {
                     Set<PointDTO> enemyMoves;
@@ -183,7 +189,7 @@ public class MoveHelper {
     }
 
     private Map<PointDTO, UnmovableData> getUnmovablePointsMap(Side enemySide, PointDTO kingPoint) {
-        return originalMatrix
+        return matrix
                 .includePiecesStream(enemySide, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN)
                 .map(enemyPossibleAttackerCell -> {
                     BetweenParams betweenParams = createBetweenParams(kingPoint, enemyPossibleAttackerCell);
@@ -681,7 +687,7 @@ public class MoveHelper {
 
     private CellDTO getCell(int rowIndex, int columnIndex) {
         if (PointDTO.isCorrectIndex(rowIndex, columnIndex)) {
-            return originalMatrix.getCell(rowIndex, columnIndex);
+            return matrix.getCell(rowIndex, columnIndex);
         }
         return null;
     }

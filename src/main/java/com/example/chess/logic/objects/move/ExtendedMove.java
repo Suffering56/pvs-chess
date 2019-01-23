@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -18,6 +19,7 @@ import java.util.Objects;
 
 import static com.example.chess.logic.utils.ChessUtils.isPawnTransformation;
 
+@Log4j2
 @Getter
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -48,6 +50,7 @@ public class ExtendedMove implements Move {
     @Override
     public PieceType getPieceFromPawn() {
         if (isPawnTransformation(this, getPieceFrom())) {
+            log.info("Pawn transformation. TransformPiece: " + PieceType.QUEEN);
             return PieceType.QUEEN;
         }
         throw new UnsupportedOperationException();
@@ -148,5 +151,9 @@ public class ExtendedMove implements Move {
         }
 
         return result.toString();
+    }
+
+    public Integer toMapKey() {
+        return getRowIndexFrom() + getColumnIndexFrom() * 10 + getRowIndexTo() * 100 + getColumnIndexTo() * 1000;
     }
 }

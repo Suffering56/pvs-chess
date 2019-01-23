@@ -10,9 +10,11 @@ import com.example.chess.logic.*;
 import com.example.chess.logic.debug.BotMode;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.Rating;
+import com.example.chess.logic.objects.game.GameContext;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.logic.objects.game.FakeGame;
 import com.example.chess.logic.utils.CommonUtils;
+import com.google.common.base.Preconditions;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -27,6 +30,7 @@ import java.util.stream.Collectors;
 @Service
 @Log4j2
 @Qualifier(BotMode.MEDIUM)
+@SuppressWarnings("Duplicates")
 public class BotServiceImplMedium extends AbstractBotService {
 
     @Override
@@ -112,6 +116,226 @@ public class BotServiceImplMedium extends AbstractBotService {
              *
              */
         };
+    }
+
+
+    @Override
+    protected void calculateRating(GameContext gameContext) {
+        Preconditions.checkArgument(!gameContext.isRoot());
+
+        CellsMatrix originalMatrix = gameContext.getParent().getMatrix();
+        ExtendedMove analyzedMove = gameContext.getLastMove();
+        CellsMatrix firstMatrixPlayerNext = gameContext.getMatrix();
+        Side botSide = gameContext.lastMoveSide();
+
+
+//        Rating materialRating = getMaterialRating(firstMatrixPlayerNext, analyzedMove, botSide, -1);
+        Rating materialRating = getMaterialRating(gameContext, -1);
+        analyzedMove.updateRating(materialRating);
+//
+//        Rating invertedMaterialRating = internalService.getInvertedMaterialRating(-1);
+//        analyzedMove.updateRating(invertedMaterialRating);
+//
+//        Rating checkRating = internalService.getCheckRating();
+//        analyzedMove.updateRating(checkRating);
+//
+//        Rating movesCountRating = internalService.getAvailableMovesCountRating(botMovesByOriginal, botSide, false);
+//        analyzedMove.updateRating(movesCountRating);
+//
+//        Rating invertedMovesCountRating = internalService.getInvertedAvailableMovesCountRating();
+//        analyzedMove.updateRating(invertedMovesCountRating);
+    }
+
+//
+//    /**
+//     * Алгоритм работает не только для определения материального рейтинга для бота, но и для игрока так же.
+//     * Достаточно ему передать в параметр botSide - playerSide.
+//     * В таком случае все понятия внутри функций инвертируются - все что было ботом - станет игроком, и наоборот.
+//     * <p>
+//     * Некрасиво, но если переименовать botSide и playerSide во что-то более абстрактное - легко будет запутаться.
+//     * <p>
+//     * ...->moveBefore->matrix->...
+//     */
+
+    private Rating getMaterialRating(GameContext gameContext, int maxDeep) {
+        List<Integer> exchangeValues = generateExchangeValuesList(gameContext, maxDeep);
+
+        int exchangeDeep = exchangeValues.size();
+        Rating.Builder builder = Rating.builder()
+                .var("exchangeDeep", exchangeDeep);
+
+        if (exchangeDeep <= 2) {
+            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
+        } else {
+            return getMaterialRatingForDeepExchange(builder, exchangeValues);
+        }
+    }
+
+//    @NoRoot
+    private List<Integer> generateExchangeValuesList(GameContext gameContext, int maxDeep) {
+        List<Integer> exchangeValuesResult = new ArrayList<>();
+
+        ExtendedMove analyzedMove = gameContext.getAnalyzedMove();
+        PointDTO targetPoint = analyzedMove.getPointTo();
+
+        int exchangeValue = 0;
+        GameContext deepContext = gameContext;
+
+        do {
+            ExtendedMove lastMove = deepContext.getLastMove();
+
+            if (deepContext.botLast()) {
+                exchangeValue += lastMove.getValueTo(0);
+            } else {
+                exchangeValue -= lastMove.getValueTo(0);
+            }
+
+            exchangeValuesResult.add(exchangeValue);
+
+            deepContext = findMostProfitableMove(deepContext, targetPoint);
+        }
+        while (deepContext != null && exchangeValuesResult.size() != maxDeep);
+
+        return exchangeValuesResult;
+    }
+
+    private GameContext findMostProfitableMove(GameContext context, PointDTO targetPoint) {
+        if (!context.hasChildren()) {
+            context.fill(1);
+        }
+
+        return context.childrenStream(targetPoint)
+                //TODO: имеет значение чем рубить если фигуры одинаковой стоимости (т.е. тупо reduce-ить = плохо) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
+                .reduce((c1, c2) -> c1.getLastMove().getValueFrom() <= c2.getLastMove().getValueFrom() ? c1 : c2)
+                .orElse(null);
+    }
+
+
+    private Rating getMaterialRatingForSimpleMoves(Rating.Builder builder, List<Integer> exchangeValues) {
+        int exchangeDeep = exchangeValues.size();
+
+        if (exchangeDeep == 1) {  //1) bot -> X
+            if (exchangeValues.get(0) == 0) {
+                //бот шагнул на незащищенную (ботом), но безопасную (не находящуюся под атакой игрока) клетку = сделал самый обычный ход
+                return builder.build(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));
+            } else {
+                //бот срубил незащищенную фигуру игрока
+                return builder.build(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));
+            }
+        }
+        if (exchangeDeep == 2) {  //1) bot -> X 2) player -> X
+            if (exchangeValues.get(0) == 0) {
+                //бот шагнул на незащищенную (ботом) пустую клетку, находящуюся под атакой игрока = отдал фигуру
+                return builder.build(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));
+            } else {
+                //бот срубил фигуру, но срубившая фигура ничем теперь не защищена и игрок может ее срубить = простой размен
+                return builder.build(RatingParam.MATERIAL_SIMPLE_EXCHANGE, exchangeValues.get(1));
+            }
+        }
+
+        throw new RuntimeException("exchangeDeep > 2");
+    }
+
+    private Rating getMaterialRatingForDeepExchange(Rating.Builder builder, List<Integer> exchangeValues) {
+        int exchangeDeep = exchangeValues.size();
+
+        if (exchangeDeep < 3) {
+            throw new RuntimeException("exchangeDeep < 3");
+        }
+
+        int totalMinB = exchangeValues.get(0);
+        int totalMaxP = exchangeValues.get(1);
+        for (int n = 0; n < exchangeDeep; n++) {
+            Integer currentExchangeValue = exchangeValues.get(n);
+
+            if (isBotMove(n)) {   //bot move
+                totalMinB = Math.min(totalMinB, currentExchangeValue);
+            } else {            //player move
+                totalMaxP = Math.max(totalMaxP, currentExchangeValue);
+            }
+        }
+
+        boolean botMovesLast = isBotMove(exchangeDeep - 1);
+        int lastMoveValue = exchangeValues.get(exchangeDeep - 1);
+        if (botMovesLast) {
+            totalMaxP = Math.max(totalMaxP, lastMoveValue);
+        } else {//playerMovesLast
+            totalMinB = Math.min(totalMinB, lastMoveValue);
+        }
+
+        builder.var("totalMaxP", totalMaxP);
+        builder.var("totalMinB", totalMinB);
+
+        int minB = exchangeValues.get(0);
+        int maxP = exchangeValues.get(1);   //на самом деле null, но я не хочу использовать Integer;
+        for (int n = 0; n < exchangeDeep; n++) {
+            Integer currentExchangeValue = exchangeValues.get(n);
+
+            boolean stopByPlayer = currentExchangeValue == totalMinB;
+            boolean stopByBot = currentExchangeValue == totalMaxP;
+
+            builder.var("n", n);
+
+            if (isBotMove(n)) {//уже сделанный
+                minB = Math.min(minB, currentExchangeValue);
+
+                if (stopByPlayer) {
+                    builder.note("stopByPlayer");
+
+                    /*
+                     * Игрок прекращает размен, потому что добрался до наиболее выгодного для сеья момента =>
+                     * Поэтому именно бот выбирает:
+                     * - либо последнее слово будет за ним - т.к. дальше игрок не пойдет и result = totalMinB,
+                     * - либо последнее слово будет за игроком, а значит result = maxP
+                     * - ессно он выбирает меньшее из двух зол == Math.max(totalMinB, maxP) ;
+                     */
+
+                    if (n == 0) {
+                        /*
+                         * Такое может произойти, в случае если игрок добрался до наиболее выгодного для себя момента первым же ходом.
+                         * Бот должен выбрать меньшее из двух зол (Math.min(totalMinB, maxP))
+                         * Но maxP в текущий момент скажем... null.
+                         * По коду не скажешь, но на самом деле дело до вычисления корректного значения maxP не доходит.
+                         *
+                         * Поэтому возвращаем min(totalMinB, null) = totalMinB;
+                         */
+                        return builder
+                                .var("maxP", null)
+                                .note("return totalMinB")
+                                .build(RatingParam.MATERIAL_DEEP_EXCHANGE, totalMinB);
+                    }
+                    return builder
+                            .var("maxP", maxP)
+                            .var("minB", minB)
+                            .note("return Math.max(totalMinB, maxP)")
+                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.max(totalMinB, maxP));
+                }
+            } else { //player move
+                builder.note("stopByBot");
+                maxP = Math.max(maxP, currentExchangeValue);
+                if (stopByBot) {
+                    /*
+                     * Бот прекращает размен, потому что добрался до наиболее выгодного для себя момента =>
+                     * Поэтому именно игрок выбирает:
+                     * - либо последнее слово будет за ним - т.к. дальше бот не пойдет и result = totalMaxP,
+                     * - либо последнее слово будет за ботом, а значит result = minB
+                     * - ессно он выбирает меньшее из двух зол == Math.min(totalMaxP, minB);
+                     */
+                    return builder
+                            .var("maxP", maxP)
+                            .var("minB", minB)
+                            .note("return Math.min(totalMaxP, minB)")
+                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMaxP, minB));
+                }
+            }
+        }
+
+        //ситуации, когда код доберется сюда быть не должно. по крайней мере я такую придумать не смог
+        throw new UnsupportedOperationException();
+    }
+
+    private boolean isBotMove(int n) {
+        return n % 2 == 0;
     }
 
     //TODO:originalMatrix->analyzedMove->firstMatrixPlayerNext>playerMove->secondMatrixBotNext->botMove->....
@@ -444,14 +668,19 @@ public class BotServiceImplMedium extends AbstractBotService {
             return MoveHelper.valueOf(fakeGame, matrix)
                     .getStandardMovesStream(side)
                     .filter(nextMove -> nextMove.hasSamePointTo(targetPoint))
-                    .reduce((m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2)
+                    .reduce(cheapestPieceFrom())
                     .orElse(null);
+        }
+
+        private BinaryOperator<ExtendedMove> cheapestPieceFrom() {
+            return (m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2;
         }
 
         private boolean isBotMove(int n) {
             return n % 2 == 0;
         }
     }
+
 
 }
 

@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@SuppressWarnings({"WeakerAccess", "SameParameterValue"})
+@SuppressWarnings({"WeakerAccess", "SameParameterValue", "Duplicates"})
 @Log4j2
 public abstract class AbstractBotService implements BotService {
 
@@ -55,6 +55,10 @@ public abstract class AbstractBotService implements BotService {
 
     protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall);
 
+    protected void calculateRating(GameContext gameContext) {
+        throw new UnsupportedOperationException();
+    }
+
     @Profile
     @Override
     public void applyBotMove(Game game, @Nullable ExtendedMove playerLastMove) {
@@ -63,9 +67,9 @@ public abstract class AbstractBotService implements BotService {
                 Side botSide = game.getActiveSide();
                 CellsMatrix originalMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
 
-                RootGameContext rootNode = RootGameContext.of(FakeGame.ofGame(game), originalMatrix, playerLastMove, botSide);
+                RootGameContext rootContext = RootGameContext.of(game, originalMatrix, playerLastMove, botSide);
 
-                MoveDTO nextBotMove = findBestMove(rootNode);
+                MoveDTO nextBotMove = findBestMove(rootContext);
                 gameService.applyMove(game, nextBotMove);
 
                 TimeUnit.SECONDS.sleep(1);
@@ -75,31 +79,36 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-    private void executeMoves(GameContext gameContext, int deep) {
-        MoveHelper.valueOf(gameContext.getGame(), gameContext.getMatrix())
-                .getStandardMovesStream(gameContext.nextTurnSide())
-                .map(gameContext::executeMove)
-                .filter(childState -> deep > 1)
-                .forEach(childState -> executeMoves(childState, deep - 1));
+
+    private void calculateRatingRecursive(GameContext context) {
+        if (!context.isRoot()) {
+            calculateRating(context);
+        }
+        context.childrenStream()
+                .forEach(this::calculateRatingRecursive);
     }
 
-    private MoveDTO findBestMove(RootGameContext rootNode) {
+    private MoveDTO findBestMove(RootGameContext rootContext) {
         long start = System.currentTimeMillis();
         Debug.resetCounters();
-        CellsMatrix originalMatrix = rootNode.getMatrix();
-        Side botSide = rootNode.getBotSide();
-        FakeGame fakeGame = rootNode.getGame();
 
-        executeMoves(rootNode, 2);
+        rootContext.fill(1);
+//        rootContext.print();
+        log.info("rootContext.getTotalMovesCount(): " + rootContext.getTotalMovesCount());
+
+//        calculateRatingRecursive(rootContext);
 
 
-        ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
-        System.out.println("resultMove[pos=" + originalMatrix.getPosition() + "] = " + resultMove);
+        rootContext.childrenStream().forEach(this::calculateRating);
 
+
+        ExtendedMove resultMove = findBestExtendedMove(rootContext);
+        System.out.println("resultMove[pos=" + rootContext.getMatrix().getPosition() + "] = " + resultMove);
+//
         if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
             System.out.println("Bot want checkmate you!!!");
         }
-
+//
         System.out.println();
         Debug.printCounters();
         System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
@@ -109,12 +118,47 @@ public abstract class AbstractBotService implements BotService {
             pieceFromPawn = PieceType.QUEEN;
         }
 
-        MoveDTO predestinedMove = Debug.getPredestinedMove(originalMatrix.getPosition());
+        MoveDTO predestinedMove = Debug.getPredestinedMove(rootContext.getMatrix().getPosition());
         if (predestinedMove != null) {
             return predestinedMove;
         }
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
+    }
+
+
+
+    protected ExtendedMove findBestExtendedMove(RootGameContext rootGameContext) {
+        List<ExtendedMove> botAvailableMoves = rootGameContext.childrenStream()
+                .map(GameContext::getLastMove)
+                .sorted(Comparator.comparing(ExtendedMove::getTotal))
+                .collect(Collectors.toList());
+
+        if (botAvailableMoves.isEmpty()) {
+            return null;
+        }
+
+        int max = botAvailableMoves
+                .stream()
+                .mapToInt(ExtendedMove::getTotal)
+                .max().orElseThrow(UnsupportedOperationException::new);
+
+        List<ExtendedMove> topMovesList = botAvailableMoves
+                .stream()
+                .filter(move -> move.getTotal() == max)
+                .collect(Collectors.toList());
+
+        ExtendedMove bestMove = getRandomMove(topMovesList);
+
+        enter(LoggerParam.COMMON, 50);
+//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
+        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+
+        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
+        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + rootGameContext.getMatrix().getPosition() + "]::::" + bestMove);
+        logDoubleSeparator(LoggerParam.COMMON, 3);
+
+        return bestMove;
     }
 
     protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
