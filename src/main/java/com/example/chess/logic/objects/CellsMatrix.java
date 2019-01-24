@@ -99,6 +99,10 @@ public final class CellsMatrix implements Immutable {
         private Builder executeMove(Move move) {
             Piece pieceFrom = getCell(move.getPointFrom()).getPiece();
 
+            if (pieceFrom.isKing()) {
+                kingPoints.put(pieceFrom.getSide(), move.getPointTo());
+            }
+
             if (isCastling(move, pieceFrom)) {
                 return executeCastling(move, pieceFrom);
             } else if (isEnPassant(CellsMatrix.this, move, pieceFrom)) {

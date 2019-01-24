@@ -42,13 +42,14 @@ public class GameContext {
                 .forEach(childContext -> childContext.fill(deep - 1));
     }
 
-    public GameContext executeMove(ExtendedMove nextMove) {
+    private GameContext executeMove(ExtendedMove nextMove) {
         Piece pieceFrom = matrix.getCell(nextMove.getPointFrom()).getPiece();
 
         FakeGame nextGame = game.executeMove(nextMove, pieceFrom);
         CellsMatrix nextMatrix = matrix.executeMove(nextMove);
 
-        return addChild(new GameContext(root, this, nextGame, nextMatrix, nextMove));
+        RootGameContext rootContext = isRoot() ? (RootGameContext) this : root;
+        return addChild(new GameContext(rootContext, this, nextGame, nextMatrix, nextMove));
     }
 
     private GameContext addChild(GameContext childNode) {
@@ -88,7 +89,7 @@ public class GameContext {
     }
 
     public boolean isRoot() {
-        return parent == null;
+        return root == null && parent == null;
     }
 
     public long getTotalMovesCount() {
@@ -108,6 +109,9 @@ public class GameContext {
     }
 
     public Stream<GameContext> childrenStream(PointDTO targetPoint) {
+        if (children == null) {
+            return Stream.empty();
+        }
         List<GameContext> internalList = children.get(targetPoint);
         if (internalList == null) {
             return Stream.empty();

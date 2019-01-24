@@ -84,22 +84,19 @@ public abstract class AbstractBotService implements BotService {
         if (!context.isRoot()) {
             calculateRating(context);
         }
-        context.childrenStream()
-                .forEach(this::calculateRatingRecursive);
+        if (context.hasChildren() && context.getDeep() <= ChessConstants.BOT_ANALYSIS_DEEP) {
+            context.childrenStream()
+                    .forEach(this::calculateRatingRecursive);
+        }
     }
 
     private MoveDTO findBestMove(RootGameContext rootContext) {
         long start = System.currentTimeMillis();
         Debug.resetCounters();
 
-        rootContext.fill(1);
-//        rootContext.print();
+        rootContext.fill();
         log.info("rootContext.getTotalMovesCount(): " + rootContext.getTotalMovesCount());
-
-//        calculateRatingRecursive(rootContext);
-
-
-        rootContext.childrenStream().forEach(this::calculateRating);
+        calculateRatingRecursive(rootContext);
 
 
         ExtendedMove resultMove = findBestExtendedMove(rootContext);

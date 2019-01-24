@@ -124,14 +124,16 @@ public class BotServiceImplMedium extends AbstractBotService {
         Preconditions.checkArgument(!gameContext.isRoot());
 
         CellsMatrix originalMatrix = gameContext.getParent().getMatrix();
-        ExtendedMove analyzedMove = gameContext.getLastMove();
         CellsMatrix firstMatrixPlayerNext = gameContext.getMatrix();
         Side botSide = gameContext.lastMoveSide();
+        ExtendedMove analyzedMove = gameContext.getLastMove();
 
 
 //        Rating materialRating = getMaterialRating(firstMatrixPlayerNext, analyzedMove, botSide, -1);
-        Rating materialRating = getMaterialRating(gameContext, -1);
-        analyzedMove.updateRating(materialRating);
+        if (gameContext.getDeep() <= 2) {
+            Rating materialRating = getMaterialRating(gameContext, -1);
+            analyzedMove.updateRating(materialRating);
+        }
 //
 //        Rating invertedMaterialRating = internalService.getInvertedMaterialRating(-1);
 //        analyzedMove.updateRating(invertedMaterialRating);
@@ -171,7 +173,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         }
     }
 
-//    @NoRoot
+    //    @NoRoot
     private List<Integer> generateExchangeValuesList(GameContext gameContext, int maxDeep) {
         List<Integer> exchangeValuesResult = new ArrayList<>();
 
@@ -192,14 +194,14 @@ public class BotServiceImplMedium extends AbstractBotService {
 
             exchangeValuesResult.add(exchangeValue);
 
-            deepContext = findMostProfitableMove(deepContext, targetPoint);
+            deepContext = findMostProfitableHarmfulMove(deepContext, targetPoint);
         }
         while (deepContext != null && exchangeValuesResult.size() != maxDeep);
 
         return exchangeValuesResult;
     }
 
-    private GameContext findMostProfitableMove(GameContext context, PointDTO targetPoint) {
+    private GameContext findMostProfitableHarmfulMove(GameContext context, PointDTO targetPoint) {
         if (!context.hasChildren()) {
             context.fill(1);
         }
@@ -225,6 +227,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         }
         if (exchangeDeep == 2) {  //1) bot -> X 2) player -> X
             if (exchangeValues.get(0) == 0) {
+
                 //бот шагнул на незащищенную (ботом) пустую клетку, находящуюся под атакой игрока = отдал фигуру
                 return builder.build(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));
             } else {
