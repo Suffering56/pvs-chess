@@ -118,26 +118,25 @@ public class BotServiceImplMedium extends AbstractBotService {
         };
     }
 
+//    CellsMatrix originalMatrix = gameContext.getParent().getMatrix();
+//    CellsMatrix firstMatrixPlayerNext = gameContext.getMatrix();
+//    Side botSide = gameContext.lastMoveSide();
 
     @Override
     protected void calculateRating(GameContext gameContext) {
         Preconditions.checkArgument(!gameContext.isRoot());
 
-        CellsMatrix originalMatrix = gameContext.getParent().getMatrix();
-        CellsMatrix firstMatrixPlayerNext = gameContext.getMatrix();
-        Side botSide = gameContext.lastMoveSide();
-        ExtendedMove analyzedMove = gameContext.getLastMove();
+        if (gameContext.getDeep() == 1) {
+            ExtendedMove analyzedMove = gameContext.getLastMove();
 
-
-//        Rating materialRating = getMaterialRating(firstMatrixPlayerNext, analyzedMove, botSide, -1);
-        if (gameContext.getDeep() <= 2) {
-            Rating materialRating = getMaterialRating(gameContext, -1);
+            Rating materialRating = getMaterialRating(gameContext, -1, false);
             analyzedMove.updateRating(materialRating);
+
+            Rating invertedMaterialRating = getInvertedMaterialRating(gameContext, -1);
+            analyzedMove.updateRating(invertedMaterialRating);
         }
-//
-//        Rating invertedMaterialRating = internalService.getInvertedMaterialRating(-1);
-//        analyzedMove.updateRating(invertedMaterialRating);
-//
+
+
 //        Rating checkRating = internalService.getCheckRating();
 //        analyzedMove.updateRating(checkRating);
 //
@@ -148,19 +147,25 @@ public class BotServiceImplMedium extends AbstractBotService {
 //        analyzedMove.updateRating(invertedMovesCountRating);
     }
 
-//
-//    /**
-//     * Алгоритм работает не только для определения материального рейтинга для бота, но и для игрока так же.
-//     * Достаточно ему передать в параметр botSide - playerSide.
-//     * В таком случае все понятия внутри функций инвертируются - все что было ботом - станет игроком, и наоборот.
-//     * <p>
-//     * Некрасиво, но если переименовать botSide и playerSide во что-то более абстрактное - легко будет запутаться.
-//     * <p>
-//     * ...->moveBefore->matrix->...
-//     */
+    private Rating getInvertedMaterialRating(GameContext gameContext, int maxDeep) {
+        Rating.Builder builder = Rating.builder();
+        final int[] maxPlayerMoveValue = {0};
 
-    private Rating getMaterialRating(GameContext gameContext, int maxDeep) {
-        List<Integer> exchangeValues = generateExchangeValuesList(gameContext, maxDeep);
+        gameContext.childrenStream()
+                .filter(context -> context.getLastMove().isHarmful() && context.getLastMove().hasDifferentPointTo(gameContext.getLastMove()))
+                .forEach(context -> {
+                    Rating tempRating = getMaterialRating(context, maxDeep, true);
+                    String varName = "INVERTED_" + tempRating.getParam() + "[" + CommonUtils.moveToString(context.getLastMove()) + "]";
+                    builder.var(varName, tempRating.getValue());
+                    maxPlayerMoveValue[0] = Math.max(maxPlayerMoveValue[0], tempRating.getValue());
+                });
+
+        return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue[0]);
+    }
+
+
+    private Rating getMaterialRating(GameContext gameContext, int maxDeep, boolean isInverted) {
+        List<Integer> exchangeValues = generateExchangeValuesList(gameContext, maxDeep, isInverted);
 
         int exchangeDeep = exchangeValues.size();
         Rating.Builder builder = Rating.builder()
@@ -173,12 +178,9 @@ public class BotServiceImplMedium extends AbstractBotService {
         }
     }
 
-    //    @NoRoot
-    private List<Integer> generateExchangeValuesList(GameContext gameContext, int maxDeep) {
+    private List<Integer> generateExchangeValuesList(GameContext gameContext, int maxDeep, boolean isInverted) {
+        PointDTO targetPoint = gameContext.getLastMove().getPointTo();
         List<Integer> exchangeValuesResult = new ArrayList<>();
-
-        ExtendedMove analyzedMove = gameContext.getAnalyzedMove();
-        PointDTO targetPoint = analyzedMove.getPointTo();
 
         int exchangeValue = 0;
         GameContext deepContext = gameContext;
@@ -186,22 +188,30 @@ public class BotServiceImplMedium extends AbstractBotService {
         do {
             ExtendedMove lastMove = deepContext.getLastMove();
 
-            if (deepContext.botLast()) {
-                exchangeValue += lastMove.getValueTo(0);
+            if (!isInverted) {//FIXME надо рефакторить, а то стыдно - но щас лень думать че тут и куда и как
+                if (deepContext.botLast()) {
+                    exchangeValue += lastMove.getValueTo(0);
+                } else {
+                    exchangeValue -= lastMove.getValueTo(0);
+                }
             } else {
-                exchangeValue -= lastMove.getValueTo(0);
+                if (deepContext.botLast()) {
+                    exchangeValue -= lastMove.getValueTo(0);
+                } else {
+                    exchangeValue += lastMove.getValueTo(0);
+                }
             }
 
             exchangeValuesResult.add(exchangeValue);
 
-            deepContext = findMostProfitableHarmfulMove(deepContext, targetPoint);
+            deepContext = findDeeperCheapestContext(deepContext, targetPoint);
         }
         while (deepContext != null && exchangeValuesResult.size() != maxDeep);
 
         return exchangeValuesResult;
     }
 
-    private GameContext findMostProfitableHarmfulMove(GameContext context, PointDTO targetPoint) {
+    private GameContext findDeeperCheapestContext(GameContext context, PointDTO targetPoint) {
         if (!context.hasChildren()) {
             context.fill(1);
         }
@@ -211,7 +221,6 @@ public class BotServiceImplMedium extends AbstractBotService {
                 .reduce((c1, c2) -> c1.getLastMove().getValueFrom() <= c2.getLastMove().getValueFrom() ? c1 : c2)
                 .orElse(null);
     }
-
 
     private Rating getMaterialRatingForSimpleMoves(Rating.Builder builder, List<Integer> exchangeValues) {
         int exchangeDeep = exchangeValues.size();

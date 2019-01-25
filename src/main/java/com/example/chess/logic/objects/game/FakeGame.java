@@ -85,6 +85,7 @@ public class FakeGame implements IGame, Immutable {
 
         private Builder afterMove(Move move, Piece pieceFrom) {
             Side side = pieceFrom.getSide();
+            setPawnLongMoveColumnIndex(side, null);
 
             int columnIndexFrom = move.getColumnIndexFrom();
             switch (pieceFrom.getType()) {
@@ -102,8 +103,6 @@ public class FakeGame implements IGame, Immutable {
                 case PAWN:
                     if (isLongPawnMove(move, pieceFrom)) {
                         setPawnLongMoveColumnIndex(side, columnIndexFrom);
-                    } else {
-                        setPawnLongMoveColumnIndex(side, null);
                     }
                     break;
             }

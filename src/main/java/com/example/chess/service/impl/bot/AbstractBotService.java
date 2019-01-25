@@ -94,10 +94,12 @@ public abstract class AbstractBotService implements BotService {
         long start = System.currentTimeMillis();
         Debug.resetCounters();
 
-        rootContext.fill();
+        rootContext.fill(1);
+        if (!rootContext.hasChildren()) {
+            throw new RuntimeException("Checkmate: Player win!");
+        }
         log.info("rootContext.getTotalMovesCount(): " + rootContext.getTotalMovesCount());
         calculateRatingRecursive(rootContext);
-
 
         ExtendedMove resultMove = findBestExtendedMove(rootContext);
         System.out.println("resultMove[pos=" + rootContext.getMatrix().getPosition() + "] = " + resultMove);

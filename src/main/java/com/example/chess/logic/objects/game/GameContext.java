@@ -43,16 +43,25 @@ public class GameContext {
     }
 
     private GameContext executeMove(ExtendedMove nextMove) {
+        return executeMove(nextMove, true);
+    }
+
+    private GameContext executeMove(ExtendedMove nextMove, boolean addToChild) {
         Piece pieceFrom = matrix.getCell(nextMove.getPointFrom()).getPiece();
 
         FakeGame nextGame = game.executeMove(nextMove, pieceFrom);
         CellsMatrix nextMatrix = matrix.executeMove(nextMove);
 
         RootGameContext rootContext = isRoot() ? (RootGameContext) this : root;
-        return addChild(new GameContext(rootContext, this, nextGame, nextMatrix, nextMove));
+        GameContext childContext = new GameContext(rootContext, this, nextGame, nextMatrix, nextMove);
+
+        if (addToChild) {
+            addChild(childContext);
+        }
+        return childContext;
     }
 
-    private GameContext addChild(GameContext childNode) {
+    private void addChild(GameContext childNode) {
         if (children == null) {
             children = new HashMap<>();
         }
@@ -60,8 +69,6 @@ public class GameContext {
 
         List<GameContext> internalList = children.computeIfAbsent(childMove.getPointTo(), key -> new ArrayList<>());
         internalList.add(childNode);
-
-        return childNode;
     }
 
     public int getPosition() {
@@ -103,13 +110,16 @@ public class GameContext {
     }
 
     public Stream<GameContext> childrenStream() {
+        if (children == null) { //FIXME: это неправильно на самом деле, что этот метод вообще дергается когда children = Null
+            return Stream.empty();
+        }
         return children.values()
                 .stream()
                 .flatMap(Collection::stream);
     }
 
     public Stream<GameContext> childrenStream(PointDTO targetPoint) {
-        if (children == null) {
+        if (children == null) { //FIXME: это неправильно на самом деле, что этот метод вообще дергается когда children = Null
             return Stream.empty();
         }
         List<GameContext> internalList = children.get(targetPoint);
@@ -137,10 +147,6 @@ public class GameContext {
             log.info("{}context[{}].childrenCount: {}", prefix, deep, children.size());
             childrenStream().forEach(GameContext::print);
         }
-    }
-
-    public ExtendedMove getAnalyzedMove() {
-        return lastMove;
     }
 
     public CellsMatrix getOriginalMatrix() {
