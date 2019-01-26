@@ -109,6 +109,20 @@ public class GameServiceImpl implements GameService {
         return CellsMatrix.ofHistory(position, historyList);
     }
 
+    @Override
+    @Transactional
+    public ArrangementDTO rollbackLastMove(Game game) {
+        History lastMove = historyRepository.findByGameIdAndPosition(game.getId(), game.getPosition());
+        log.info("Canceled move: ");
+        log.info(lastMove);
+        historyRepository.delete(lastMove);
+
+        game.setPosition(game.getPosition() - 1);
+        gameRepository.save(game);
+
+        return createArrangementByGame(game, game.getPosition());
+    }
+
     private List<History> findHistoryByGameIdAndPosition(Game game, int position) {
         return historyRepository.findByGameIdAndPositionLessThanEqualOrderByPositionAsc(game.getId(), position);
     }

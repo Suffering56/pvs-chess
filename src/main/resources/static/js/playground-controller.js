@@ -6,6 +6,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     $scope.doClick = doClick;
     $scope.getCellColorClass = getCellColorClass;
     $scope.getCellPieceClass = getCellPieceClass;
+    $scope.rollback = rollback;
 
     let params = $rootScope.params;
     let game = params.game;
@@ -214,6 +215,15 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function getEnemySide() {
         return (game.position % 2 === 0) ? SIDE_BLACK : SIDE_WHITE;
+    }
+
+    function rollback() {
+        $http({
+            method: "GET",
+            url: "/api/game/" + game.id + "/rollback"
+        }).then(function (response) {
+            updateArrangement(response.data);
+        });
     }
 
 });

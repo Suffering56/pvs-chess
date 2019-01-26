@@ -31,7 +31,8 @@ app.run(['$rootScope', function ($rootScope) {
             id: null,
             position: null,
             underCheckSide: null
-        }
+        },
+        isDebug: false
     };
 
     $rootScope.MODE_UNSELECTED = MODE_UNSELECTED;

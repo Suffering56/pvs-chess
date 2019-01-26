@@ -57,4 +57,11 @@ public class GameController {
         Game game = gameService.findAndCheckGame(gameId);
         return gameService.createArrangementByGame(game, game.getPosition());
     }
+
+    @GetMapping("/{gameId}/rollback")
+    public ArrangementDTO rollbackLastMove(@PathVariable("gameId") long gameId) throws GameNotFoundException {
+
+        Game game = gameService.findAndCheckGame(gameId);
+        return gameService.rollbackLastMove(game);
+    }
 }

@@ -10,4 +10,6 @@ import java.util.List;
 public interface HistoryRepository extends CrudRepository<History, Long> {
 
 	List<History> findByGameIdAndPositionLessThanEqualOrderByPositionAsc(long gameId, int position);
+
+	History findByGameIdAndPosition(long gameId, int position);
 }

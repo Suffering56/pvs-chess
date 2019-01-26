@@ -21,4 +21,6 @@ public interface GameService {
     Set<PointDTO> getAvailableMoves(long gameId, PointDTO selectedCell) throws GameNotFoundException;
 
     CellsMatrix createCellsMatrixByGame(Game game, int position);
+
+    ArrangementDTO rollbackLastMove(Game game);
 }

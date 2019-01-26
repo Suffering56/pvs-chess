@@ -13,6 +13,7 @@ import com.example.chess.repository.GameRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import com.example.chess.logic.utils.CustomResponse;
+import com.google.common.base.Preconditions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -50,8 +51,20 @@ public class InitController {
     }
 
     @GetMapping("/{gameId}")
-    public Game getGame(@PathVariable("gameId") long gameId) throws GameNotFoundException {
-        return gameService.findAndCheckGame(gameId);
+    public Game getGame(@PathVariable("gameId") long gameId,
+                        @RequestParam(value = "debug", required = false) boolean isDebug,
+                        @RequestParam(value = "desiredSide", required = false) Side desiredSide,
+                        HttpServletRequest request) throws GameNotFoundException {
+
+        Game game = gameService.findAndCheckGame(gameId);
+        if (!isDebug) {
+            return game;
+        }
+
+        Preconditions.checkNotNull(desiredSide);
+
+        game.getFeaturesMap().get(desiredSide).setSessionId(request.getSession().getId());
+        return gameRepository.save(game);
     }
 
     @PostMapping("/{gameId}/mode")

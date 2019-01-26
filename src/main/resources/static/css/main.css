@@ -44,6 +44,14 @@ H1 {
     font-weight: bold;
 }
 
+.rollback-button {
+    display: inline-block;
+    width: 200px;
+    height: 50px;
+    font-size: 22px;
+    font-weight: bold;
+}
+
 .chessboard {
     display: inline-block;
     overflow: hidden;
