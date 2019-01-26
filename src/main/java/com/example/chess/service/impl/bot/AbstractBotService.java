@@ -6,6 +6,7 @@ import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.ChessConstants;
 import com.example.chess.logic.MoveHelper;
@@ -79,8 +80,7 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-
-    private void calculateRatingRecursive(GameContext context) {
+    private void calculateRatingRecursive(GameContext context) throws CheckmateException {
         if (!context.isRoot()) {
             calculateRating(context);
         }
@@ -99,32 +99,34 @@ public abstract class AbstractBotService implements BotService {
             throw new RuntimeException("Checkmate: Player win!");
         }
         log.info("rootContext.getTotalMovesCount(): " + rootContext.getTotalMovesCount());
-        calculateRatingRecursive(rootContext);
 
-        ExtendedMove resultMove = findBestExtendedMove(rootContext);
+        ExtendedMove resultMove;
+        try {
+            calculateRatingRecursive(rootContext);
+            resultMove = findBestExtendedMove(rootContext);
+        } catch (CheckmateException e) {
+            resultMove = e.getContext().getLastMove();
+        }
+
+
         System.out.println("resultMove[pos=" + rootContext.getMatrix().getPosition() + "] = " + resultMove);
-//
         if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
             System.out.println("Bot want checkmate you!!!");
         }
-//
         System.out.println();
         Debug.printCounters();
         System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
 
-        PieceType pieceFromPawn = null;
-        if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
-            pieceFromPawn = PieceType.QUEEN;
-        }
+
 
         MoveDTO predestinedMove = Debug.getPredestinedMove(rootContext.getMatrix().getPosition());
         if (predestinedMove != null) {
             return predestinedMove;
         }
 
+        PieceType pieceFromPawn = resultMove.isPawnTransformation() ? resultMove.getPieceFromPawn() : null;
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
     }
-
 
 
     protected ExtendedMove findBestExtendedMove(RootGameContext rootGameContext) {

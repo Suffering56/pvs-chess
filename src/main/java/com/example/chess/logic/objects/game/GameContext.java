@@ -110,18 +110,12 @@ public class GameContext {
     }
 
     public Stream<GameContext> childrenStream() {
-        if (children == null) { //FIXME: это неправильно на самом деле, что этот метод вообще дергается когда children = Null
-            return Stream.empty();
-        }
         return children.values()
                 .stream()
                 .flatMap(Collection::stream);
     }
 
     public Stream<GameContext> childrenStream(PointDTO targetPoint) {
-        if (children == null) { //FIXME: это неправильно на самом деле, что этот метод вообще дергается когда children = Null
-            return Stream.empty();
-        }
         List<GameContext> internalList = children.get(targetPoint);
         if (internalList == null) {
             return Stream.empty();

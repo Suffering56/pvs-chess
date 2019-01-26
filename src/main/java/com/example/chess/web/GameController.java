@@ -73,10 +73,13 @@ public class GameController {
     @GetMapping("/{gameId}/wake")
     public void wakeBot(@PathVariable("gameId") long gameId) throws GameNotFoundException {
         Game game = gameService.findAndCheckGame(gameId);
+        if (game.getMode() != GameMode.AI) {
+            throw new RuntimeException("You should to use AI_MODE!");
+        }
         if (game.getPlayerSide() == game.getActiveSide()) {
             throw new RuntimeException("Is player turn!");
         }
-        
+
         History lastMove = gameService.findLastMove(game);
         CellsMatrix matrix = gameService.createCellsMatrixByGame(game, game.getPosition() - 1);
 

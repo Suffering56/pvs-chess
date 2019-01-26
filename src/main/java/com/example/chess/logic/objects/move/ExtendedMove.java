@@ -6,6 +6,7 @@ import com.example.chess.enums.PieceType;
 import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
 import com.example.chess.logic.objects.Rating;
+import com.example.chess.logic.utils.ChessUtils;
 import com.example.chess.logic.utils.CommonUtils;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -16,8 +17,6 @@ import lombok.extern.log4j.Log4j2;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
-
-import static com.example.chess.logic.utils.ChessUtils.isPawnTransformation;
 
 @Log4j2
 @Getter
@@ -49,11 +48,15 @@ public class ExtendedMove implements Move {
 
     @Override
     public PieceType getPieceFromPawn() {
-        if (isPawnTransformation(this, getPieceFrom())) {
+        if (isPawnTransformation()) {
             log.info("Pawn transformation. TransformPiece: " + PieceType.QUEEN);
             return PieceType.QUEEN;
         }
         throw new UnsupportedOperationException();
+    }
+
+    public boolean isPawnTransformation() {
+        return ChessUtils.isPawnTransformation(this, getPieceFrom());
     }
 
     @Override

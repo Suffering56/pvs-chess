@@ -1,18 +1,19 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.logic.ChessConstants;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.RatingParam;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.exceptions.KingNotFoundException;
-import com.example.chess.logic.*;
+import com.example.chess.logic.ChessConstants;
+import com.example.chess.logic.MoveHelper;
 import com.example.chess.logic.debug.BotMode;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.Rating;
+import com.example.chess.logic.objects.game.FakeGame;
 import com.example.chess.logic.objects.game.GameContext;
 import com.example.chess.logic.objects.move.ExtendedMove;
-import com.example.chess.logic.objects.game.FakeGame;
 import com.example.chess.logic.utils.CommonUtils;
 import com.google.common.base.Preconditions;
 import lombok.Getter;
@@ -123,7 +124,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 //    Side botSide = gameContext.lastMoveSide();
 
     @Override
-    protected void calculateRating(GameContext gameContext) {
+    protected void calculateRating(GameContext gameContext) throws CheckmateException {
         Preconditions.checkArgument(!gameContext.isRoot());
 
         if (gameContext.getDeep() == 1) {
@@ -147,7 +148,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 //        analyzedMove.updateRating(invertedMovesCountRating);
     }
 
-    private Rating getInvertedMaterialRating(GameContext gameContext, int maxDeep) {
+    private Rating getInvertedMaterialRating(GameContext gameContext, int maxDeep) throws CheckmateException {
         Rating.Builder builder = Rating.builder();
         final int[] maxPlayerMoveValue = {0};
 
@@ -164,7 +165,7 @@ public class BotServiceImplMedium extends AbstractBotService {
     }
 
 
-    private Rating getMaterialRating(GameContext gameContext, int maxDeep, boolean isInverted) {
+    private Rating getMaterialRating(GameContext gameContext, int maxDeep, boolean isInverted) throws CheckmateException {
         List<Integer> exchangeValues = generateExchangeValuesList(gameContext, maxDeep, isInverted);
 
         int exchangeDeep = exchangeValues.size();
@@ -178,7 +179,7 @@ public class BotServiceImplMedium extends AbstractBotService {
         }
     }
 
-    private List<Integer> generateExchangeValuesList(GameContext gameContext, int maxDeep, boolean isInverted) {
+    private List<Integer> generateExchangeValuesList(GameContext gameContext, int maxDeep, boolean isInverted) throws CheckmateException {
         PointDTO targetPoint = gameContext.getLastMove().getPointTo();
         List<Integer> exchangeValuesResult = new ArrayList<>();
 
@@ -215,9 +216,17 @@ public class BotServiceImplMedium extends AbstractBotService {
         return exchangeValuesResult;
     }
 
-    private GameContext findDeeperCheapestContext(GameContext context, PointDTO targetPoint) {
+    private GameContext findDeeperCheapestContext(GameContext context, PointDTO targetPoint) throws CheckmateException {
         if (!context.hasChildren()) {
             context.fill(1);
+        }
+
+        if (!context.hasChildren()) {
+            if (context.getDeep() == 1) {
+                throw new CheckmateException(context);
+            } else  {
+                //TODO: handle deepest Checkmates
+            }
         }
 
         return context.childrenStream(targetPoint)

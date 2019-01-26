@@ -1,5 +1,6 @@
 package com.example.chess.logic.utils;
 
+import com.example.chess.dto.CellDTO;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
@@ -68,7 +69,10 @@ public class ChessUtils {
 
     public static boolean isEnPassant(CellsMatrix matrix, Move move, PieceType pieceType) {
         if (isPawnAttacks(move, pieceType)) {
-            return matrix.getCell(move.getRowIndexFrom(), move.getColumnIndexTo()) != null;
+            CellDTO cellTo = matrix.getCell(move.getRowIndexTo(), move.getColumnIndexTo());
+            if (cellTo == null) {
+                return matrix.getCell(move.getRowIndexFrom(), move.getColumnIndexTo()) != null;
+            }
         }
         return false;
     }
