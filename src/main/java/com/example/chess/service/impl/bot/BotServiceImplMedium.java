@@ -185,21 +185,25 @@ public class BotServiceImplMedium extends AbstractBotService {
         int exchangeValue = 0;
         GameContext deepContext = gameContext;
 
+        /*
+         * inverted=false botLast=true          +
+         * inverted=false botLast=false         -
+         * inverted=false botLast=true          +
+         * inverted=false botLast=false         -
+
+         * inverted=true botLast=false          +
+         * inverted=true botLast=true           -
+         * inverted=true botLast=false          +
+         * inverted=true botLast=true           -
+         */
+
         do {
             ExtendedMove lastMove = deepContext.getLastMove();
 
-            if (!isInverted) {//FIXME надо рефакторить, а то стыдно - но щас лень думать че тут и куда и как
-                if (deepContext.botLast()) {
-                    exchangeValue += lastMove.getValueTo(0);
-                } else {
-                    exchangeValue -= lastMove.getValueTo(0);
-                }
+            if (isInverted != deepContext.botLast()) {
+                exchangeValue += lastMove.getValueTo(0);
             } else {
-                if (deepContext.botLast()) {
-                    exchangeValue -= lastMove.getValueTo(0);
-                } else {
-                    exchangeValue += lastMove.getValueTo(0);
-                }
+                exchangeValue -= lastMove.getValueTo(0);
             }
 
             exchangeValuesResult.add(exchangeValue);
@@ -217,7 +221,8 @@ public class BotServiceImplMedium extends AbstractBotService {
         }
 
         return context.childrenStream(targetPoint)
-                //TODO: имеет значение чем рубить если фигуры одинаковой стоимости (т.е. тупо reduce-ить = плохо) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
+                // TODO: имеет значение чем рубить если фигуры одинаковой стоимости (т.е. тупо reduce-ить = плохо)
+                // - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
                 .reduce((c1, c2) -> c1.getLastMove().getValueFrom() <= c2.getLastMove().getValueFrom() ? c1 : c2)
                 .orElse(null);
     }

@@ -7,13 +7,13 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     $scope.getCellColorClass = getCellColorClass;
     $scope.getCellPieceClass = getCellPieceClass;
 
-    var params = $rootScope.params;
-    var game = params.game;
+    let params = $rootScope.params;
+    let game = params.game;
 
-    var selectedCell;
-    var availablePoints;
+    let selectedCell;
+    let availablePoints;
 
-    if (params.mode == MODE_AI || params.mode == MODE_PVP) {
+    if (params.mode === MODE_AI || params.mode === MODE_PVP) {
         utils.createAndStartTimer(function () {
             listenEnemyActions();
         }, 500);
@@ -25,8 +25,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
             method: "GET",
             url: "/api/game/" + game.id + "/listen"
         }).then(function (response) {
-            var arrangementDTO = response.data;
-            if (arrangementDTO.position != params.game.position) {
+            let arrangementDTO = response.data;
+            if (arrangementDTO.position !== params.game.position) {
                 updateArrangement(arrangementDTO);
             }
         });
@@ -47,8 +47,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function applyMove(cell) {
         //cell = CellDTO
-        if (selectedCell.piece.type == PIECE_PAWN) {
-            if (cell.rowIndex == 0 || cell.rowIndex == 7) {
+        if (selectedCell.piece.type === PIECE_PAWN) {
+            if (cell.rowIndex === 0 || cell.rowIndex === 7) {
                 showPieceChooser(cell);
                 return;
             }
@@ -58,8 +58,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function showPieceChooser(cell) {
-        var data = {side: selectedCell.piece.side};
-        var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", data, {size: "md"});
+        let data = {side: selectedCell.piece.side};
+        let dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", data, {size: "md"});
 
         dlg.result.then(function (pieceType) {
             //success
@@ -70,9 +70,9 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function sendApplyMoveRequest(cell, selectedPieceType) {
-        var url = "/api/game/" + game.id + "/move";
+        let url = "/api/game/" + game.id + "/move";
 
-        var moveDTO = {
+        let moveDTO = {
             from: {
                 rowIndex: selectedCell.rowIndex,
                 columnIndex: selectedCell.columnIndex
@@ -109,13 +109,13 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function selectCell(cell) {
-        if (params.mode != MODE_SINGLE) {
-            var expectedSide = getExpectedSide();
+        if (params.mode !== MODE_SINGLE) {
+            let expectedSide = getExpectedSide();
 
-            if (cell.piece == null || cell.piece.side != expectedSide) {
+            if (cell.piece == null || cell.piece.side !== expectedSide) {
                 return;
             }
-            if (params.side != expectedSide) {
+            if (params.side !== expectedSide) {
                 return;
             }
         }
@@ -176,7 +176,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function getCellPieceClass(cell) {
         //cell = cellDTO
-        var result = [];
+        let result = [];
 
         if (cell.piece) {
             result.push("piece");

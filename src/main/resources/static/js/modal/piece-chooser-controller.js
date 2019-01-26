@@ -11,7 +11,7 @@ app.controller("pieceChooserController", function ($scope, $uibModalInstance, da
     };
 
     $scope.getItemClass = function (pieceType) {
-        var result = [];
+        let result = [];
 
         result.push("modal-piece");
         result.push(pieceType + "-" + data.side);
