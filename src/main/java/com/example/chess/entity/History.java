@@ -1,7 +1,10 @@
 package com.example.chess.entity;
 
+import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.logic.objects.move.Move;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -55,5 +58,12 @@ public class History implements Move {
     @Transient
     public PointDTO getPointTo() {
         return PointDTO.valueOf(rowIndexTo, columnIndexTo);
+    }
+
+    @Transient
+    public ExtendedMove toExtendedMove(CellsMatrix matrix) {
+        CellDTO from = matrix.getCell(getPointFrom());
+        CellDTO to = matrix.getCell(getPointTo());
+        return new ExtendedMove(from, to);
     }
 }

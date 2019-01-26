@@ -5,9 +5,11 @@ import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
+import com.example.chess.entity.History;
 import com.example.chess.enums.GameMode;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.repository.GameRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import org.apache.commons.lang3.tuple.Pair;
@@ -23,11 +25,13 @@ public class GameController {
 
     private final GameService gameService;
     private final BotService botService;
+    private final GameRepository gameRepository;
 
     @Autowired
-    public GameController(GameService gameService, @Qualifier(App.DEFAULT_BOT_MODE) BotService botService) {
+    public GameController(GameService gameService, @Qualifier(App.DEFAULT_BOT_MODE) BotService botService, GameRepository gameRepository) {
         this.gameService = gameService;
         this.botService = botService;
+        this.gameRepository = gameRepository;
     }
 
     @GetMapping("/{gameId}/move")
@@ -63,5 +67,20 @@ public class GameController {
 
         Game game = gameService.findAndCheckGame(gameId);
         return gameService.rollbackLastMove(game);
+    }
+
+    @GetMapping("/{gameId}/wake")
+    public void wakeBot(@PathVariable("gameId") long gameId) throws GameNotFoundException {
+        Game game = gameService.findAndCheckGame(gameId);
+        if (game.getPlayerSide() == game.getActiveSide()) {
+            throw new RuntimeException("Is player turn!");
+        }
+        History lastMove = gameService.findLastMove(game);
+        CellsMatrix matrix = gameService.createCellsMatrixByGame(game, game.getPosition() - 1);
+
+        game.setUnderCheckSide(null);
+        game = gameRepository.save(game);
+
+        botService.applyBotMove(game, lastMove.toExtendedMove(matrix));
     }
 }

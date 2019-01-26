@@ -112,7 +112,7 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public ArrangementDTO rollbackLastMove(Game game) {
-        History lastMove = historyRepository.findByGameIdAndPosition(game.getId(), game.getPosition());
+        History lastMove = findLastMove(game);
         log.info("Canceled move: ");
         log.info(lastMove);
         historyRepository.delete(lastMove);
@@ -121,6 +121,11 @@ public class GameServiceImpl implements GameService {
         gameRepository.save(game);
 
         return createArrangementByGame(game, game.getPosition());
+    }
+
+    @Override
+    public History findLastMove(Game game) {
+        return historyRepository.findByGameIdAndPosition(game.getId(), game.getPosition());
     }
 
     private List<History> findHistoryByGameIdAndPosition(Game game, int position) {

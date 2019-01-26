@@ -4,6 +4,7 @@ import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
+import com.example.chess.entity.History;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.objects.CellsMatrix;
 import org.apache.commons.lang3.tuple.Pair;
@@ -23,4 +24,6 @@ public interface GameService {
     CellsMatrix createCellsMatrixByGame(Game game, int position);
 
     ArrangementDTO rollbackLastMove(Game game);
+
+    History findLastMove(Game game);
 }

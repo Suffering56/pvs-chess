@@ -7,6 +7,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     $scope.getCellColorClass = getCellColorClass;
     $scope.getCellPieceClass = getCellPieceClass;
     $scope.rollback = rollback;
+    $scope.wakeBot = wakeBot;
 
     let params = $rootScope.params;
     let game = params.game;
@@ -223,6 +224,15 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
             url: "/api/game/" + game.id + "/rollback"
         }).then(function (response) {
             updateArrangement(response.data);
+        });
+    }
+
+    function wakeBot() {
+        $http({
+            method: "GET",
+            url: "/api/game/" + game.id + "/wake"
+        }).then(function (response) {
+
         });
     }
 
