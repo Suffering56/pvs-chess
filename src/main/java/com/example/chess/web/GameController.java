@@ -9,6 +9,7 @@ import com.example.chess.entity.History;
 import com.example.chess.enums.GameMode;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
@@ -75,12 +76,18 @@ public class GameController {
         if (game.getPlayerSide() == game.getActiveSide()) {
             throw new RuntimeException("Is player turn!");
         }
+        
         History lastMove = gameService.findLastMove(game);
         CellsMatrix matrix = gameService.createCellsMatrixByGame(game, game.getPosition() - 1);
 
         game.setUnderCheckSide(null);
         game = gameRepository.save(game);
 
-        botService.applyBotMove(game, lastMove.toExtendedMove(matrix));
+        ExtendedMove lastExtMove = null;
+        if (lastMove != null) {
+            lastExtMove = lastMove.toExtendedMove(matrix);
+        }
+
+        botService.applyBotMove(game, lastExtMove);
     }
 }
