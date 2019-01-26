@@ -32,14 +32,14 @@ public class GameContext {
     //fk = pointFrom, sk = pointTo
     Map<PointDTO, List<GameContext>> children;
 
-    public void fill(int deep) {
+    public void fill(int maxDeep) {
         MoveHelper.valueOf(this)
                 .getStandardMovesStream(nextTurnSide())
                 //здесь еще можно фильтровать по targetPoint (см - findMostProfitableMove)
                 .sorted(Comparator.comparing(ExtendedMove::getValueFrom))   //TODO: кажется отсортировал
                 .map(this::executeMove)
-                .filter(childContext -> deep > 1)
-                .forEach(childContext -> childContext.fill(deep - 1));
+                .filter(childContext -> maxDeep > 1)
+                .forEach(childContext -> childContext.fill(maxDeep - 1));
     }
 
     private GameContext executeMove(ExtendedMove nextMove) {
