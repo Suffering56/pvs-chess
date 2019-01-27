@@ -41,7 +41,6 @@ public class BotServiceImplMedium extends AbstractBotService {
         analyzedMove.updateRating(invertedMovesCountRating);
     }
 
-
     private Rating getCheckRating(GameContext gameContext) {
         if (gameContext.hasChildren()) {
             long count = gameContext.childrenStream(gameContext.getMatrix().getKingPoint(gameContext.lastMoveSide())).count();

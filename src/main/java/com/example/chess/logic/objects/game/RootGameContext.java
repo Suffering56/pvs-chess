@@ -6,8 +6,6 @@ import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import lombok.Getter;
 
-import static com.example.chess.logic.ChessConstants.BOT_ANALYSIS_DEEP;
-
 @Getter
 public class RootGameContext extends GameContext {
 
@@ -25,9 +23,5 @@ public class RootGameContext extends GameContext {
     @Override
     public long getTotalMovesCount() {
         return super.getTotalMovesCount() - 1;
-    }
-
-    public void fill() {
-        super.fill(BOT_ANALYSIS_DEEP);
     }
 }

@@ -13,6 +13,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static com.example.chess.logic.utils.CommonUtils.tabs;
@@ -33,9 +34,13 @@ public class GameContext {
     Map<PointDTO, List<GameContext>> children;
 
     public void fill(int maxDeep) {
+        fill(maxDeep, move -> true);
+    }
+
+    public void fill(int maxDeep, Predicate<ExtendedMove> movesFilter) {
         MoveHelper.valueOf(this)
                 .getStandardMovesStream(nextTurnSide())
-                //здесь еще можно фильтровать по targetPoint (см - findMostProfitableMove)
+                .filter(movesFilter)
                 .sorted(Comparator.comparing(ExtendedMove::getValueFrom))   //TODO: кажется отсортировал
                 .map(this::executeMove)
                 .filter(childContext -> maxDeep > 1)

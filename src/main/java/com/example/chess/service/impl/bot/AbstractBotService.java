@@ -70,7 +70,7 @@ public abstract class AbstractBotService implements BotService {
     }
 
     private MoveDTO findBestMove(RootGameContext rootContext) {
-        int deep = 2;
+        int deep = 3;
         Debug.resetCounters();
         long start = System.currentTimeMillis();
 
@@ -109,10 +109,14 @@ public abstract class AbstractBotService implements BotService {
     }
 
     private void calculateRatingRecursive(GameContext context, int deep) throws CheckmateException {
+        if (deep < 0) {
+            return;
+        }
+
         if (!context.isRoot()) {
             calculateRating(context);
         }
-        if (context.hasChildren() && context.getDeep() <= deep) {
+        if (context.hasChildren()) {
             if (context.isRoot()) {
                 context.childrenStream()
                         .parallel()
@@ -127,6 +131,7 @@ public abstract class AbstractBotService implements BotService {
     private ExtendedMove findBestExtendedMove(RootGameContext rootGameContext) {
         List<ExtendedMove> botAvailableMoves = rootGameContext.childrenStream()
                 .map(GameContext::getLastMove)
+                //FIXME: надо учитывать тоталы и более глубоких ходов
                 .sorted(Comparator.comparing(ExtendedMove::getTotal))
                 .collect(Collectors.toList());
 
