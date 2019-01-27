@@ -49,7 +49,6 @@ public class ExtendedMove implements Move {
     @Override
     public PieceType getPieceFromPawn() {
         if (isPawnTransformation()) {
-            log.info("Pawn transformation. TransformPiece: " + PieceType.QUEEN);
             return PieceType.QUEEN;
         }
         throw new UnsupportedOperationException();
@@ -133,11 +132,6 @@ public class ExtendedMove implements Move {
         return this.getPointTo().equals(pointTo);
     }
 
-    public void updateTotalByGreedy() {
-        int value = getPieceTo() != null ? getPieceTo().getValue() : 0;
-        updateRating(Rating.builder().build(RatingParam.GREEDY, value));
-    }
-
     public Side getSide() {
         return from.getSide();
     }
@@ -154,9 +148,5 @@ public class ExtendedMove implements Move {
         }
 
         return result.toString();
-    }
-
-    public Integer toMapKey() {
-        return getRowIndexFrom() + getColumnIndexFrom() * 10 + getRowIndexTo() * 100 + getColumnIndexTo() * 1000;
     }
 }

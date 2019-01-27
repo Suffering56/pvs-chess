@@ -7,7 +7,6 @@ import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.logic.ChessConstants;
 import com.example.chess.logic.debug.Debug;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.game.GameContext;
@@ -71,7 +70,7 @@ public abstract class AbstractBotService implements BotService {
     }
 
     private MoveDTO findBestMove(RootGameContext rootContext) {
-        int deep = 1;
+        int deep = 2;
         Debug.resetCounters();
         long start = System.currentTimeMillis();
 
@@ -79,6 +78,8 @@ public abstract class AbstractBotService implements BotService {
         if (!rootContext.hasChildren()) {
             throw new RuntimeException("Checkmate: Player win!");
         }
+
+        log.info("totalMovesCount[before calculation]: " + rootContext.getTotalMovesCount());
 
         ExtendedMove resultMove;
         try {
@@ -88,14 +89,7 @@ public abstract class AbstractBotService implements BotService {
             resultMove = e.getContext().getLastMove();
         }
 
-        log.info("rootContext.getTotalMovesCount(): " + rootContext.getTotalMovesCount());
-        System.out.println("resultMove[pos=" + rootContext.getMatrix().getPosition() + "] = " + resultMove);
-        if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
-            System.out.println("Bot want checkmate you!!!");
-        }
-        System.out.println();
-        Debug.printCounters();
-        System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
+        log.info("totalMovesCount[after calculation]: " + rootContext.getTotalMovesCount());
 
 
         MoveDTO predestinedMove = Debug.getPredestinedMove(rootContext.getMatrix().getPosition());
@@ -104,6 +98,13 @@ public abstract class AbstractBotService implements BotService {
         }
 
         PieceType pieceFromPawn = resultMove.isPawnTransformation() ? resultMove.getPieceFromPawn() : null;
+
+        System.out.println();
+        Debug.printCounters();
+        log.info("ResultMove[original_pos = " + rootContext.getMatrix().getPosition() + "]::::" + resultMove);
+        System.out.println();
+        System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
+
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
     }
 
@@ -112,8 +113,14 @@ public abstract class AbstractBotService implements BotService {
             calculateRating(context);
         }
         if (context.hasChildren() && context.getDeep() <= deep) {
-            context.childrenStream()
-                    .forEach(childContext -> calculateRatingRecursive(childContext, deep));
+            if (context.isRoot()) {
+                context.childrenStream()
+                        .parallel()
+                        .forEach(childContext -> calculateRatingRecursive(childContext, deep - 1));
+            } else {
+                context.childrenStream()
+                        .forEach(childContext -> calculateRatingRecursive(childContext, deep - 1));
+            }
         }
     }
 

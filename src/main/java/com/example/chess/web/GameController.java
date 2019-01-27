@@ -1,6 +1,5 @@
 package com.example.chess.web;
 
-import com.example.chess.App;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
@@ -15,7 +14,6 @@ import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -29,7 +27,7 @@ public class GameController {
     private final GameRepository gameRepository;
 
     @Autowired
-    public GameController(GameService gameService, @Qualifier(App.DEFAULT_BOT_MODE) BotService botService, GameRepository gameRepository) {
+    public GameController(GameService gameService, BotService botService, GameRepository gameRepository) {
         this.gameService = gameService;
         this.botService = botService;
         this.gameRepository = gameRepository;

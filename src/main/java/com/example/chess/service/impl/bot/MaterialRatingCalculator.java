@@ -8,11 +8,13 @@ import com.example.chess.logic.objects.game.GameContext;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.logic.utils.CommonUtils;
 import com.google.common.base.Preconditions;
+import lombok.experimental.UtilityClass;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings({"Duplicates", "WeakerAccess"})
+@UtilityClass
 public class MaterialRatingCalculator {
 
     private static final int MAX_MATERIAL_DEEP = -1;
@@ -35,14 +37,16 @@ public class MaterialRatingCalculator {
         Rating.Builder builder = Rating.builder();
         final int[] maxPlayerMoveValue = {0};
 
-        gameContext.childrenStream()
-                .filter(context -> context.getLastMove().isHarmful() && context.getLastMove().hasDifferentPointTo(gameContext.getLastMove()))
-                .forEach(context -> {
-                    Rating tempRating = getMaterialRating(context, true);
-                    String varName = "INVERTED_" + tempRating.getParam() + "[" + CommonUtils.moveToString(context.getLastMove()) + "]";
-                    builder.var(varName, tempRating.getValue());
-                    maxPlayerMoveValue[0] = Math.max(maxPlayerMoveValue[0], tempRating.getValue());
-                });
+        if (gameContext.hasChildren()) {
+            gameContext.childrenStream()
+                    .filter(context -> context.getLastMove().isHarmful() && context.getLastMove().hasDifferentPointTo(gameContext.getLastMove()))
+                    .forEach(context -> {
+                        Rating tempRating = getMaterialRating(context, true);
+                        String varName = "INVERTED_" + tempRating.getParam() + "[" + CommonUtils.moveToString(context.getLastMove()) + "]";
+                        builder.var(varName, tempRating.getValue());
+                        maxPlayerMoveValue[0] = Math.max(maxPlayerMoveValue[0], tempRating.getValue());
+                    });
+        }
 
         return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue[0]);
     }
@@ -106,6 +110,7 @@ public class MaterialRatingCalculator {
                 throw new CheckmateException(context);
             } else {
                 //TODO: handle deepest Checkmates
+                return null;
             }
         }
 
@@ -159,7 +164,7 @@ public class MaterialRatingCalculator {
      */
     private static Rating getMaterialRatingForDeepExchange(Rating.Builder builder, List<Integer> exchangeValues) {
         int exchangeDeep = exchangeValues.size();
-        Preconditions.checkState(exchangeDeep < 3, "exchangeDeep < 3");
+        Preconditions.checkState(exchangeDeep >= 3, "exchangeDeep must be >= 3");
 
         int totalMinB = exchangeValues.get(0);
         int totalMaxP = exchangeValues.get(1);

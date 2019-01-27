@@ -1,29 +1,14 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.dto.PointDTO;
-import com.example.chess.enums.PieceType;
 import com.example.chess.enums.RatingParam;
-import com.example.chess.enums.Side;
 import com.example.chess.exceptions.CheckmateException;
-import com.example.chess.exceptions.KingNotFoundException;
 import com.example.chess.logic.MoveHelper;
-import com.example.chess.logic.debug.BotMode;
-import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.Rating;
-import com.example.chess.logic.objects.game.FakeGame;
 import com.example.chess.logic.objects.game.GameContext;
 import com.example.chess.logic.objects.move.ExtendedMove;
-import com.example.chess.logic.utils.CommonUtils;
 import com.google.common.base.Preconditions;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
 
 import static com.example.chess.service.impl.bot.MaterialRatingCalculator.getInvertedMaterialRating;
 import static com.example.chess.service.impl.bot.MaterialRatingCalculator.getMaterialRating;
@@ -31,16 +16,12 @@ import static com.example.chess.service.impl.bot.MaterialRatingCalculator.getMat
 
 @Service
 @Log4j2
-@Qualifier(BotMode.MEDIUM)
-@SuppressWarnings("Duplicates")
 public class BotServiceImplMedium extends AbstractBotService {
-
 
     @Override
     protected void calculateRating(GameContext gameContext) throws CheckmateException {
         Preconditions.checkArgument(!gameContext.isRoot());
         ExtendedMove analyzedMove = gameContext.getLastMove();
-
 
 //        if (gameContext.getDeep() == 1) {
         Rating materialRating = getMaterialRating(gameContext, false);
@@ -50,67 +31,26 @@ public class BotServiceImplMedium extends AbstractBotService {
         analyzedMove.updateRating(invertedMaterialRating);
 //        }
 
+        Rating checkRating = getCheckRating(gameContext);
+        analyzedMove.updateRating(checkRating);
 
-//        CellsMatrix originalMatrix = gameContext.getParent().getMatrix();
-//        CellsMatrix firstMatrixPlayerNext = gameContext.getMatrix();
-//        Side botSide = gameContext.lastMoveSide();
-//
-//        InternalBotService internalService = new InternalBotService(fakeGame, originalMatrix, analyzedMove, botSide);
-//        CellsMatrix firstMatrixPlayerNext = internalService.getFirstMatrixPlayerNext();
-//
-//        Rating materialRating = internalService.getMaterialRating(firstMatrixPlayerNext, analyzedMove, botSide, -1);
-//        analyzedMove.updateRating(materialRating);
-//
-//        Rating invertedMaterialRating = internalService.getInvertedMaterialRating(-1);
-//        analyzedMove.updateRating(invertedMaterialRating);
-//
-//        Rating checkRating = internalService.getCheckRating();
-//        analyzedMove.updateRating(checkRating);
-//
-//        Rating movesCountRating = internalService.getAvailableMovesCountRating(botMovesByOriginal, botSide, false);
-//        analyzedMove.updateRating(movesCountRating);
-//
-//        Rating invertedMovesCountRating = internalService.getInvertedAvailableMovesCountRating();
-//        analyzedMove.updateRating(invertedMovesCountRating);
-}
+        Rating movesCountRating = getMovesCountRating(gameContext, false);
+        analyzedMove.updateRating(movesCountRating);
+
+        Rating invertedMovesCountRating = getMovesCountRating(gameContext, true);
+        analyzedMove.updateRating(invertedMovesCountRating);
+    }
 
 
+    private Rating getCheckRating(GameContext gameContext) {
+        if (gameContext.hasChildren()) {
+            long count = gameContext.childrenStream(gameContext.getMatrix().getKingPoint(gameContext.lastMoveSide())).count();
+            if (count > 0) {
+                return Rating.builder().build(RatingParam.CHECK);
+            }
+        }
 
-//TODO:originalMatrix->analyzedMove->firstMatrixPlayerNext>playerMove->secondMatrixBotNext->botMove->....
-class InternalBotService {
-
-    @Getter
-    private final CellsMatrix firstMatrixPlayerNext;
-    private final FakeGame originalFakeGame;
-    private final FakeGame fakeGame;
-    private final CellsMatrix originalMatrix;
-    @Getter
-    private final List<ExtendedMove> playerMoves;
-    private final ExtendedMove analyzedMove;
-    private final Side botSide;
-    private final Side playerSide;
-    private final List<ExtendedMove> playerMovesByOriginal;
-
-
-    public InternalBotService(FakeGame originalFakeGame, CellsMatrix originalMatrix, ExtendedMove analyzedMove, Side botSide) {
-        this.analyzedMove = analyzedMove;
-        this.originalFakeGame = originalFakeGame;
-        this.fakeGame = originalFakeGame;
-        this.originalMatrix = originalMatrix;
-
-
-        this.botSide = botSide;
-        playerSide = botSide.reverse();
-
-        firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove);
-
-        playerMoves = MoveHelper.valueOf(originalFakeGame, firstMatrixPlayerNext)
-                .getStandardMovesStream(playerSide)
-                .collect(Collectors.toList());
-
-        playerMovesByOriginal = MoveHelper.valueOf(fakeGame, originalMatrix)
-                .getStandardMovesStream(playerSide)
-                .collect(Collectors.toList());
+        return Rating.builder().build(RatingParam.CHECK, 0);
     }
 
     /**
@@ -131,295 +71,26 @@ class InternalBotService {
      * 2) Он пытается убрать пешки с вертикалей A,H чтобы как можно раньше вывести ладьи (тем самым исключая собственную рокировку)
      * 3) Можно попасть под троекратное повторение одной и той же позиции (было такое, правда до внедрения INVERTED_AVAILABLE_MOVES_COUNT)
      */
-    private Rating getAvailableMovesCountRating(List<ExtendedMove> movesBefore, Side expectedSide, boolean isInverted) {
-        movesBefore = movesBefore.stream()
-                .filter(move -> move.getPieceFrom() != PieceType.KING)
-                .collect(Collectors.toList());
+    private Rating getMovesCountRating(GameContext context, boolean isInverted) {
+        int movesBefore = (int) (context.neighboursStream()
+                //.filter(neighbor -> neighbor.getLastMove().getPieceFrom() != PieceType.KING)
+                .count() + 1);
 
-        List<ExtendedMove> movesAfter = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-                .getStandardMovesStream(expectedSide)
-                .filter(move -> move.getPieceFrom() != PieceType.KING)
-                .collect(Collectors.toList());
+        int movesAfter = (int) MoveHelper.valueOf(context)
+                .getStandardMovesStream(context.nextTurnSide().reverse())
+                //.filter(move -> move.getPieceFrom() != PieceType.KING)
+                .count();
 
         Rating.Builder builder = Rating.builder()
-                .var("movesBefore", movesBefore.size())
-                .var("movesAfter", movesAfter.size());
+                .var("movesBefore", movesBefore)
+                .var("movesAfter", movesAfter);
 
         if (isInverted) {
-            return builder.build(RatingParam.INVERTED_AVAILABLE_MOVES_COUNT, movesAfter.size() - movesBefore.size());
+            return builder.build(RatingParam.INVERTED_AVAILABLE_MOVES_COUNT, movesAfter - movesBefore);
         } else {
-            return builder.build(RatingParam.AVAILABLE_MOVES_COUNT, movesAfter.size() - movesBefore.size());
+            return builder.build(RatingParam.AVAILABLE_MOVES_COUNT, movesAfter - movesBefore);
         }
     }
-
-    private Rating getInvertedAvailableMovesCountRating() {
-        return getAvailableMovesCountRating(playerMovesByOriginal, playerSide, true);
-    }
-
-    /**
-     * Алгоритм работает не только для определения материального рейтинга для бота, но и для игрока так же.
-     * Достаточно ему передать в параметр botSide - playerSide.
-     * В таком случае все понятия внутри функций инвертируются - все что было ботом - станет игроком, и наоборот.
-     * <p>
-     * Некрасиво, но если переименовать botSide и playerSide во что-то более абстрактное - легко будет запутаться.
-     * <p>
-     * ...->moveBefore->matrix->...
-     */
-    private Rating getMaterialRating(CellsMatrix matrix, ExtendedMove moveBefore, Side side, int maxDeep) {
-        List<Integer> exchangeValues = generateExchangeValuesList(matrix, moveBefore, side, maxDeep);
-
-        int exchangeDeep = exchangeValues.size();
-        Rating.Builder builder = Rating.builder()
-                .var("exchangeDeep", exchangeDeep);
-
-        if (exchangeDeep <= 2) {
-            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
-        } else {
-            return getMaterialRatingForDeepExchange(builder, exchangeValues);
-        }
-    }
-
-    /**
-     * Алгоритм анализирует ситуацию на доске образовавшуюся после того как бот сделал текущий ход (analyzedMove)
-     * Он ищет все доступные враждебные(которые ведут к потере ботом фигуры или размену) ходы врага,
-     * кроме тех, которые хотят срубить только что сходившую фигуру бота (эти размены анализируются в другом месте)
-     * И анализирует этот самый размен вплоть до максимальной глубины.
-     * Если показатель положительный (для игрока), значит текущий сделанный ход - плохой и получит отрицательный рейтинг.
-     */
-    private Rating getInvertedMaterialRating(int maxDeep) {
-        List<ExtendedMove> playerHarmfulMoves = playerMoves
-                .stream()
-                .filter(move -> move.isHarmful() && move.hasDifferentPointTo(analyzedMove))
-                .collect(Collectors.toList());
-
-        Rating.Builder builder = Rating.builder();
-        int maxPlayerMoveValue = 0;
-
-        for (ExtendedMove playerMove : playerHarmfulMoves) {
-            CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove);
-
-            Rating playerMoveRating = getMaterialRating(secondMatrixBotNext, playerMove, playerSide, maxDeep);
-
-            String varName = "INVERTED_" + playerMoveRating.getParam() + "[" + CommonUtils.moveToString(playerMove) + "]";
-            builder.var(varName, playerMoveRating.getValue());
-
-            maxPlayerMoveValue = Math.max(maxPlayerMoveValue, playerMoveRating.getValue());
-        }
-
-        return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue);
-    }
-
-    private Rating getCheckRating() {
-        if (MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext).isKingUnderAttack(playerSide)) {
-
-            if (playerMoves.isEmpty()) {
-                return Rating.builder().build(RatingParam.CHECKMATE_BY_BOT);   ////TODO: checkmate
-            }
-            return Rating.builder().build(RatingParam.CHECK);
-        }
-
-        return Rating.builder().build(RatingParam.CHECK, 0);
-    }
-
-    private List<Integer> generateExchangeValuesList(CellsMatrix matrix, ExtendedMove moveBefore, Side botSide, int maxDeep) {
-        Side playerSide = botSide.reverse();
-
-        int targetCellValue = moveBefore.getValueTo(0);
-        PointDTO targetPoint = moveBefore.getPointTo();
-
-        List<Integer> exchangeValues = new ArrayList<>();
-
-        int exchangeValue = targetCellValue;
-        exchangeValues.add(exchangeValue);
-
-        CellsMatrix prevMatrix = matrix;
-        ExtendedMove prevMove = moveBefore;
-
-        try {
-            ExtendedMove minPlayerMove = getMinMove(fakeGame, matrix, targetPoint, playerSide);
-            CellsMatrix afterBotMoveMatrix = matrix;
-
-
-            while (true) {
-                if (minPlayerMove == null || exchangeValues.size() == maxDeep) break;
-                /*
-                 * EXECUTE PLAYER MOVE
-                 */
-                CellsMatrix afterPlayerMoveMatrix = afterBotMoveMatrix.executeMove(minPlayerMove);
-                ExtendedMove minBotMove = getMinMove(fakeGame, afterPlayerMoveMatrix, targetPoint, botSide);
-                prevMatrix = afterBotMoveMatrix;
-                prevMove = minPlayerMove;
-
-                exchangeValue -= minPlayerMove.getValueTo();
-                exchangeValues.add(exchangeValue);
-
-                if (minBotMove == null || exchangeValues.size() == maxDeep) break;
-                /*
-                 * EXECUTE BOT MOVE
-                 */
-                afterBotMoveMatrix = afterPlayerMoveMatrix.executeMove(minBotMove);
-                minPlayerMove = getMinMove(fakeGame, afterBotMoveMatrix, targetPoint, playerSide);
-                prevMatrix = afterPlayerMoveMatrix;
-                prevMove = minBotMove;
-
-                exchangeValue += minBotMove.getValueTo();
-                exchangeValues.add(exchangeValue);
-            }
-        } catch (KingNotFoundException e) {
-            e.setOriginalMatrix(originalMatrix);
-            e.setAnalyzedMove(analyzedMove);
-            e.setPrevMatrix(prevMatrix);
-            e.setPrevMove(prevMove);
-            e.print();
-            throw e;
-        }
-
-        return exchangeValues;
-    }
-
-    private Rating getMaterialRatingForSimpleMoves(Rating.Builder builder, List<Integer> exchangeValues) {
-        int exchangeDeep = exchangeValues.size();
-
-        if (exchangeDeep == 1) {  //1) bot -> X
-            if (exchangeValues.get(0) == 0) {
-                //бот шагнул на незащищенную (ботом), но безопасную (не находящуюся под атакой игрока) клетку = сделал самый обычный ход
-                return builder.build(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));
-            } else {
-                //бот срубил незащищенную фигуру игрока
-                return builder.build(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));
-            }
-        }
-        if (exchangeDeep == 2) {  //1) bot -> X 2) player -> X
-            if (exchangeValues.get(0) == 0) {
-                //бот шагнул на незащищенную (ботом) пустую клетку, находящуюся под атакой игрока = отдал фигуру
-                return builder.build(RatingParam.MATERIAL_SIMPLE_FEED, exchangeValues.get(1));
-            } else {
-                //бот срубил фигуру, но срубившая фигура ничем теперь не защищена и игрок может ее срубить = простой размен
-                return builder.build(RatingParam.MATERIAL_SIMPLE_EXCHANGE, exchangeValues.get(1));
-            }
-        }
-
-        throw new RuntimeException("exchangeDeep > 2");
-    }
-
-    private Rating getMaterialRatingForDeepExchange(Rating.Builder builder, List<Integer> exchangeValues) {
-        int exchangeDeep = exchangeValues.size();
-
-        if (exchangeDeep < 3) {
-            throw new RuntimeException("exchangeDeep < 3");
-        }
-
-        int totalMinB = exchangeValues.get(0);
-        int totalMaxP = exchangeValues.get(1);
-        for (int n = 0; n < exchangeDeep; n++) {
-            Integer currentExchangeValue = exchangeValues.get(n);
-
-            if (isBotMove(n)) {   //bot move
-                totalMinB = Math.min(totalMinB, currentExchangeValue);
-            } else {            //player move
-                totalMaxP = Math.max(totalMaxP, currentExchangeValue);
-            }
-        }
-
-        boolean botMovesLast = isBotMove(exchangeDeep - 1);
-        int lastMoveValue = exchangeValues.get(exchangeDeep - 1);
-        if (botMovesLast) {
-            totalMaxP = Math.max(totalMaxP, lastMoveValue);
-        } else {//playerMovesLast
-            totalMinB = Math.min(totalMinB, lastMoveValue);
-        }
-
-        builder.var("totalMaxP", totalMaxP);
-        builder.var("totalMinB", totalMinB);
-
-        int minB = exchangeValues.get(0);
-        int maxP = exchangeValues.get(1);   //на самом деле null, но я не хочу использовать Integer;
-        for (int n = 0; n < exchangeDeep; n++) {
-            Integer currentExchangeValue = exchangeValues.get(n);
-
-            boolean stopByPlayer = currentExchangeValue == totalMinB;
-            boolean stopByBot = currentExchangeValue == totalMaxP;
-
-            builder.var("n", n);
-
-            if (isBotMove(n)) {//уже сделанный
-                minB = Math.min(minB, currentExchangeValue);
-
-                if (stopByPlayer) {
-                    builder.note("stopByPlayer");
-
-                    /*
-                     * Игрок прекращает размен, потому что добрался до наиболее выгодного для сеья момента =>
-                     * Поэтому именно бот выбирает:
-                     * - либо последнее слово будет за ним - т.к. дальше игрок не пойдет и result = totalMinB,
-                     * - либо последнее слово будет за игроком, а значит result = maxP
-                     * - ессно он выбирает меньшее из двух зол == Math.max(totalMinB, maxP) ;
-                     */
-
-                    if (n == 0) {
-                        /*
-                         * Такое может произойти, в случае если игрок добрался до наиболее выгодного для себя момента первым же ходом.
-                         * Бот должен выбрать меньшее из двух зол (Math.min(totalMinB, maxP))
-                         * Но maxP в текущий момент скажем... null.
-                         * По коду не скажешь, но на самом деле дело до вычисления корректного значения maxP не доходит.
-                         *
-                         * Поэтому возвращаем min(totalMinB, null) = totalMinB;
-                         */
-                        return builder
-                                .var("maxP", null)
-                                .note("return totalMinB")
-                                .build(RatingParam.MATERIAL_DEEP_EXCHANGE, totalMinB);
-                    }
-                    return builder
-                            .var("maxP", maxP)
-                            .var("minB", minB)
-                            .note("return Math.max(totalMinB, maxP)")
-                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.max(totalMinB, maxP));
-                }
-            } else { //player move
-                builder.note("stopByBot");
-                maxP = Math.max(maxP, currentExchangeValue);
-                if (stopByBot) {
-                    /*
-                     * Бот прекращает размен, потому что добрался до наиболее выгодного для себя момента =>
-                     * Поэтому именно игрок выбирает:
-                     * - либо последнее слово будет за ним - т.к. дальше бот не пойдет и result = totalMaxP,
-                     * - либо последнее слово будет за ботом, а значит result = minB
-                     * - ессно он выбирает меньшее из двух зол == Math.min(totalMaxP, minB);
-                     */
-                    return builder
-                            .var("maxP", maxP)
-                            .var("minB", minB)
-                            .note("return Math.min(totalMaxP, minB)")
-                            .build(RatingParam.MATERIAL_DEEP_EXCHANGE, Math.min(totalMaxP, minB));
-                }
-            }
-        }
-
-        //ситуации, когда код доберется сюда быть не должно. по крайней мере я такую придумать не смог
-        throw new UnsupportedOperationException();
-    }
-
-    //TODO: имеет значение чем рубить - если фигуры одинаковой стоимости (min) - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
-    //TODO: а еще про fakeGame подумай (longPawn, under check)
-    private ExtendedMove getMinMove(FakeGame fakeGame, CellsMatrix matrix, PointDTO targetPoint, Side side) {
-        return MoveHelper.valueOf(fakeGame, matrix)
-                .getStandardMovesStream(side)
-                .filter(nextMove -> nextMove.hasSamePointTo(targetPoint))
-                .reduce(cheapestPieceFrom())
-                .orElse(null);
-    }
-
-    private BinaryOperator<ExtendedMove> cheapestPieceFrom() {
-        return (m1, m2) -> m1.getValueFrom() <= m2.getValueFrom() ? m1 : m2;
-    }
-
-    private boolean isBotMove(int n) {
-        return n % 2 == 0;
-    }
-}
-
-
 }
 
 

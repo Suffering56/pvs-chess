@@ -1,6 +1,5 @@
 package com.example.chess.web;
 
-import com.example.chess.App;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.ModeDTO;
 import com.example.chess.dto.SideDTO;
@@ -9,13 +8,12 @@ import com.example.chess.entity.GameFeatures;
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.logic.utils.CustomResponse;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.logic.utils.CustomResponse;
 import com.google.common.base.Preconditions;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,8 +30,7 @@ public class InitController {
     private final BotService botService;
 
     @Autowired
-    public InitController(GameService gameService, GameRepository gameRepository,
-                          @Qualifier(App.DEFAULT_BOT_MODE) BotService botService) {
+    public InitController(GameService gameService, GameRepository gameRepository, BotService botService) {
         this.gameService = gameService;
         this.gameRepository = gameRepository;
         this.botService = botService;

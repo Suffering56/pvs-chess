@@ -29,7 +29,7 @@ public class GameContext {
 
     final CellsMatrix matrix;   //matrix state after lastMove
     final ExtendedMove lastMove;
-    //fk = pointFrom, sk = pointTo
+    //key = pointTo
     Map<PointDTO, List<GameContext>> children;
 
     public void fill(int maxDeep) {
@@ -43,10 +43,6 @@ public class GameContext {
     }
 
     private GameContext executeMove(ExtendedMove nextMove) {
-        return executeMove(nextMove, true);
-    }
-
-    private GameContext executeMove(ExtendedMove nextMove, boolean addToChild) {
         Piece pieceFrom = matrix.getCell(nextMove.getPointFrom()).getPiece();
 
         FakeGame nextGame = game.executeMove(nextMove, pieceFrom);
@@ -55,9 +51,7 @@ public class GameContext {
         RootGameContext rootContext = isRoot() ? (RootGameContext) this : root;
         GameContext childContext = new GameContext(rootContext, this, nextGame, nextMatrix, nextMove);
 
-        if (addToChild) {
-            addChild(childContext);
-        }
+        addChild(childContext);
         return childContext;
     }
 
@@ -123,6 +117,14 @@ public class GameContext {
         return internalList.stream();
     }
 
+    public Stream<GameContext> neighboursStream() {
+        if (parent != null) {
+            return parent.childrenStream()
+                    .filter(context -> context != this);
+        }
+        return Stream.empty();
+    }
+
     public int getDeep() {
         int deep = 0;
         GameContext parent = this.getParent();
@@ -134,6 +136,10 @@ public class GameContext {
         return deep;
     }
 
+    public boolean hasChildren() {
+        return children != null;
+    }
+
     public void print() {
         int deep = getDeep();
         String prefix = tabs(deep);
@@ -141,17 +147,5 @@ public class GameContext {
             log.info("{}context[{}].childrenCount: {}", prefix, deep, children.size());
             childrenStream().forEach(GameContext::print);
         }
-    }
-
-    public CellsMatrix getOriginalMatrix() {
-        return root.getMatrix();
-    }
-
-    public CellsMatrix getPostAnalyzedMoveMatrix() {
-        return matrix;
-    }
-
-    public boolean hasChildren() {
-        return children != null;
     }
 }
