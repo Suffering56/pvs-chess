@@ -153,4 +153,17 @@ public class GameContext {
             childrenStream().forEach(GameContext::print);
         }
     }
+
+    public int getTotal() {
+        if (!hasChildren()) {
+            return lastMove.getTotal();
+        }
+
+        int deeperMovesTotal = 0;
+
+        //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
+        //TODO: deeper moves ratio? (without checkmate)
+
+        return lastMove.getTotal() + deeperMovesTotal;
+    }
 }

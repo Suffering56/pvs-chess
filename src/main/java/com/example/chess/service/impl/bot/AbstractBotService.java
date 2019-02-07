@@ -129,28 +129,27 @@ public abstract class AbstractBotService implements BotService {
     }
 
     private ExtendedMove findBestExtendedMove(RootGameContext rootGameContext) {
-        List<ExtendedMove> botAvailableMoves = rootGameContext.childrenStream()
-                .map(GameContext::getLastMove)
+        List<GameContext> rootChildren = rootGameContext.childrenStream()
                 //FIXME: надо учитывать тоталы и более глубоких ходов
-                .sorted(Comparator.comparing(ExtendedMove::getTotal))
+                .sorted(Comparator.comparing(GameContext::getTotal))
                 .collect(Collectors.toList());
 
-        int max = botAvailableMoves
+        int max = rootChildren
                 .stream()
-                .mapToInt(ExtendedMove::getTotal)
+                .mapToInt(GameContext::getTotal)
                 .max().orElseThrow(UnsupportedOperationException::new);
 
-        List<ExtendedMove> topMovesList = botAvailableMoves
+        List<GameContext> topMovesList = rootChildren
                 .stream()
-                .filter(move -> move.getTotal() == max)
+                .filter(context -> context.getTotal() == max)
                 .collect(Collectors.toList());
 
         return getRandomMove(topMovesList);
     }
 
-    protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
+    protected ExtendedMove getRandomMove(List<GameContext> movesList) {
         int i = (int) (movesList.size() * Math.random());
-        return movesList.get(i);
+        return movesList.get(i).getLastMove();
     }
 
 }
