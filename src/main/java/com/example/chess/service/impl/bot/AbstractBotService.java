@@ -77,6 +77,7 @@ public abstract class AbstractBotService implements BotService {
         long start = System.currentTimeMillis();
 
         rootContext.fill(MAX_DEEP);
+
         if (!rootContext.hasChildren()) {
             throw new RuntimeException("Checkmate: Player win!");
         }

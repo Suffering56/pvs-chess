@@ -21,18 +21,18 @@ public class BotServiceImplMedium extends AbstractBotService {
     @Override
     protected void calculateRating(GameContext gameContext, int maxDeep) throws CheckmateException {
         Preconditions.checkState(!gameContext.isRoot());
-        Preconditions.checkState(gameContext.getDeep() > maxDeep);
+        Preconditions.checkState(gameContext.getDeep() <= maxDeep);
 
         ExtendedMove analyzedMove = gameContext.getLastMove();
 
         Rating materialRating = getMaterialRating(gameContext, false);
         analyzedMove.updateRating(materialRating);
 
-        Rating checkRating = getCheckRating(gameContext);
-        analyzedMove.updateRating(checkRating);
-
-        Rating movesCountRating = getMovesCountRating(gameContext, false);
-        analyzedMove.updateRating(movesCountRating);
+//        Rating checkRating = getCheckRating(gameContext);
+//        analyzedMove.updateRating(checkRating);
+//
+//        Rating movesCountRating = getMovesCountRating(gameContext, false);
+//        analyzedMove.updateRating(movesCountRating);
 
         if (gameContext.getDeep() == maxDeep) {
             //нет смысла считать инвертированный рейтинг т.к. он подсчитывается в более глубоких контекстах

@@ -2,6 +2,7 @@ package com.example.chess.service.impl.bot;
 
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.RatingParam;
+import com.example.chess.enums.Side;
 import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.logic.objects.Rating;
 import com.example.chess.logic.objects.game.GameContext;
@@ -70,6 +71,7 @@ public class MaterialRatingCalculator {
      */
     private static List<Integer> generateExchangeValuesList(GameContext gameContext, boolean isInverted) throws CheckmateException {
         PointDTO targetPoint = gameContext.getLastMove().getPointTo();
+        Side initialSide = gameContext.lastMoveSide();
         List<Integer> exchangeValuesResult = new ArrayList<>();
 
         int exchangeValue = 0;
@@ -93,7 +95,14 @@ public class MaterialRatingCalculator {
         do {
             ExtendedMove lastMove = deepContext.getLastMove();
 
-            if (isInverted != deepContext.botLast()) {
+            //TODO: если вернется isInverted - надо будет здесь решить как обрабатывать isInverted
+//            if (isInverted != deepContext.botLast()) {
+//                exchangeValue += lastMove.getValueTo(0);
+//            } else {
+//                exchangeValue -= lastMove.getValueTo(0);
+//            }
+
+            if (lastMove.getSide() == initialSide) {
                 exchangeValue += lastMove.getValueTo(0);
             } else {
                 exchangeValue -= lastMove.getValueTo(0);

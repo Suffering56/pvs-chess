@@ -17,6 +17,8 @@ import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static com.example.chess.logic.utils.CommonUtils.tabs;
+
 @Log4j2
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -36,14 +38,14 @@ public class GameContext {
         fill(maxDeep, move -> true);
     }
 
-    public void fill(int maxDeep, Predicate<ExtendedMove> movesFilter) {
+    public void fill(int deep, Predicate<ExtendedMove> movesFilter) {
         MoveHelper.valueOf(this)
                 .getStandardMovesStream(nextTurnSide())
                 .filter(movesFilter)
-                .sorted(Comparator.comparing(ExtendedMove::getValueFrom))   //TODO: кажется отсортировал
+                .sorted(Comparator.comparing(ExtendedMove::getValueFrom))
                 .map(this::executeMove)
-                .filter(childContext -> maxDeep > 1)
-                .forEach(childContext -> childContext.fill(maxDeep - 1));
+                .filter(childContext -> deep > 1)
+                .forEach(childContext -> childContext.fill(deep - 1));
     }
 
     private GameContext executeMove(ExtendedMove nextMove) {
@@ -146,11 +148,7 @@ public class GameContext {
 
     public int getTotal() {
         if (!hasChildren()) {
-            if (botLast()) {
-                return lastMove.getTotal();
-            } else {
-                return -lastMove.getTotal();
-            }
+            return lastMove.getTotal();
         }
 
         int deeperMovesTotal = 0;
@@ -169,7 +167,8 @@ public class GameContext {
     }
 
     public void print(int tabsCount, String prefix) {
-        getLastMove().print(tabsCount, prefix);
+        printMove(tabsCount, prefix);
+
         if (tabsCount == 0) {
             getLastMove().printRating(tabsCount + 1);
         }
@@ -184,17 +183,25 @@ public class GameContext {
             childrenStream()
                     .reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getTotal))))
                     .ifPresent(maxContext -> {
-                        maxContext.getLastMove().print(tabsCount, maxContext.getPrefix("max"), maxContext.getContextPostfix());
+                        maxContext.printMove(tabsCount, maxContext.getPrefix("max"), maxContext.getContextPostfix());
                         maxContext.printMinMax(tabsCount + 1);
                     });
 
             childrenStream()
                     .reduce((BinaryOperator.minBy(Comparator.comparing(GameContext::getTotal))))
                     .ifPresent(minContext -> {
-                        minContext.getLastMove().print(tabsCount, minContext.getPrefix("min"), minContext.getContextPostfix());
+                        minContext.printMove(tabsCount, minContext.getPrefix("min"), minContext.getContextPostfix());
                         minContext.printMinMax(tabsCount + 1);
                     });
         }
+    }
+
+    public void printMove(int tabsCount, String prefix) {
+        printMove(tabsCount, prefix, "");
+    }
+
+    public void printMove(int tabsCount, String prefix, String postfix) {
+        System.out.println(tabs(tabsCount) + prefix + "[" + getLastMove() + "].total = " + getTotal() + postfix);
     }
 
     private String getPrefix(String prefix) {

@@ -24,4 +24,9 @@ public class RootGameContext extends GameContext {
     public long getTotalMovesCount() {
         return super.getTotalMovesCount() - 1;
     }
+
+    @Override
+    public int getDeep() {
+        return 0;
+    }
 }

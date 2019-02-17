@@ -46,7 +46,6 @@ public class Debug {
         if (Debug.DESTINY_ENABLED) {
             return destinyMap.get(position);
         }
-
         return null;
     }
 }
