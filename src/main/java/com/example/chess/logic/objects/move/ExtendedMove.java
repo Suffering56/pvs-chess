@@ -18,6 +18,8 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.example.chess.logic.utils.CommonUtils.tabs;
+
 @Log4j2
 @Getter
 @Setter
@@ -142,11 +144,20 @@ public class ExtendedMove implements Move {
 
     @Override
     public String toString() {
-        StringBuilder result = new StringBuilder("Move[" + CommonUtils.moveToString(this) + "].total = " + getTotal() + "\r\n");
-        for (Rating rating : ratingMap.values()) {
-            result.append(rating);
-        }
+        return CommonUtils.moveToString(this);
+    }
 
-        return result.toString();
+    public void print(int tabsCount, String prefix) {
+        print(tabsCount, prefix, "");
+    }
+
+    public void print(int tabsCount, String prefix, String postfix) {
+        System.out.println(tabs(tabsCount) + prefix + "[" + this + "].total = " + getTotal() + postfix);
+    }
+
+    public void printRating(int tabsCount) {
+        for (Rating rating : ratingMap.values()) {
+            rating.print(tabsCount + 1);
+        }
     }
 }

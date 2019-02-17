@@ -13,10 +13,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
+import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
-import static com.example.chess.logic.utils.CommonUtils.tabs;
 
 @Log4j2
 @Getter
@@ -31,7 +30,7 @@ public class GameContext {
     final CellsMatrix matrix;   //matrix state after lastMove
     final ExtendedMove lastMove;
     //key = pointTo
-    Map<PointDTO, List<GameContext>> children;
+    Map<PointDTO, List<GameContext>> children;  //возможно стоит поменять на array[][][]
 
     public void fill(int maxDeep) {
         fill(maxDeep, move -> true);
@@ -145,25 +144,70 @@ public class GameContext {
         return children != null;
     }
 
-    public void print() {
-        int deep = getDeep();
-        String prefix = tabs(deep);
-        if (children != null) {
-            log.info("{}context[{}].childrenCount: {}", prefix, deep, children.size());
-            childrenStream().forEach(GameContext::print);
-        }
-    }
-
     public int getTotal() {
         if (!hasChildren()) {
-            return lastMove.getTotal();
+            if (botLast()) {
+                return lastMove.getTotal();
+            } else {
+                return -lastMove.getTotal();
+            }
         }
 
         int deeperMovesTotal = 0;
+//        childrenStream()
+//                .mapToInt(GameContext::getTotal)
+//                .max();
 
         //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
         //TODO: deeper moves ratio? (without checkmate)
 
         return lastMove.getTotal() + deeperMovesTotal;
+    }
+
+    public void print() {
+        print(0, "ResultMove");
+    }
+
+    public void print(int tabsCount, String prefix) {
+        getLastMove().print(tabsCount, prefix);
+        if (tabsCount == 0) {
+            getLastMove().printRating(tabsCount + 1);
+        }
+
+        System.out.println("--------------------------------");
+        printMinMax(tabsCount + 1);
+    }
+
+
+    private void printMinMax(int tabsCount) {
+        if (hasChildren()) {
+            childrenStream()
+                    .reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getTotal))))
+                    .ifPresent(maxContext -> {
+                        maxContext.getLastMove().print(tabsCount, maxContext.getPrefix("max"), maxContext.getContextPostfix());
+                        maxContext.printMinMax(tabsCount + 1);
+                    });
+
+            childrenStream()
+                    .reduce((BinaryOperator.minBy(Comparator.comparing(GameContext::getTotal))))
+                    .ifPresent(minContext -> {
+                        minContext.getLastMove().print(tabsCount, minContext.getPrefix("min"), minContext.getContextPostfix());
+                        minContext.printMinMax(tabsCount + 1);
+                    });
+        }
+    }
+
+    private String getPrefix(String prefix) {
+        if (botLast()) {
+            return prefix + "BotMove";
+        }
+        return prefix + "PlayerMove";
+    }
+
+    private String getContextPostfix() {
+        if (!hasChildren()) {
+            return " [-]";
+        }
+        return "";
     }
 }

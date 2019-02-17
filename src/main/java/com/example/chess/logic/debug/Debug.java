@@ -27,6 +27,7 @@ public class Debug {
     }
 
     public static void printCounters() {
+        System.out.println("\r\nCounters: ");
         System.out.println("moveHelpersCount = " + moveHelpersCount.get());
         System.out.println("movesExecuted = " + movesExecuted.get());
         System.out.println("availablePointsFound = " + availablePointsFound.get());

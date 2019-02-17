@@ -6,9 +6,10 @@ import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.logic.objects.Rating;
 import com.example.chess.logic.objects.game.GameContext;
 import com.example.chess.logic.objects.move.ExtendedMove;
-import com.example.chess.logic.utils.CommonUtils;
 import com.google.common.base.Preconditions;
 import lombok.experimental.UtilityClass;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,20 +36,27 @@ public class MaterialRatingCalculator {
 
     public static Rating getInvertedMaterialRating(GameContext gameContext) throws CheckmateException {
         Rating.Builder builder = Rating.builder();
-        final int[] maxPlayerMoveValue = {0};
+
+        MutableInt maxPlayerMoveValue = new MutableInt(0);
+        MutableObject<GameContext> maxContext = new MutableObject<>(null);
 
         if (gameContext.hasChildren()) {
             gameContext.childrenStream()
                     .filter(context -> context.getLastMove().isHarmful() && context.getLastMove().hasDifferentPointTo(gameContext.getLastMove()))
                     .forEach(context -> {
                         Rating tempRating = getMaterialRating(context, true);
-                        String varName = "INVERTED_" + tempRating.getParam() + "[" + CommonUtils.moveToString(context.getLastMove()) + "]";
-                        builder.var(varName, tempRating.getValue());
-                        maxPlayerMoveValue[0] = Math.max(maxPlayerMoveValue[0], tempRating.getValue());
+
+                        if (tempRating.getValue() > maxPlayerMoveValue.getValue()) {
+                            maxContext.setValue(context);
+                            maxPlayerMoveValue.setValue(tempRating.getValue());
+                        }
                     });
         }
 
-        return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue[0]);
+        if (maxContext.getValue() != null) {
+            builder.reasonMove(maxContext.getValue().getLastMove());
+        }
+        return builder.build(RatingParam.INVERTED_MATERIAL_FOR_PLAYER, maxPlayerMoveValue.getValue());
     }
 
     /**

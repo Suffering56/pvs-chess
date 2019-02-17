@@ -35,9 +35,9 @@ public abstract class AbstractBotService implements BotService {
     protected Long botMoveDelay;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    protected void calculateRating(GameContext gameContext) {
-        throw new UnsupportedOperationException();
-    }
+//    protected void calculateRating(GameContext gameContext) {
+//        throw new UnsupportedOperationException();
+//    }
 
     @Autowired
     public void setGameService(GameService gameService) {
@@ -69,41 +69,43 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
+
+    private static final int MAX_DEEP = 3;
+
     private MoveDTO findBestMove(RootGameContext rootContext) {
-        int deep = 3;
         Debug.resetCounters();
         long start = System.currentTimeMillis();
 
-        rootContext.fill(deep);
+        rootContext.fill(MAX_DEEP);
         if (!rootContext.hasChildren()) {
             throw new RuntimeException("Checkmate: Player win!");
         }
 
         log.info("totalMovesCount[before calculation]: " + rootContext.getTotalMovesCount());
 
-        ExtendedMove resultMove;
+       GameContext resultContext;
         try {
-            calculateRatingRecursive(rootContext, deep);
-            resultMove = findBestExtendedMove(rootContext);
+            calculateRatingRecursive(rootContext, MAX_DEEP);
+            resultContext = findBestExtendedMove(rootContext);
         } catch (CheckmateException e) {
-            resultMove = e.getContext().getLastMove();
+            resultContext = e.getContext();
         }
 
         log.info("totalMovesCount[after calculation]: " + rootContext.getTotalMovesCount());
-
 
         MoveDTO predestinedMove = Debug.getPredestinedMove(rootContext.getMatrix().getPosition());
         if (predestinedMove != null) {
             return predestinedMove;
         }
 
+        ExtendedMove resultMove = resultContext.getLastMove();
         PieceType pieceFromPawn = resultMove.isPawnTransformation() ? resultMove.getPieceFromPawn() : null;
 
-        System.out.println();
+
         Debug.printCounters();
-        log.info("ResultMove[original_pos = " + rootContext.getMatrix().getPosition() + "]::::" + resultMove);
-        System.out.println();
-        System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
+        System.out.println("\r\nResultMove[original_pos = " + rootContext.getMatrix().getPosition() + "]: " + resultMove);
+        resultContext.print();
+        System.out.println("\r\nfindBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
     }
@@ -114,7 +116,7 @@ public abstract class AbstractBotService implements BotService {
         }
 
         if (!context.isRoot()) {
-            calculateRating(context);
+            calculateRating(context, MAX_DEEP);
         }
         if (context.hasChildren()) {
             if (context.isRoot()) {
@@ -128,7 +130,7 @@ public abstract class AbstractBotService implements BotService {
         }
     }
 
-    private ExtendedMove findBestExtendedMove(RootGameContext rootGameContext) {
+    private GameContext findBestExtendedMove(RootGameContext rootGameContext) {
         List<GameContext> rootChildren = rootGameContext.childrenStream()
                 //FIXME: надо учитывать тоталы и более глубоких ходов
                 .sorted(Comparator.comparing(GameContext::getTotal))
@@ -139,17 +141,18 @@ public abstract class AbstractBotService implements BotService {
                 .mapToInt(GameContext::getTotal)
                 .max().orElseThrow(UnsupportedOperationException::new);
 
-        List<GameContext> topMovesList = rootChildren
+        List<GameContext> topContextList = rootChildren
                 .stream()
                 .filter(context -> context.getTotal() == max)
                 .collect(Collectors.toList());
 
-        return getRandomMove(topMovesList);
+        return getRandomContext(topContextList);
     }
 
-    protected ExtendedMove getRandomMove(List<GameContext> movesList) {
-        int i = (int) (movesList.size() * Math.random());
-        return movesList.get(i).getLastMove();
+    protected GameContext getRandomContext(List<GameContext> contextList) {
+        int i = (int) (contextList.size() * Math.random());
+        return contextList.get(i);
     }
 
+    protected abstract void calculateRating(GameContext gameContext, int maxDeep) throws CheckmateException;
 }

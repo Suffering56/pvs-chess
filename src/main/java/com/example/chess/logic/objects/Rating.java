@@ -1,10 +1,9 @@
 package com.example.chess.logic.objects;
 
 import com.example.chess.enums.RatingParam;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.utils.CommonUtils;
 import lombok.Getter;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class Rating {
 
@@ -13,15 +12,12 @@ public class Rating {
     @Getter
     private int value;
 
-    private final Map<String, Object> description = new LinkedHashMap<>();
-    private static final String NOT_SHOW_THIS_VALUE = "NOT_SHOW_THIS_VALUE";
+    private String reasonMove;
+
+//    private final Map<String, Object> description = new LinkedHashMap<>();    ////TODO: возможно надо будет вернуть (1)
+//    private static final String NOT_SHOW_THIS_VALUE = "NOT_SHOW_THIS_VALUE";
 
     private Rating() {
-    }
-
-    private Rating(RatingParam param, int value) {
-        this.param = param;
-        this.value = value;
     }
 
     public static Rating.Builder builder() {
@@ -30,13 +26,18 @@ public class Rating {
 
     public class Builder {
 
+        public Builder reasonMove(ExtendedMove move) {
+            reasonMove = move.toString();
+            return this;
+        }
+
         public Builder var(String key, Object value) {
-            description.put(key, value);
+//            description.put(key, value);                  //TODO: возможно надо будет вернуть (1)
             return this;
         }
 
         public Builder note(String note) {
-            description.put(note, NOT_SHOW_THIS_VALUE);
+//            description.put(note, NOT_SHOW_THIS_VALUE);   //TODO: возможно надо будет вернуть (1)
             return this;
         }
 
@@ -51,20 +52,12 @@ public class Rating {
         }
     }
 
-    @Override
-    public String toString() {
-        StringBuilder result = new StringBuilder("\tRating[" + param + "(" + param.getFactor() + ")] = " + value + " :\r\n");
-        for (String key : description.keySet()) {
-            result.append("\t\t").append(key);
-
-            Object value = description.get(key);
-            if (!NOT_SHOW_THIS_VALUE.equals(value)) {
-                result.append("=>").append(value);
-            }
-
-            result.append("\r\n");
+    public void print(int tabsCount) {
+        String str = CommonUtils.tabs(tabsCount) + param + ": " + param.getFactor() + "x" + value;
+        if (reasonMove != null) {
+            str += " [" + reasonMove + "]";
         }
-
-        return result.toString();
+        System.out.println(str);
     }
+
 }
