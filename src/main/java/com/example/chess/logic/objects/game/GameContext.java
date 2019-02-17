@@ -3,6 +3,7 @@ package com.example.chess.logic.objects.game;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.logic.MoveHelper;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.move.ExtendedMove;
@@ -147,23 +148,29 @@ public class GameContext {
     }
 
     public int getTotal() {
-        if (!hasChildren()) {
-            return lastMove.getTotal();
+        int total = lastMove.getTotal();
+        GameContext maxDeeperContext = findMaxChildren();
+
+        while (maxDeeperContext != null) {
+            if (maxDeeperContext.botLast()) {
+                total += maxDeeperContext.getLastMove().getTotal();
+            } else {
+                total -= maxDeeperContext.getLastMove().getTotal();
+            }
+
+            maxDeeperContext = maxDeeperContext.findMaxChildren();
         }
 
-        int deeperMovesTotal = 0;
-//        childrenStream()
-//                .mapToInt(GameContext::getTotal)
-//                .max();
-
+        return total;
         //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
         //TODO: deeper moves ratio? (without checkmate)
-
-        return lastMove.getTotal() + deeperMovesTotal;
     }
 
-    public void print() {
-        print(0, "ResultMove");
+    private GameContext findMaxChildren() {
+        if (hasChildren()) {
+            return childrenStream().reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getTotal)))).orElseThrow(() -> new CheckmateException(this));
+        }
+        return null;
     }
 
     public void print(int tabsCount, String prefix) {
@@ -176,7 +183,6 @@ public class GameContext {
         System.out.println("--------------------------------");
         printMinMax(tabsCount + 1);
     }
-
 
     private void printMinMax(int tabsCount) {
         if (hasChildren()) {

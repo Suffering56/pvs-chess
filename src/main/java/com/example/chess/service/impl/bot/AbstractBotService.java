@@ -105,7 +105,7 @@ public abstract class AbstractBotService implements BotService {
 
         Debug.printCounters();
         System.out.println("\r\nResultMove[original_pos = " + rootContext.getMatrix().getPosition() + "]: " + resultMove);
-        resultContext.print();
+        resultContext.print(0, "ResultMove");
         System.out.println("\r\nfindBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
 
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
