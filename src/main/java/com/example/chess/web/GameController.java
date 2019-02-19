@@ -4,20 +4,14 @@ import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
-import com.example.chess.entity.History;
 import com.example.chess.enums.GameMode;
-import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.objects.CellsMatrix;
-import com.example.chess.logic.objects.move.ExtendedMove;
-import com.example.chess.repository.GameRepository;
-import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -26,14 +20,10 @@ public class GameController {
 
     private final GameService gameService;
     private final BotService botService;
-    private final GameRepository gameRepository;
-    private final HistoryRepository historyRepository;
 
-    public GameController(GameService gameService, BotService botService, GameRepository gameRepository, HistoryRepository historyRepository) {
+    public GameController(GameService gameService, BotService botService) {
         this.gameService = gameService;
         this.botService = botService;
-        this.gameRepository = gameRepository;
-        this.historyRepository = historyRepository;
     }
 
     @GetMapping("/{gameId}/move")
@@ -64,44 +54,5 @@ public class GameController {
         return gameService.createArrangementByGame(game, game.getPosition());
     }
 
-    @GetMapping("/{gameId}/history")
-    public String[] getHistory(@PathVariable("gameId") long gameId) throws GameNotFoundException {
-        Game game = gameService.findAndCheckGame(gameId);
-        List<History> history = historyRepository.findByGameIdAndPositionLessThanEqualOrderByPositionAsc(game.getId(), Integer.MAX_VALUE);
 
-        return history.stream()
-                .map(move -> String.format("move[%s]: %s (%s)", move.getFormattedPosition(), move.toReadableString(), Side.ofPosition(move.getPosition())))
-                .toArray(String[]::new);
-    }
-
-    @GetMapping("/{gameId}/rollback")
-    public ArrangementDTO rollbackLastMove(@PathVariable("gameId") long gameId) throws GameNotFoundException {
-
-        Game game = gameService.findAndCheckGame(gameId);
-        return gameService.rollbackLastMove(game);
-    }
-
-    @GetMapping("/{gameId}/wake")
-    public void wakeBot(@PathVariable("gameId") long gameId) throws GameNotFoundException {
-        Game game = gameService.findAndCheckGame(gameId);
-        if (game.getMode() != GameMode.AI) {
-            throw new RuntimeException("You should to use AI_MODE!");
-        }
-        if (game.getPlayerSide() == game.getActiveSide()) {
-            throw new RuntimeException("Is player turn!");
-        }
-
-        History lastMove = gameService.findLastMove(game);
-        CellsMatrix matrix = gameService.createCellsMatrixByGame(game, game.getPosition() - 1);
-
-        game.setUnderCheckSide(null);
-        game = gameRepository.save(game);
-
-        ExtendedMove lastExtMove = null;
-        if (lastMove != null) {
-            lastExtMove = lastMove.toExtendedMove(matrix);
-        }
-
-        botService.applyBotMove(game, lastExtMove);
-    }
 }

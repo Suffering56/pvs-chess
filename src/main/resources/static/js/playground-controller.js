@@ -221,7 +221,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     function rollback() {
         $http({
             method: "GET",
-            url: "/api/game/" + game.id + "/rollback"
+            url: "/api/debug/" + game.id + "/rollback"
         }).then(function (response) {
             updateArrangement(response.data);
         });
@@ -230,7 +230,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     function wakeBot() {
         $http({
             method: "GET",
-            url: "/api/game/" + game.id + "/wake"
+            url: "/api/debug/" + game.id + "/wake"
         }).then(function (response) {
 
         });
