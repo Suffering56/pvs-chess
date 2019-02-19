@@ -98,6 +98,7 @@ public final class CellsMatrix implements Immutable {
 
         private Builder executeMove(Move move) {
             Piece pieceFrom = getCell(move.getPointFrom()).getPiece();
+            Preconditions.checkNotNull(pieceFrom);
 
             if (pieceFrom.isKing()) {
                 kingPoints.put(pieceFrom.getSide(), move.getPointTo());

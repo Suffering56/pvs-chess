@@ -14,6 +14,7 @@ import com.example.chess.repository.GameRepository;
 import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
+import com.google.common.base.Preconditions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,35 +46,47 @@ public class DebugController {
     }
 
     @GetMapping("/{gameId}/reset")
-    public Game resetGame(@PathVariable("gameId") long gameId) throws GameNotFoundException {
+    public String[] resetGame(@PathVariable("gameId") long gameId) throws GameNotFoundException {
         Game game = gameService.findAndCheckGame(gameId);
         game.reset();
 
-        return gameRepository.save(game);
+        historyRepository.deleteAll(findAllGameHistory(gameId));
+        gameRepository.save(game);
+
+        return getHistory(gameId);
     }
 
     @GetMapping("/{gameId}/move/{moveStr}")
-    public CellDTO applyMove(@PathVariable("gameId") long gameId,
-                             @PathVariable String moveStr) throws GameNotFoundException {
+    public String[] applyMove(@PathVariable("gameId") long gameId,
+                              @PathVariable String moveStr) throws GameNotFoundException {
 
         Game game = gameService.findAndCheckGame(gameId);
         CellsMatrix originalMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
 
         MoveDTO move = MoveDTO.valueOf(moveStr);
-        CellDTO cellTo = originalMatrix.getCell(move.getTo());
+        CellDTO cellFrom = originalMatrix.getCell(move.getFrom());
+
+        Preconditions.checkArgument(!cellFrom.isEmpty(), "incorrect pointFrom: cell is empty");
+        Preconditions.checkArgument(cellFrom.getSide() == Side.getNextTurnSideByPosition(game.getPosition()), "incorrect pointFrom: is not your turn");
 
         gameService.applyMove(game, move);
-        return cellTo;
+        return getHistory(gameId);
     }
 
     @GetMapping("/{gameId}/history")
     public String[] getHistory(@PathVariable("gameId") long gameId) throws GameNotFoundException {
-        Game game = gameService.findAndCheckGame(gameId);
-        List<History> history = historyRepository.findByGameIdAndPositionLessThanEqualOrderByPositionAsc(game.getId(), Integer.MAX_VALUE);
+        gameService.findAndCheckGame(gameId);
 
-        return history.stream()
-                .map(move -> String.format("move[%s]: %s (%s)", move.getFormattedPosition(), move.toReadableString(), Side.ofPosition(move.getPosition())))
+        return findAllGameHistory(gameId)
+                .stream()
+                .map(move -> String.format("move[%s]: %s (%s)", move.getFormattedPosition(), move.toReadableString(), Side.getNextTurnSideByPosition(move.getPosition()).reverse()))
                 .toArray(String[]::new);
+    }
+
+
+    //TODO: move to service
+    private List<History> findAllGameHistory(long gameId) {
+        return historyRepository.findByGameIdAndPositionLessThanEqualOrderByPositionAsc(gameId, Integer.MAX_VALUE);
     }
 
     @GetMapping("/{gameId}/rollback")
@@ -86,12 +99,9 @@ public class DebugController {
     @GetMapping("/{gameId}/wake")
     public void wakeBot(@PathVariable("gameId") long gameId) throws GameNotFoundException {
         Game game = gameService.findAndCheckGame(gameId);
-        if (game.getMode() != GameMode.AI) {
-            throw new RuntimeException("You should to use AI_MODE!");
-        }
-        if (game.getPlayerSide() == game.getActiveSide()) {
-            throw new RuntimeException("Is player turn!");
-        }
+
+        Preconditions.checkState(game.getMode() == GameMode.AI, "You should to use AI_MODE!");
+        Preconditions.checkState(game.getPlayerSide() != game.getActiveSide(), "Is player turn!");
 
         History lastMove = gameService.findLastMove(game);
         CellsMatrix matrix = gameService.createCellsMatrixByGame(game, game.getPosition() - 1);
