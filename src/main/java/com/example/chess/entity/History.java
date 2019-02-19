@@ -66,4 +66,14 @@ public class History implements Move {
         CellDTO to = matrix.getCell(getPointTo());
         return new ExtendedMove(from, to);
     }
+
+    @Transient
+    public String toReadableString() {
+        return getPointFrom() + "-" + getPointTo();
+    }
+
+    @Transient
+    public String getFormattedPosition() {
+        return String.format("%02d", position);
+    }
 }

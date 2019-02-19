@@ -20,4 +20,8 @@ public enum Side {
         }
         return WHITE;
     }
+
+    public static Side ofPosition(int position) {
+        return position % 2 == 0 ? WHITE : BLACK;
+    }
 }

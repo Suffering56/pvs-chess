@@ -91,6 +91,7 @@ public class MaterialRatingCalculator {
 
         //noinspection ConstantConditions
         do {
+//            deepContext.setDeepExchangeAlreadyCalculated(true);
             ExtendedMove lastMove = deepContext.getLastMove();
 
             if (isInverted != deepContext.botLast()) {
@@ -130,7 +131,7 @@ public class MaterialRatingCalculator {
 
         return context.childrenStream(targetPoint)
                 // TODO: имеет значение чем рубить если фигуры одинаковой стоимости (т.е. тупо reduce-ить = плохо)
-                // - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
+                //  - скрытый шах или скрытая атака на более дорогую фигуру или наоборот одна из фигур бота связана с более дорогой фигурой
                 .reduce((c1, c2) -> c1.getLastMove().getValueFrom() <= c2.getLastMove().getValueFrom() ? c1 : c2)
                 .orElse(null);
     }

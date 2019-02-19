@@ -10,6 +10,7 @@ import com.example.chess.logic.objects.move.ExtendedMove;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.log4j.Log4j2;
 
@@ -32,8 +33,12 @@ public class GameContext {
 
     final CellsMatrix matrix;   //matrix state after lastMove
     final ExtendedMove lastMove;
+
     //key = pointTo
     Map<PointDTO, List<GameContext>> children;  //возможно стоит поменять на array[][][]
+
+    @Setter boolean isCheckmate;
+    @Setter boolean isDeepExchangeAlreadyCalculated = false;
 
     public void fill(int maxDeep) {
         fill(maxDeep, move -> true);

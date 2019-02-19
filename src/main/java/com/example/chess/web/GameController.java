@@ -6,16 +6,18 @@ import com.example.chess.dto.PointDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
 import com.example.chess.enums.GameMode;
+import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.repository.GameRepository;
+import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -25,12 +27,13 @@ public class GameController {
     private final GameService gameService;
     private final BotService botService;
     private final GameRepository gameRepository;
+    private final HistoryRepository historyRepository;
 
-    @Autowired
-    public GameController(GameService gameService, BotService botService, GameRepository gameRepository) {
+    public GameController(GameService gameService, BotService botService, GameRepository gameRepository, HistoryRepository historyRepository) {
         this.gameService = gameService;
         this.botService = botService;
         this.gameRepository = gameRepository;
+        this.historyRepository = historyRepository;
     }
 
     @GetMapping("/{gameId}/move")
@@ -59,6 +62,16 @@ public class GameController {
 
         Game game = gameService.findAndCheckGame(gameId);
         return gameService.createArrangementByGame(game, game.getPosition());
+    }
+
+    @GetMapping("/{gameId}/history")
+    public String[] getHistory(@PathVariable("gameId") long gameId) throws GameNotFoundException {
+        Game game = gameService.findAndCheckGame(gameId);
+        List<History> history = historyRepository.findByGameIdAndPositionLessThanEqualOrderByPositionAsc(game.getId(), Integer.MAX_VALUE);
+
+        return history.stream()
+                .map(move -> String.format("move[%s]: %s (%s)", move.getFormattedPosition(), move.toReadableString(), Side.ofPosition(move.getPosition())))
+                .toArray(String[]::new);
     }
 
     @GetMapping("/{gameId}/rollback")
