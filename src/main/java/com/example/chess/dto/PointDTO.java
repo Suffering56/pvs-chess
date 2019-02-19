@@ -46,6 +46,12 @@ public final class PointDTO implements Immutable {
         return true;
     }
 
+    public static PointDTO valueOf(String str) {
+        int rowIndex = Integer.parseInt(String.valueOf(str.charAt(1))) - 1;
+        int columnIndex = CommonUtils.nameToColumnIndex(String.valueOf(str.charAt(0)));
+        return valueOf(rowIndex, columnIndex);
+    }
+
     /**
      * Все point-ы лежат в pointsArray. В программе невозможно наличие point-ов которых нет в pointsArray.
      * Если у двух point-ов одинаковые координаты, значит это один и тот же point (если конечно не баловаться reflection).

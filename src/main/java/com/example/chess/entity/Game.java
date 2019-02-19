@@ -11,6 +11,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.example.chess.logic.ChessConstants.ROOK_LONG_COLUMN_INDEX;
@@ -150,5 +151,20 @@ public class Game implements IGame {
     @JsonIgnore
     public Side getActiveSide() {
         return getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
+    }
+
+    @Transient
+    @JsonIgnore
+    public void reset() {
+        setPosition(0);
+        clearFuturesMap();
+        setUnderCheckSide(null);
+    }
+
+    public void clearFuturesMap() {
+        setFeaturesMap(new HashMap<Side, GameFeatures>() {{
+            put(Side.WHITE, new GameFeatures(Game.this, Side.WHITE));
+            put(Side.BLACK, new GameFeatures(Game.this, Side.BLACK));
+        }});
     }
 }

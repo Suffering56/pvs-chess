@@ -79,6 +79,16 @@ public class CommonUtils {
         put(PieceType.KING, "K");
     }};
 
+    private static Map<String, Integer> columnIndexesMap = new HashMap<String, Integer>() {{
+        for (Entry<Integer, String> entry : columnNamesMap.entrySet()) {
+            put(entry.getValue(), entry.getKey());
+        }
+    }};
+
+    public static int nameToColumnIndex(String columnName) {
+        return columnIndexesMap.get(columnName);
+    }
+
     public static String moveToString(ExtendedMove move) {
         CellDTO from = move.getFrom();
         CellDTO to = move.getTo();

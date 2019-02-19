@@ -32,6 +32,19 @@ public final class MoveDTO implements Move, Immutable {
         return new MoveDTO(from, to, pieceFromPawn);
     }
 
+    public static MoveDTO valueOf(String moveStr) {
+        String[] split = moveStr.split("-");
+        String from = split[0];
+        String to = split[1];
+
+        PieceType pieceFromPawn = null;
+        if (split.length == 3) {
+            pieceFromPawn = PieceType.valueOf(split[2]);
+        }
+
+        return valueOf(PointDTO.valueOf(from), PointDTO.valueOf(to), pieceFromPawn);
+    }
+
     @Override
     public PointDTO getPointFrom() {
         return from;

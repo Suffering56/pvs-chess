@@ -1,6 +1,8 @@
 package com.example.chess.web;
 
 import com.example.chess.dto.ArrangementDTO;
+import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.entity.History;
 import com.example.chess.enums.GameMode;
@@ -40,6 +42,28 @@ public class DebugController {
         this.botService = botService;
         this.gameRepository = gameRepository;
         this.historyRepository = historyRepository;
+    }
+
+    @GetMapping("/{gameId}/reset")
+    public Game resetGame(@PathVariable("gameId") long gameId) throws GameNotFoundException {
+        Game game = gameService.findAndCheckGame(gameId);
+        game.reset();
+
+        return gameRepository.save(game);
+    }
+
+    @GetMapping("/{gameId}/move/{moveStr}")
+    public CellDTO applyMove(@PathVariable("gameId") long gameId,
+                             @PathVariable String moveStr) throws GameNotFoundException {
+
+        Game game = gameService.findAndCheckGame(gameId);
+        CellsMatrix originalMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
+
+        MoveDTO move = MoveDTO.valueOf(moveStr);
+        CellDTO cellTo = originalMatrix.getCell(move.getTo());
+
+        gameService.applyMove(game, move);
+        return cellTo;
     }
 
     @GetMapping("/{gameId}/history")

@@ -119,6 +119,7 @@ public class GameServiceImpl implements GameService {
 
         game.setPosition(game.getPosition() - 1);
         gameRepository.save(game);
+        //FIXME: need to update underCheckSide and gameFeatures
 
         return createArrangementByGame(game, game.getPosition());
     }

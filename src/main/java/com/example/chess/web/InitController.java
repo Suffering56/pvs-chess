@@ -39,10 +39,7 @@ public class InitController {
     @GetMapping
     public Game createGame() {
         Game game = new Game();
-        game.setFeaturesMap(new HashMap<Side, GameFeatures>() {{
-            put(Side.WHITE, new GameFeatures(game, Side.WHITE));
-            put(Side.BLACK, new GameFeatures(game, Side.BLACK));
-        }});
+        game.clearFuturesMap();
 
         return gameRepository.save(game);
     }
