@@ -180,6 +180,7 @@ public class GameContext {
 
     public void print(int tabsCount, String prefix) {
         printMove(tabsCount, prefix);
+        System.out.println("resultMove.context.total = " + getTotal());
 
         if (tabsCount == 0) {
             getLastMove().printRating(tabsCount + 1);
@@ -207,12 +208,12 @@ public class GameContext {
         }
     }
 
-    public void printMove(int tabsCount, String prefix) {
+    private void printMove(int tabsCount, String prefix) {
         printMove(tabsCount, prefix, "");
     }
 
-    public void printMove(int tabsCount, String prefix, String postfix) {
-        System.out.println(tabs(tabsCount) + prefix + "[" + getLastMove() + "].total = " + getTotal() + postfix);
+    private void printMove(int tabsCount, String prefix, String postfix) {
+        System.out.println(tabs(tabsCount) + prefix + "[" + getLastMove() + "].total = " + getLastMove().getTotal() + postfix);
     }
 
     private String getPrefix(String prefix) {

@@ -15,6 +15,7 @@ import com.example.chess.repository.HistoryRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -115,5 +116,21 @@ public class DebugController {
         }
 
         botService.applyBotMove(game, lastExtMove);
+    }
+
+    @GetMapping("/{gameId}/rollbackAndWake")
+    public ImmutableMap<String, String[]> rollbackAndWake(@PathVariable("gameId") long gameId) throws GameNotFoundException, InterruptedException {
+        String[] oldHistory = getHistory(gameId);
+        int expectedMovesCount = getHistory(gameId).length;
+        rollbackLastMove(gameId);
+        wakeBot(gameId);
+
+        String[] newHistory = getHistory(gameId);
+        while (newHistory.length < expectedMovesCount) {
+            Thread.sleep(500);
+            newHistory = getHistory(gameId);
+        }
+
+        return ImmutableMap.of("old", oldHistory, "new", newHistory);
     }
 }
