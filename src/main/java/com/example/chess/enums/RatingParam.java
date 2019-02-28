@@ -17,6 +17,7 @@ public enum RatingParam {
      * Поэтому коэффициент отрицательный.
      */
     INVERTED_MATERIAL_FOR_PLAYER(-RatingParam.MATERIAL_FACTOR),
+    DEEP_EXCHANGE_ALREADY_CALCULATED(0),
 
     AVAILABLE_MOVES_COUNT(1),
     INVERTED_AVAILABLE_MOVES_COUNT(-1),
@@ -63,8 +64,6 @@ public enum RatingParam {
 
 
     GREEDY(1);
-
-
     private static final int MATERIAL_FACTOR = 100;
     private final int factor;
 

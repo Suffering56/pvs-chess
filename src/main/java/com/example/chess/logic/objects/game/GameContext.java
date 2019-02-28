@@ -36,6 +36,7 @@ public class GameContext {
 
     //key = pointTo
     Map<PointDTO, List<GameContext>> children;  //возможно стоит поменять на array[][][]
+    Set<PointDTO> deepExchangePoints;
 
     @Setter boolean isCheckmate;
     @Setter boolean isDeepExchangeAlreadyCalculated = false;
@@ -154,17 +155,17 @@ public class GameContext {
 
     public int getTotal() {
         int total = lastMove.getTotal();
-        GameContext maxDeeperContext = findMaxChildren();
-
-        while (maxDeeperContext != null) {
-            if (maxDeeperContext.botLast()) {
-                total += maxDeeperContext.getLastMove().getTotal();
-            } else {
-                total -= maxDeeperContext.getLastMove().getTotal();
-            }
-
-            maxDeeperContext = maxDeeperContext.findMaxChildren();
-        }
+//        GameContext maxDeeperContext = findMaxChildren();
+//
+//        while (maxDeeperContext != null) {
+//            if (maxDeeperContext.botLast()) {
+//                total += maxDeeperContext.getLastMove().getTotal();
+//            } else {
+//                total -= maxDeeperContext.getLastMove().getTotal();
+//            }
+//
+//            maxDeeperContext = maxDeeperContext.findMaxChildren();
+//        }
 
         return total;
         //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
@@ -228,5 +229,9 @@ public class GameContext {
             return " [-]";
         }
         return "";
+    }
+
+    public PointDTO getPointTo() {
+        return getLastMove().getPointTo();
     }
 }
