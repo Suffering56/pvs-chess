@@ -20,6 +20,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static com.example.chess.logic.utils.CommonUtils.tabs;
+import static com.example.chess.service.impl.bot.AbstractBotService.MAX_DEEP;
 
 @Log4j2
 @Getter
@@ -153,27 +154,38 @@ public class GameContext {
         return children != null;
     }
 
+
+    //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
+    //TODO: deeper moves ratio? (without checkmate)
     public int getTotal() {
         int total = lastMove.getTotal();
-//        GameContext maxDeeperContext = findMaxChildren();
-//
-//        while (maxDeeperContext != null) {
-//            if (maxDeeperContext.botLast()) {
-//                total += maxDeeperContext.getLastMove().getTotal();
-//            } else {
-//                total -= maxDeeperContext.getLastMove().getTotal();
-//            }
-//
-//            maxDeeperContext = maxDeeperContext.findMaxChildren();
-//        }
 
+        if (getDeep() <= MAX_DEEP) {
+
+            return total + findMaxChildrenByContextTotal().getTotal();
+        }
+
+//        return getTotal() +
+
+//        if (getDeep() <= MAX_DEEP) {
+//            GameContext maxDeeperContext = findMaxChildrenByContextTotal();
+//
+//            while (maxDeeperContext != null) {
+//                //TODO!!!! gameContext.getLastMove.getTotal
+        //проблема в том, что maxMove может быть далеко не один. т.е. могут быть 10 ходов с рейтингом 0.
+        //но не все последующие ходы идущие по дереву от первых десяти равнозначны. это нужно учитывать
+        //так же нужно учесть, что добавятся менее значимые рейтинги и просто собирать набор лучших ходов не получится.
+
+//                total += maxDeeperContext.getLastMove().getTotal();
+//                maxDeeperContext = maxDeeperContext.findMaxChildrenByContextTotal();
+//            }
+//        }
         return total;
-        //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
-        //TODO: deeper moves ratio? (without checkmate)
     }
 
-    private GameContext findMaxChildren() {
+    private GameContext findMaxChildrenByContextTotal() {
         if (hasChildren()) {
+            //TODO!!!! gameContext.getTotal
             return childrenStream().reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getTotal)))).orElseThrow(() -> new CheckmateException(this));
         }
         return null;
@@ -184,7 +196,7 @@ public class GameContext {
         System.out.println("resultMove.context.total = " + getTotal());
 
         if (tabsCount == 0) {
-            getLastMove().printRating(tabsCount + 1);
+//            getLastMove().printRating(tabsCount + 1);
         }
 
         System.out.println("--------------------------------");
@@ -215,6 +227,7 @@ public class GameContext {
 
     private void printMove(int tabsCount, String prefix, String postfix) {
         System.out.println(tabs(tabsCount) + prefix + "[" + getLastMove() + "].total = " + getLastMove().getTotal() + postfix);
+        getLastMove().printRating(tabsCount + 1);
     }
 
     private String getPrefix(String prefix) {

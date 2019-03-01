@@ -70,7 +70,7 @@ public abstract class AbstractBotService implements BotService {
     }
 
 
-    private static final int MAX_DEEP = 3;
+    public static final int MAX_DEEP = 3;
 
     private MoveDTO findBestMove(RootGameContext rootContext) {
         Debug.resetCounters();

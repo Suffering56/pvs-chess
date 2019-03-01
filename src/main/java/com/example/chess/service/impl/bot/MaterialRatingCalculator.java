@@ -21,21 +21,23 @@ public class MaterialRatingCalculator {
     private static final int MAX_MATERIAL_DEEP = -1;
 
     public static Rating getMaterialRating(GameContext gameContext, boolean isInverted) throws CheckmateException {
-//        if (gameContext.getParent().getPointTo().equals(gameContext.getPointTo())) {
-//            return Rating.builder()
-//                    .var("targetPoint", gameContext.getPointTo())
-//                    .build(RatingParam.DEEP_EXCHANGE_ALREADY_CALCULATED);
-//        }
 
         List<Integer> exchangeValues = generateExchangeValuesList(gameContext, isInverted);
 
         int exchangeDeep = exchangeValues.size();
         Rating.Builder builder = Rating.builder()
+//                .setInverted(!gameContext.botLast())
                 .var("exchangeDeep", exchangeDeep);
 
         if (exchangeDeep <= 2) {
             return getMaterialRatingForSimpleMoves(builder, exchangeValues);
         } else {
+//            if (gameContext.getParent().getPointTo().equals(gameContext.getPointTo())) {
+//                return Rating.builder()
+//                        .var("targetPoint", gameContext.getPointTo())
+//                        .build(RatingParam.DEEP_EXCHANGE_ALREADY_CALCULATED);
+//            }
+
             return getMaterialRatingForDeepExchange(builder, exchangeValues);
         }
     }

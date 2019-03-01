@@ -4,6 +4,7 @@ import com.example.chess.enums.RatingParam;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.logic.utils.CommonUtils;
 import lombok.Getter;
+import org.w3c.dom.ranges.Range;
 
 public class Rating {
 
@@ -26,8 +27,15 @@ public class Rating {
 
     public class Builder {
 
+        private boolean inverted = false;
+
         public Builder reasonMove(ExtendedMove move) {
             reasonMove = move.toString();
+            return this;
+        }
+
+        public Builder setInverted(boolean inverted) {
+            this.inverted = inverted;
             return this;
         }
 
@@ -46,8 +54,12 @@ public class Rating {
         }
 
         public Rating build(RatingParam param, int value) {
-            Rating.this.param = param;
+            if (inverted) {
+                value = -value;
+            }
+
             Rating.this.value = value;
+            Rating.this.param = param;
             return Rating.this;
         }
     }
