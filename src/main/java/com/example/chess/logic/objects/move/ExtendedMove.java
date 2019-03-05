@@ -117,11 +117,12 @@ public class ExtendedMove implements Move {
         return getValueTo();
     }
 
-    public void updateRating(Rating rating) {
+    public ExtendedMove updateRating(Rating rating) {
         ratingMap.computeIfAbsent(rating.getParam(), key -> {
             total += rating.getValue() * rating.getParam().getFactor();
             return rating;
         });
+        return this;
     }
 
     public boolean hasDifferentPointTo(ExtendedMove otherMove) {

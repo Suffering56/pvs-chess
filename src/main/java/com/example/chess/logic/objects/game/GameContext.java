@@ -1,5 +1,6 @@
 package com.example.chess.logic.objects.game;
 
+import com.example.chess.App;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.Piece;
 import com.example.chess.enums.Side;
@@ -20,7 +21,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static com.example.chess.logic.utils.CommonUtils.tabs;
-import static com.example.chess.service.impl.bot.AbstractBotService.MAX_DEEP;
 
 @Log4j2
 @Getter
@@ -184,7 +184,7 @@ public class GameContext {
      * который в свою очередь должен учитывать ответ бота, который тоже в свою очередь не дурак: children.find(maxB)
      */
     public int getContextTotal() {
-        if (hasChildren() && getDeep() <= MAX_DEEP) {
+        if (hasChildren() && getDeep() <= App.MAX_DEEP) {
             return getMoveTotal() + getMostPossibleChildContextTotal();
         }
         return getMoveTotal();

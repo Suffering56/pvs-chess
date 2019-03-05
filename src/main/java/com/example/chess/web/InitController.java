@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/init")

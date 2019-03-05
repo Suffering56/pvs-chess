@@ -20,6 +20,24 @@ public class MaterialRatingCalculator {
 
     private static final int MAX_MATERIAL_DEEP = -1;
 
+    public static Rating getMaterialRatingV2(GameContext gameContext, boolean isInverted) throws CheckmateException {
+        //TODO: if context.getDeep == MAX => getMaterialRating + getInvertedMaterialRating (OR fillDeeperHarmfulContexts)
+        //else:
+
+        List<Integer> exchangeValues = generateExchangeValuesList(gameContext, isInverted);
+
+        int exchangeDeep = exchangeValues.size();
+        Rating.Builder builder = Rating.builder()
+                .var("exchangeDeep", exchangeDeep);
+
+        if (exchangeDeep <= 2) {
+            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
+        } else {
+            return getMaterialRatingForDeepExchange(builder, exchangeValues);
+        }
+    }
+
+
     public static Rating getMaterialRating(GameContext gameContext, boolean isInverted) throws CheckmateException {
 
         List<Integer> exchangeValues = generateExchangeValuesList(gameContext, isInverted);
@@ -35,7 +53,8 @@ public class MaterialRatingCalculator {
             // ну то есть можно просто посчитать вглубь все эти размены, тоталы не считать, а если происходит кто-то кого-то срубил, не сложно подсчитать материальную разницу
             //FIXME: если exchangeDeep == 2, то там тоже суммы наслаиваются, что не есть гуд
             return getMaterialRatingForSimpleMoves(builder, exchangeValues);
-        } else {
+        }
+        else {
 
             //FIXME:
 //            if (gameContext.getParent().getPointTo().equals(gameContext.getPointTo())) {

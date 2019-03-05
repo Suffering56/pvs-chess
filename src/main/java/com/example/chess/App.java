@@ -10,6 +10,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class App implements CommandLineRunner {
 
+    public static final int MAX_DEEP = 3;
+
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);
     }

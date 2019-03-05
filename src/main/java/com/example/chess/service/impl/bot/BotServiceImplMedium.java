@@ -1,5 +1,6 @@
 package com.example.chess.service.impl.bot;
 
+import com.example.chess.App;
 import com.example.chess.enums.RatingParam;
 import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.logic.MoveHelper;
@@ -19,23 +20,22 @@ import static com.example.chess.service.impl.bot.MaterialRatingCalculator.getMat
 public class BotServiceImplMedium extends AbstractBotService {
 
     @Override
-    protected void calculateRating(GameContext gameContext, int maxDeep) throws CheckmateException {
+    protected void calculateRating(GameContext gameContext) throws CheckmateException {
         Preconditions.checkState(!gameContext.isRoot());
-        Preconditions.checkState(gameContext.getDeep() <= maxDeep);
+        Preconditions.checkState(gameContext.getDeep() <= App.MAX_DEEP);
+
+        Rating materialRating = getMaterialRating(gameContext, false);
+        Rating invertedMaterialRating = getInvertedMaterialRating(gameContext);
+        Rating checkRating = getCheckRating(gameContext);
+        Rating movesCountRating = getMovesCountRating(gameContext, false);
 
         ExtendedMove analyzedMove = gameContext.getLastMove();
 
-        Rating materialRating = getMaterialRating(gameContext, false);
-        analyzedMove.updateRating(materialRating);
+        analyzedMove.updateRating(materialRating)
+                .updateRating(movesCountRating)
+                .updateRating(checkRating);
+//                .updateRating(invertedMaterialRating)
 
-        Rating invertedMaterialRating = getInvertedMaterialRating(gameContext);
-        analyzedMove.updateRating(invertedMaterialRating);
-
-        Rating checkRating = getCheckRating(gameContext);
-        analyzedMove.updateRating(checkRating);
-
-        Rating movesCountRating = getMovesCountRating(gameContext, false);
-        analyzedMove.updateRating(movesCountRating);
 
 //        if (gameContext.getDeep() == maxDeep) {
             //нет смысла считать инвертированный рейтинг т.к. он подсчитывается в более глубоких контекстах

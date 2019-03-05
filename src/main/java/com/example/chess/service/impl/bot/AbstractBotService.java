@@ -1,5 +1,6 @@
 package com.example.chess.service.impl.bot;
 
+import com.example.chess.App;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
@@ -35,10 +36,6 @@ public abstract class AbstractBotService implements BotService {
     protected Long botMoveDelay;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-//    protected void calculateRating(GameContext gameContext) {
-//        throw new UnsupportedOperationException();
-//    }
-
     @Autowired
     public void setGameService(GameService gameService) {
         this.gameService = gameService;
@@ -70,13 +67,11 @@ public abstract class AbstractBotService implements BotService {
     }
 
 
-    public static final int MAX_DEEP = 3;
-
     private MoveDTO findBestMove(RootGameContext rootContext) {
         Debug.resetCounters();
         long start = System.currentTimeMillis();
 
-        rootContext.fill(MAX_DEEP);
+        rootContext.fill(App.MAX_DEEP);
 
         if (!rootContext.hasChildren()) {
             throw new RuntimeException("Checkmate: Player win!");
@@ -86,7 +81,7 @@ public abstract class AbstractBotService implements BotService {
 
        GameContext resultContext;
         try {
-            calculateRatingRecursive(rootContext, MAX_DEEP);
+            calculateRatingRecursive(rootContext);
             resultContext = findBestExtendedMove(rootContext);
         } catch (CheckmateException e) {
             resultContext = e.getContext();
@@ -111,22 +106,23 @@ public abstract class AbstractBotService implements BotService {
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
     }
 
-    private void calculateRatingRecursive(GameContext context, int deep) throws CheckmateException {
-        if (deep < 0) {
+    private void calculateRatingRecursive(GameContext context) throws CheckmateException {
+        if (context.getDeep() > App.MAX_DEEP) {
             return;
         }
 
         if (!context.isRoot()) {
-            calculateRating(context, MAX_DEEP);
+            calculateRating(context);
         }
+
         if (context.hasChildren()) {
             if (context.isRoot()) {
                 context.childrenStream()
                         .parallel()
-                        .forEach(childContext -> calculateRatingRecursive(childContext, deep - 1));
+                        .forEach(this::calculateRatingRecursive);
             } else {
                 context.childrenStream()
-                        .forEach(childContext -> calculateRatingRecursive(childContext, deep - 1));
+                        .forEach(this::calculateRatingRecursive);
             }
         }
     }
@@ -155,5 +151,5 @@ public abstract class AbstractBotService implements BotService {
         return contextList.get(i);
     }
 
-    protected abstract void calculateRating(GameContext gameContext, int maxDeep) throws CheckmateException;
+    protected abstract void calculateRating(GameContext gameContext) throws CheckmateException;
 }
