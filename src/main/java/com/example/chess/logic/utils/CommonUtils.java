@@ -1,11 +1,10 @@
-package com.example.chess.utils;
+package com.example.chess.logic.utils;
 
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
-import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.exceptions.HistoryNotFoundException;
-import com.example.chess.service.support.ExtendedMove;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.CharacterPredicates;
@@ -17,6 +16,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Log4j2
+@UtilityClass
 public class CommonUtils {
 
     private static final String GRADLE_PROPERTIES_PATH = System.getProperty("user.dir") + "/gradle.properties";
@@ -79,6 +79,16 @@ public class CommonUtils {
         put(PieceType.KING, "K");
     }};
 
+    private static Map<String, Integer> columnIndexesMap = new HashMap<String, Integer>() {{
+        for (Entry<Integer, String> entry : columnNamesMap.entrySet()) {
+            put(entry.getValue(), entry.getKey());
+        }
+    }};
+
+    public static int nameToColumnIndex(String columnName) {
+        return columnIndexesMap.get(columnName);
+    }
+
     public static String moveToString(ExtendedMove move) {
         CellDTO from = move.getFrom();
         CellDTO to = move.getTo();
@@ -102,7 +112,7 @@ public class CommonUtils {
         }
         if (pieceType == PieceType.PAWN) {
             if (printPawnName) {
-                return "P";
+                return "p";
             } else {
                 return " ";
             }
@@ -126,5 +136,13 @@ public class CommonUtils {
     public static boolean fakeTrue() {
         String s = "00000";
         return s.contains("0");
+    }
+
+    public static String tabs(int count) {
+        StringBuilder prefix = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            prefix.append("\t");
+        }
+        return prefix.toString();
     }
 }

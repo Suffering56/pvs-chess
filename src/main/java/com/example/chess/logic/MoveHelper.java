@@ -1,17 +1,23 @@
-package com.example.chess.service.support;
+package com.example.chess.logic;
 
-import com.example.chess.Debug;
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.KingNotFoundException;
-import com.example.chess.exceptions.UnattainablePointException;
+import com.example.chess.logic.debug.Debug;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.game.GameContext;
+import com.example.chess.logic.objects.game.IGame;
+import com.example.chess.logic.objects.move.ExtendedMove;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,24 +25,29 @@ import java.util.stream.Stream;
 @SuppressWarnings({"ConstantConditions", "Duplicates"})
 public class MoveHelper {
 
-    private final FakeGame fakeGame;
-    private final CellsMatrix originalMatrix;
+    private final IGame game;
+    private final CellsMatrix matrix;
 
-    private MoveHelper(FakeGame fakeGame, CellsMatrix originalMatrix) {
-        this.fakeGame = fakeGame;
-        this.originalMatrix = originalMatrix;
+    private MoveHelper(IGame game, CellsMatrix matrix) {
+        this.game = game;
+        this.matrix = matrix;
     }
 
-    public static MoveHelper valueOf(FakeGame fakeGame, CellsMatrix originalMatrix) {
+    public static MoveHelper valueOf(IGame fakeGame, CellsMatrix matrix) {
         Debug.moveHelpersCount.incrementAndGet();
-        return new MoveHelper(fakeGame, originalMatrix);
+        return new MoveHelper(fakeGame, matrix);
+    }
+
+    public static MoveHelper valueOf(GameContext context) {
+        Debug.moveHelpersCount.incrementAndGet();
+        return new MoveHelper(context.getGame(), context.getMatrix());
     }
 
     public boolean isKingUnderAttack(Side kingSide) {
-        PointDTO kingPoint = originalMatrix.getKingPoint(kingSide);
+        PointDTO kingPoint = matrix.getKingPoint(kingSide);
         Side enemySide = kingSide.reverse();
 
-        Set<PointDTO> enemyMoves = originalMatrix
+        Set<PointDTO> enemyMoves = matrix
                 .excludePiecesStream(enemySide, PieceType.KING)
                 .map(enemyCell -> getUnfilteredMovesForCell(enemyCell, false))
                 .flatMap(Set::stream)
@@ -46,7 +57,7 @@ public class MoveHelper {
     }
 
     public Set<PointDTO> getFilteredAvailablePoints(PointDTO pointFrom) {
-        CellDTO moveableCell = originalMatrix.getCell(pointFrom);
+        CellDTO moveableCell = matrix.getCell(pointFrom);
         FilterData filterData = createFilterData(moveableCell.getSide());
 
         return getFilteredMovesForCell(moveableCell, filterData, false);
@@ -55,20 +66,20 @@ public class MoveHelper {
     public Stream<ExtendedMove> getStandardMovesStream(Side side) throws KingNotFoundException {
         FilterData filterData = createFilterData(side);
 
-        return originalMatrix
+        return matrix
                 .allPiecesBySideStream(side)
                 .flatMap(moveableCell -> {
                     Set<PointDTO> filteredMoves = getFilteredMovesForCell(moveableCell, filterData, false);
-                    return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, originalMatrix.getCell(pointTo)));
+                    return filteredMoves.stream().map(pointTo -> new ExtendedMove(moveableCell, matrix.getCell(pointTo)));
                 });
     }
 
     private FilterData createFilterData(Side side) {
         Side enemySide = side.reverse();
-        PointDTO kingPoint = originalMatrix.getKingPoint(side);
+        PointDTO kingPoint = matrix.getKingPoint(side);
         Map<PointDTO, UnmovableData> unmovablePointsMap = getUnmovablePointsMap(enemySide, kingPoint);
 
-        Set<PointDTO> enemyDefensivePoints = originalMatrix
+        Set<PointDTO> enemyDefensivePoints = matrix
                 .allPiecesBySideStream(enemySide)
                 .flatMap(enemyCell -> getUnfilteredMovesForCell(enemyCell, true).stream())
                 .collect(Collectors.toSet());
@@ -82,7 +93,7 @@ public class MoveHelper {
 
     private void initFilterData(PointDTO kingPoint, Side enemySide, FilterData filterData) {
 
-        originalMatrix
+        matrix
                 .allPiecesBySideStream(enemySide)
                 .forEach(enemyCell -> {
                     Set<PointDTO> enemyMoves;
@@ -123,7 +134,7 @@ public class MoveHelper {
                     filterData.excludePoints = calculateExcludePoints(source, kingPoint);
                     break;
                 case KING:
-                    throw new UnattainablePointException();
+                    throw new UnsupportedOperationException();
             }
         }
     }
@@ -178,7 +189,7 @@ public class MoveHelper {
     }
 
     private Map<PointDTO, UnmovableData> getUnmovablePointsMap(Side enemySide, PointDTO kingPoint) {
-        return originalMatrix
+        return matrix
                 .includePiecesStream(enemySide, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN)
                 .map(enemyPossibleAttackerCell -> {
                     BetweenParams betweenParams = createBetweenParams(kingPoint, enemyPossibleAttackerCell);
@@ -252,7 +263,7 @@ public class MoveHelper {
                 }
                 return betweenParams;
             default:
-                throw new UnattainablePointException();
+                throw new UnsupportedOperationException();
         }
     }
 
@@ -498,14 +509,14 @@ public class MoveHelper {
             int kingRowIndex = movableCell.getRowIndex();
 
             if (!isCheckFilterEnabled() || filterData.sourceOfCheck == null) {
-                if (fakeGame.isShortCastlingAvailable(allySide)) {
+                if (game.isShortCastlingAvailable(allySide)) {
                     if (isEmptyCellsOnRow(kingRowIndex, 1, 2)) {
                         if (isSafeCrossPointForCastling(-1)) {
                             addKingMove(0, -2);
                         }
                     }
                 }
-                if (fakeGame.isLongCastlingAvailable(allySide)) {
+                if (game.isLongCastlingAvailable(allySide)) {
                     if (isEmptyCellsOnRow(kingRowIndex, 4, 5, 6)) {
                         if (isSafeCrossPointForCastling(1)) {
                             addKingMove(0, 2);
@@ -535,7 +546,7 @@ public class MoveHelper {
                 }
             }
 
-            Integer enemyLongMoveColumnIndex = fakeGame.getPawnLongMoveColumnIndex(enemySide);
+            Integer enemyLongMoveColumnIndex = game.getPawnLongMoveColumnIndex(enemySide);
             if (enemyLongMoveColumnIndex != null) {    //противник только что сделал длинный ход пешкой
 
                 if (Math.abs(enemyLongMoveColumnIndex - currentColumn) == 1) {    //и эта пешка рядом с выделенной (слева или справа)
@@ -676,7 +687,7 @@ public class MoveHelper {
 
     private CellDTO getCell(int rowIndex, int columnIndex) {
         if (PointDTO.isCorrectIndex(rowIndex, columnIndex)) {
-            return originalMatrix.getCell(rowIndex, columnIndex);
+            return matrix.getCell(rowIndex, columnIndex);
         }
         return null;
     }

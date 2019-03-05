@@ -1,6 +1,6 @@
-package com.example.chess.service.support;
+package com.example.chess.enums;
 
-import com.example.chess.ChessConstants;
+import com.example.chess.logic.ChessConstants;
 import lombok.Getter;
 
 @Getter
@@ -17,6 +17,7 @@ public enum RatingParam {
      * Поэтому коэффициент отрицательный.
      */
     INVERTED_MATERIAL_FOR_PLAYER(-RatingParam.MATERIAL_FACTOR),
+    DEEP_EXCHANGE_ALREADY_CALCULATED(0),
 
     AVAILABLE_MOVES_COUNT(1),
     INVERTED_AVAILABLE_MOVES_COUNT(-1),
@@ -59,9 +60,10 @@ public enum RatingParam {
     CHECKMATE_BY_BOT(ChessConstants.CHECKMATE_VALUE),
     CHECKMATE_BY_PLAYER(-ChessConstants.CHECKMATE_VALUE),
     DEEP_2_BY_PLAYER(-1),
-    DEEP_3_BY_BOT(1);
+    DEEP_3_BY_BOT(1),
 
 
+    GREEDY(1);
     private static final int MATERIAL_FACTOR = 100;
     private final int factor;
 

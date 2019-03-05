@@ -2,17 +2,17 @@ package com.example.chess.dto;
 
 import com.example.chess.enums.Side;
 import lombok.*;
-
-import java.util.List;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ArrangementDTO {
 
-	private int position;
-	private List<List<CellDTO>> cellsMatrix;
-	private Side underCheckSide;
+    int position;
+    CellDTO[][] cellsMatrix;
+    Side underCheckSide;
 }

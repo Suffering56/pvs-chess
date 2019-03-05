@@ -1,4 +1,4 @@
-package com.example.chess.service.support;
+package com.example.chess.logic.objects;
 
 import com.example.chess.dto.CellDTO;
 import com.example.chess.dto.PointDTO;

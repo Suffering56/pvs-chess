@@ -1,10 +1,11 @@
 package com.example.chess.service;
 
-import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
-import com.example.chess.service.support.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
+
+import javax.annotation.Nullable;
 
 public interface BotService {
 
-    void applyBotMove(Game game);
+    void applyBotMove(Game game, @Nullable ExtendedMove move);
 }

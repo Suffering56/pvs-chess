@@ -2,8 +2,7 @@ package com.example.chess.entity;
 
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
-import com.example.chess.service.support.FakeGame;
-import com.example.chess.service.support.Gameplay;
+import com.example.chess.logic.objects.game.IGame;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,16 +11,17 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.example.chess.ChessConstants.ROOK_LONG_COLUMN_INDEX;
-import static com.example.chess.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
+import static com.example.chess.logic.ChessConstants.ROOK_LONG_COLUMN_INDEX;
+import static com.example.chess.logic.ChessConstants.ROOK_SHORT_COLUMN_INDEX;
 
 @Entity
 @Getter
 @Setter
 @ToString
-public class Game implements Gameplay {
+public class Game implements IGame {
 
     @Id
     @GenericGenerator(name = "game_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "game_id_seq"))
@@ -114,12 +114,12 @@ public class Game implements Gameplay {
     }
 
     @Transient
-    public GameFeatures getWhiteFeatures() {
+    private GameFeatures getWhiteFeatures() {
         return featuresMap.get(Side.WHITE);
     }
 
     @Transient
-    public GameFeatures getBlackFeatures() {
+    private GameFeatures getBlackFeatures() {
         return featuresMap.get(Side.BLACK);
     }
 
@@ -149,12 +149,22 @@ public class Game implements Gameplay {
      */
     @Transient
     @JsonIgnore
-    public Side getReadyToMoveSide() {
+    public Side getActiveSide() {
         return getPosition() % 2 == 0 ? Side.WHITE : Side.BLACK;
     }
 
     @Transient
-    public FakeGame toFake() {
-        return FakeGame.builder(this).build();
+    @JsonIgnore
+    public void reset() {
+        setPosition(0);
+        clearFuturesMap();
+        setUnderCheckSide(null);
+    }
+
+    public void clearFuturesMap() {
+        setFeaturesMap(new HashMap<Side, GameFeatures>() {{
+            put(Side.WHITE, new GameFeatures(Game.this, Side.WHITE));
+            put(Side.BLACK, new GameFeatures(Game.this, Side.BLACK));
+        }});
     }
 }

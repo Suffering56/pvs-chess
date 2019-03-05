@@ -1,9 +1,9 @@
 package com.example.chess.exceptions;
 
 import com.example.chess.enums.Side;
-import com.example.chess.service.support.CellsMatrix;
-import com.example.chess.service.support.ExtendedMove;
-import com.example.chess.utils.CommonUtils;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.utils.CommonUtils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;

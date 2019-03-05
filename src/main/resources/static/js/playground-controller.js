@@ -4,16 +4,18 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     $scope.verticalLabels = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
     $scope.doClick = doClick;
-    $scope.getCellClass = getCellClass;
-    $scope.getInnerCellClass = getInnerCellClass;
+    $scope.getCellColorClass = getCellColorClass;
+    $scope.getCellPieceClass = getCellPieceClass;
+    $scope.rollback = rollback;
+    $scope.wakeBot = wakeBot;
 
-    var params = $rootScope.params;
-    var game = params.game;
+    let params = $rootScope.params;
+    let game = params.game;
 
-    var selectedCell;
-    var availablePoints;
+    let selectedCell;
+    let availablePoints;
 
-    if (params.mode == MODE_AI || params.mode == MODE_PVP) {
+    if (params.mode === MODE_AI || params.mode === MODE_PVP) {
         utils.createAndStartTimer(function () {
             listenEnemyActions();
         }, 500);
@@ -25,8 +27,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
             method: "GET",
             url: "/api/game/" + game.id + "/listen"
         }).then(function (response) {
-            var arrangementDTO = response.data;
-            if (arrangementDTO.position != params.game.position) {
+            let arrangementDTO = response.data;
+            if (arrangementDTO.position !== params.game.position) {
                 updateArrangement(arrangementDTO);
             }
         });
@@ -47,8 +49,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function applyMove(cell) {
         //cell = CellDTO
-        if (selectedCell.piece.type == PIECE_PAWN) {
-            if (cell.rowIndex == 0 || cell.rowIndex == 7) {
+        if (selectedCell.piece.type === PIECE_PAWN) {
+            if (cell.rowIndex === 0 || cell.rowIndex === 7) {
                 showPieceChooser(cell);
                 return;
             }
@@ -58,8 +60,8 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function showPieceChooser(cell) {
-        var data = {side: selectedCell.piece.side};
-        var dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", data, {size: "md"});
+        let data = {side: selectedCell.piece.side};
+        let dlg = dialogs.create("/modal/piece-chooser.html", "pieceChooserController", data, {size: "md"});
 
         dlg.result.then(function (pieceType) {
             //success
@@ -70,9 +72,9 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function sendApplyMoveRequest(cell, selectedPieceType) {
-        var url = "/api/game/" + game.id + "/move";
+        let url = "/api/game/" + game.id + "/move";
 
-        var moveDTO = {
+        let moveDTO = {
             from: {
                 rowIndex: selectedCell.rowIndex,
                 columnIndex: selectedCell.columnIndex
@@ -81,11 +83,11 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
                 rowIndex: cell.rowIndex,
                 columnIndex: cell.columnIndex
             },
-            promotionPieceType: null
+            pieceFromPawn: null
         };
 
         if (selectedPieceType) {
-            moveDTO.promotionPieceType = selectedPieceType;
+            moveDTO.pieceFromPawn = selectedPieceType;
         }
 
         $http({
@@ -109,13 +111,13 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
     }
 
     function selectCell(cell) {
-        if (params.mode != MODE_SINGLE) {
-            var expectedSide = getExpectedSide();
+        if (params.mode !== MODE_SINGLE) {
+            let expectedSide = getExpectedSide();
 
-            if (cell.piece == null || cell.piece.side != expectedSide) {
+            if (cell.piece == null || cell.piece.side !== expectedSide) {
                 return;
             }
-            if (params.side != expectedSide) {
+            if (params.side !== expectedSide) {
                 return;
             }
         }
@@ -165,7 +167,7 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
         }
     }
 
-    function getCellClass(cell) {
+    function getCellColorClass(cell) {
         //cell = cellDTO
         if ((cell.rowIndex + cell.columnIndex) % 2 === 0) {
             return "white";
@@ -174,9 +176,9 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
         }
     }
 
-    function getInnerCellClass(cell) {
+    function getCellPieceClass(cell) {
         //cell = cellDTO
-        var result = [];
+        let result = [];
 
         if (cell.piece) {
             result.push("piece");
@@ -214,6 +216,24 @@ app.controller("playgroundController", function ($rootScope, $scope, $http, util
 
     function getEnemySide() {
         return (game.position % 2 === 0) ? SIDE_BLACK : SIDE_WHITE;
+    }
+
+    function rollback() {
+        $http({
+            method: "GET",
+            url: "/api/debug/" + game.id + "/rollback"
+        }).then(function (response) {
+            updateArrangement(response.data);
+        });
+    }
+
+    function wakeBot() {
+        $http({
+            method: "GET",
+            url: "/api/debug/" + game.id + "/wake"
+        }).then(function (response) {
+
+        });
     }
 
 });

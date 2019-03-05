@@ -1,6 +1,11 @@
 package com.example.chess.entity;
 
 import com.example.chess.dto.CellDTO;
+import com.example.chess.dto.PointDTO;
+import com.example.chess.enums.PieceType;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.move.ExtendedMove;
+import com.example.chess.logic.objects.move.Move;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
@@ -12,41 +17,63 @@ import javax.persistence.*;
 @ToString
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class History {
+public class History implements Move {
 
     @Id
     @GenericGenerator(name = "history_id_seq", strategy = "sequence-identity", parameters = @org.hibernate.annotations.Parameter(name = "sequence", value = "history_id_seq"))
     @GeneratedValue(generator = "history_id_seq")
-    private Long id;
+    private long id;
 
     @Column(nullable = false)
-    private Long gameId;
+    private long gameId;
 
     @Column(nullable = false)
-    private Integer position;
-
-    @Column(nullable = false, name = "piece_id")
-    private Integer pieceId;
-
-    @ManyToOne
-    @JoinColumn(name = "piece_id", nullable = false, insertable = false, updatable = false)
-    private Piece piece;
+    private int position;
 
     @Column(nullable = false)
-    private Integer rowIndex;
+    private int rowIndexFrom;
 
     @Column(nullable = false)
-    private Integer columnIndex;
+    private int columnIndexFrom;
+
+    @Column(nullable = false)
+    private int rowIndexTo;
+
+    @Column(nullable = false)
+    private int columnIndexTo;
+
+    @Column
+    private PieceType pieceFromPawn;
+
+    @Column
+    private String description;
+
+    @Override
+    @Transient
+    public PointDTO getPointFrom() {
+        return PointDTO.valueOf(rowIndexFrom, columnIndexFrom);
+    }
+
+    @Override
+    @Transient
+    public PointDTO getPointTo() {
+        return PointDTO.valueOf(rowIndexTo, columnIndexTo);
+    }
 
     @Transient
-    public static History ofCell(CellDTO cell, Long gameId, Integer position) {
-        return History.builder()
-                .gameId(gameId)
-                .position(position)
-                .rowIndex(cell.getRowIndex())
-                .columnIndex(cell.getColumnIndex())
-                .piece(cell.getPiece())
-                .pieceId(cell.getPiece().getId())
-                .build();
+    public ExtendedMove toExtendedMove(CellsMatrix matrix) {
+        CellDTO from = matrix.getCell(getPointFrom());
+        CellDTO to = matrix.getCell(getPointTo());
+        return new ExtendedMove(from, to);
+    }
+
+    @Transient
+    public String toReadableString() {
+        return getPointFrom() + "-" + getPointTo();
+    }
+
+    @Transient
+    public String getFormattedPosition() {
+        return String.format("%02d", position);
     }
 }

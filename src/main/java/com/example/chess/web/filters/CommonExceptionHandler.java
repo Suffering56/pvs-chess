@@ -1,6 +1,6 @@
 package com.example.chess.web.filters;
 
-import com.example.chess.utils.CustomResponse;
+import com.example.chess.logic.utils.CustomResponse;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;

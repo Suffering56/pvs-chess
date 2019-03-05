@@ -1,12 +1,14 @@
-package com.example.chess;
+package com.example.chess.logic.debug;
 
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.dto.PointDTO;
+import lombok.experimental.UtilityClass;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+@UtilityClass
 public class Debug {
 
     private static final boolean DESTINY_ENABLED = false;
@@ -25,6 +27,7 @@ public class Debug {
     }
 
     public static void printCounters() {
+        System.out.println("\r\nCounters: ");
         System.out.println("moveHelpersCount = " + moveHelpersCount.get());
         System.out.println("movesExecuted = " + movesExecuted.get());
         System.out.println("availablePointsFound = " + availablePointsFound.get());
@@ -43,7 +46,6 @@ public class Debug {
         if (Debug.DESTINY_ENABLED) {
             return destinyMap.get(position);
         }
-
         return null;
     }
 }

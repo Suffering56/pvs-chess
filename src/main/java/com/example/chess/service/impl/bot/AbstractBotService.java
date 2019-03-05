@@ -1,195 +1,43 @@
 package com.example.chess.service.impl.bot;
 
-import com.example.chess.ChessConstants;
-import com.example.chess.Debug;
 import com.example.chess.aspects.Profile;
 import com.example.chess.dto.MoveDTO;
 import com.example.chess.entity.Game;
 import com.example.chess.enums.PieceType;
 import com.example.chess.enums.Side;
+import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.exceptions.GameNotFoundException;
-import com.example.chess.exceptions.HistoryNotFoundException;
-import com.example.chess.exceptions.UnattainablePointException;
+import com.example.chess.logic.debug.Debug;
+import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.game.GameContext;
+import com.example.chess.logic.objects.game.RootGameContext;
+import com.example.chess.logic.objects.move.ExtendedMove;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.service.support.*;
-import com.example.chess.utils.CommonUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.util.Pair;
 
-import java.util.*;
+import javax.annotation.Nullable;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-@SuppressWarnings({"WeakerAccess", "SameParameterValue"})
+
 @Log4j2
+@SuppressWarnings({"WeakerAccess", "SameParameterValue", "Duplicates"})
 public abstract class AbstractBotService implements BotService {
 
     protected GameService gameService;
     protected Long botMoveDelay;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-
-    protected enum LoggerParam {
-        COMMON, PRINT_SORTED_BOT_MOVES_LIST, PRINT_RESULT_MOVE, MATERIAL;
-    }
-
-    private Map<LoggerParam, Boolean> loggerSettings = new EnumMap<LoggerParam, Boolean>(LoggerParam.class) {{
-        put(LoggerParam.COMMON, false);
-        put(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, false);
-        put(LoggerParam.PRINT_RESULT_MOVE, false);
-        put(LoggerParam.MATERIAL, false);
-    }};
-
-    @Profile
-    @Override
-    public void applyBotMove(Game game) {
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.execute(() -> {
-            try {
-                CellsMatrix cellsMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
-                Side botSide = game.getReadyToMoveSide();
-                MoveDTO moveDTO = findBestMove(game.toFake(), cellsMatrix, botSide);
-                gameService.applyMove(game, moveDTO);
-                TimeUnit.SECONDS.sleep(1);
-            } catch (HistoryNotFoundException | GameNotFoundException | InterruptedException e) {
-                log.error(e.getMessage(), e);
-            }
-        });
-    }
-
-    protected abstract Consumer<? super ExtendedMove> calculateRating(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall);
-
-    protected MoveDTO findBestMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide) {
-        long start = System.currentTimeMillis();
-        Debug.resetCounters();
-
-
-        ExtendedMove resultMove = findBestExtendedMove(fakeGame, originalMatrix, botSide, true);
-        System.out.println("resultMove[pos=" + originalMatrix.getPosition() + "] = " + resultMove);
-
-        if (resultMove.getTotal() >= ChessConstants.CHECKMATE_VALUE) {
-            System.out.println("Bot want checkmate you!!!");
-        }
-
-        System.out.println();
-        Debug.printCounters();
-        System.out.println("findBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
-
-        PieceType promotionPieceType = null;
-        if (resultMove.getPieceFrom() == PieceType.PAWN && (resultMove.getTo().getRowIndex() == 0 || resultMove.getTo().getRowIndex() == 7)) {
-            promotionPieceType = PieceType.QUEEN;
-        }
-
-        MoveDTO predestinedMove = Debug.getPredestinedMove(originalMatrix.getPosition());
-        if (predestinedMove != null) {
-            return predestinedMove;
-        }
-
-        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), promotionPieceType);
-    }
-
-    protected ExtendedMove findBestExtendedMove(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, boolean isExternalCall) {
-        List<ExtendedMove> botAvailableMoves = MoveHelper.valueOf(fakeGame, originalMatrix)
-                .getStandardMovesStream(botSide)
-                .sorted(Comparator.comparing(ExtendedMove::getTotal))
-                .collect(Collectors.toList());
-
-        if (botAvailableMoves.isEmpty()) {
-            return null;
-        }
-
-        botAvailableMoves = executeFirstVariation(fakeGame, originalMatrix, botSide, botAvailableMoves, isExternalCall);
-//        botAvailableMoves = executeSecondVariation(fakeGame, originalMatrix, botSide, botAvailableMoves);
-
-
-        int max = botAvailableMoves
-                .stream()
-                .mapToInt(ExtendedMove::getTotal)
-                .max().orElseThrow(UnattainablePointException::new);
-
-        List<ExtendedMove> topMovesList = botAvailableMoves
-                .stream()
-                .filter(move -> move.getTotal() == max)
-                .collect(Collectors.toList());
-
-        ExtendedMove bestMove = getRandomMove(topMovesList);
-
-        enter(LoggerParam.COMMON, 50);
-//        movesWithRating.forEach(move -> log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, move));
-        logSingleSeparator(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-
-        enter(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST);
-        log(LoggerParam.PRINT_SORTED_BOT_MOVES_LIST, "ResultMove[original_pos = " + originalMatrix.getPosition() + "]::::" + bestMove);
-        logDoubleSeparator(LoggerParam.COMMON, 3);
-
-        return bestMove;
-    }
-
-    private List<ExtendedMove> executeFirstVariation(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, List<ExtendedMove> botAvailableMoves, boolean isExternalCall) {
-        botAvailableMoves.forEach(calculateRating(fakeGame, originalMatrix, botSide, isExternalCall));
-        return botAvailableMoves;
-    }
-
-    private List<ExtendedMove> executeSecondVariation(FakeGame fakeGame, CellsMatrix originalMatrix, Side botSide, List<ExtendedMove> botAvailableMoves) {
-        Side playerSide = botSide.reverse();
-
-        return botAvailableMoves
-                .stream()
-                .peek(calculateRating(fakeGame, originalMatrix, botSide, false))
-                .peek(analyzedMove -> {
-                    CellsMatrix firstMatrixPlayerNext = originalMatrix.executeMove(analyzedMove.toMoveDTO(), null).getNewMatrix();
-
-
-                    List<ExtendedMove> playerMoves = MoveHelper.valueOf(fakeGame, firstMatrixPlayerNext)
-                            .getStandardMovesStream(playerSide)
-                            .collect(Collectors.toList());
-
-
-                    Pair<Integer, Integer> maxPair = playerMoves
-                            .stream()
-                            .peek(calculateRating(fakeGame, firstMatrixPlayerNext, playerSide, false))
-                            .map(playerMove -> {
-                                CellsMatrix secondMatrixBotNext = firstMatrixPlayerNext.executeMove(playerMove.toMoveDTO(), null).getNewMatrix();
-
-                                int maxByBot = MoveHelper.valueOf(fakeGame, secondMatrixBotNext)
-                                        .getStandardMovesStream(botSide)
-                                        .peek(calculateRating(fakeGame, secondMatrixBotNext, botSide, false))
-                                        .mapToInt(ExtendedMove::getTotal)
-                                        .max().orElse(-ChessConstants.CHECKMATE_VALUE);
-
-//                                return -playerMove.getTotal() + maxByBot;
-
-                                return Pair.of(playerMove.getTotal(), maxByBot);
-                            })
-                            .reduce((p1, p2) -> {
-                                int max1 = -p1.getFirst() + p1.getSecond();
-                                int max2 = -p2.getFirst() + p2.getSecond();
-
-                                return max1 >= max2 ? p1 : p2;
-                            })
-                            .orElse(null);
-
-                    if (maxPair == null) {
-                        //checkmate by bot
-                        analyzedMove.updateRating(Rating.builder().build(RatingParam.CHECKMATE_BY_BOT));
-                        return;
-                    }
-
-                    analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP_2_BY_PLAYER, maxPair.getFirst()));
-                    analyzedMove.updateRating(Rating.builder().build(RatingParam.DEEP_3_BY_BOT, maxPair.getSecond()));
-                })
-                .collect(Collectors.toList());
-    }
-
-    protected ExtendedMove getRandomMove(List<ExtendedMove> movesList) {
-        int i = (int) (movesList.size() * Math.random());
-        return movesList.get(i);
-    }
+//    protected void calculateRating(GameContext gameContext) {
+//        throw new UnsupportedOperationException();
+//    }
 
     @Autowired
     public void setGameService(GameService gameService) {
@@ -201,38 +49,111 @@ public abstract class AbstractBotService implements BotService {
         this.botMoveDelay = botMoveDelay;
     }
 
-    protected void log(LoggerParam loggerParam, Object message, Object... params) {
-        if (loggerSettings.get(loggerParam)) {
-            log.info(message.toString(), params);
-        }
+    @Profile
+    @Override
+    public void applyBotMove(Game game, @Nullable ExtendedMove playerLastMove) {
+        executorService.execute(() -> {
+            try {
+                Side botSide = game.getActiveSide();
+                CellsMatrix originalMatrix = gameService.createCellsMatrixByGame(game, game.getPosition());
+
+                RootGameContext rootContext = RootGameContext.of(game, originalMatrix, playerLastMove, botSide);
+
+                MoveDTO nextBotMove = findBestMove(rootContext);
+                gameService.applyMove(game, nextBotMove);
+
+                TimeUnit.SECONDS.sleep(1);
+            } catch (GameNotFoundException | InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
     }
 
 
-    protected void enter(LoggerParam loggerParam, int count) {
-        if (loggerSettings.get(loggerParam)) {
-            for (int i = 0; i < count; i++) {
-                System.out.println();
+    public static final int MAX_DEEP = 3;
+
+    private MoveDTO findBestMove(RootGameContext rootContext) {
+        Debug.resetCounters();
+        long start = System.currentTimeMillis();
+
+        rootContext.fill(MAX_DEEP);
+
+        if (!rootContext.hasChildren()) {
+            throw new RuntimeException("Checkmate: Player win!");
+        }
+
+        log.info("totalMovesCount[before calculation]: " + rootContext.getTotalMovesCount());
+
+       GameContext resultContext;
+        try {
+            calculateRatingRecursive(rootContext, MAX_DEEP);
+            resultContext = findBestExtendedMove(rootContext);
+        } catch (CheckmateException e) {
+            resultContext = e.getContext();
+        }
+
+        log.info("totalMovesCount[after calculation]: " + rootContext.getTotalMovesCount());
+
+        MoveDTO predestinedMove = Debug.getPredestinedMove(rootContext.getMatrix().getPosition());
+        if (predestinedMove != null) {
+            return predestinedMove;
+        }
+
+        ExtendedMove resultMove = resultContext.getLastMove();
+        PieceType pieceFromPawn = resultMove.isPawnTransformation() ? resultMove.getPieceFromPawn() : null;
+
+
+        Debug.printCounters();
+        System.out.println("\r\nResultMove[original_pos = " + rootContext.getMatrix().getPosition() + "]: " + resultMove);
+        resultContext.print(0, "ResultMove");
+        System.out.println("\r\nfindBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
+
+        return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
+    }
+
+    private void calculateRatingRecursive(GameContext context, int deep) throws CheckmateException {
+        if (deep < 0) {
+            return;
+        }
+
+        if (!context.isRoot()) {
+            calculateRating(context, MAX_DEEP);
+        }
+        if (context.hasChildren()) {
+            if (context.isRoot()) {
+                context.childrenStream()
+                        .parallel()
+                        .forEach(childContext -> calculateRatingRecursive(childContext, deep - 1));
+            } else {
+                context.childrenStream()
+                        .forEach(childContext -> calculateRatingRecursive(childContext, deep - 1));
             }
         }
     }
 
-    protected void enter(LoggerParam loggerParam) {
-        enter(loggerParam, 1);
+    private GameContext findBestExtendedMove(RootGameContext rootGameContext) {
+        List<GameContext> rootChildren = rootGameContext.childrenStream()
+                //FIXME: надо учитывать тоталы и более глубоких ходов
+                .sorted(Comparator.comparing(GameContext::getContextTotal))
+                .collect(Collectors.toList());
+
+        int max = rootChildren
+                .stream()
+                .mapToInt(GameContext::getContextTotal)
+                .max().orElseThrow(UnsupportedOperationException::new);
+
+        List<GameContext> topContextList = rootChildren
+                .stream()
+                .filter(context -> context.getContextTotal() == max)
+                .collect(Collectors.toList());
+
+        return getRandomContext(topContextList);
     }
 
-    protected void logDoubleSeparator(LoggerParam loggerParam, int count) {
-        for (int i = 0; i < count; i++) {
-            log(loggerParam, "====================================");
-        }
+    protected GameContext getRandomContext(List<GameContext> contextList) {
+        int i = (int) (contextList.size() * Math.random());
+        return contextList.get(i);
     }
 
-    protected void logSingleSeparator(LoggerParam loggerParam, int count) {
-        for (int i = 0; i < count; i++) {
-            log(loggerParam, "----------------------------------");
-        }
-    }
-
-    protected void logSingleSeparator(LoggerParam loggerParam) {
-        logSingleSeparator(loggerParam, 1);
-    }
+    protected abstract void calculateRating(GameContext gameContext, int maxDeep) throws CheckmateException;
 }

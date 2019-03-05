@@ -1,6 +1,5 @@
 package com.example.chess.web;
 
-import com.example.chess.App;
 import com.example.chess.dto.ArrangementDTO;
 import com.example.chess.dto.ModeDTO;
 import com.example.chess.dto.SideDTO;
@@ -9,12 +8,12 @@ import com.example.chess.entity.GameFeatures;
 import com.example.chess.enums.GameMode;
 import com.example.chess.enums.Side;
 import com.example.chess.exceptions.GameNotFoundException;
+import com.example.chess.logic.utils.CustomResponse;
 import com.example.chess.repository.GameRepository;
 import com.example.chess.service.BotService;
 import com.example.chess.service.GameService;
-import com.example.chess.utils.CustomResponse;
+import com.google.common.base.Preconditions;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,8 +30,7 @@ public class InitController {
     private final BotService botService;
 
     @Autowired
-    public InitController(GameService gameService, GameRepository gameRepository,
-                          @Qualifier(App.DEFAULT_BOT_MODE) BotService botService) {
+    public InitController(GameService gameService, GameRepository gameRepository, BotService botService) {
         this.gameService = gameService;
         this.gameRepository = gameRepository;
         this.botService = botService;
@@ -41,17 +39,26 @@ public class InitController {
     @GetMapping
     public Game createGame() {
         Game game = new Game();
-        game.setFeaturesMap(new HashMap<Side, GameFeatures>() {{
-            put(Side.WHITE, new GameFeatures(game, Side.WHITE));
-            put(Side.BLACK, new GameFeatures(game, Side.BLACK));
-        }});
+        game.clearFuturesMap();
 
         return gameRepository.save(game);
     }
 
     @GetMapping("/{gameId}")
-    public Game getGame(@PathVariable("gameId") long gameId) throws GameNotFoundException {
-        return gameService.findAndCheckGame(gameId);
+    public Game getGame(@PathVariable("gameId") long gameId,
+                        @RequestParam(value = "debug", required = false) boolean isDebug,
+                        @RequestParam(value = "desiredSide", required = false) Side desiredSide,
+                        HttpServletRequest request) throws GameNotFoundException {
+
+        Game game = gameService.findAndCheckGame(gameId);
+        if (!isDebug) {
+            return game;
+        }
+
+        Preconditions.checkNotNull(desiredSide);
+
+        game.getFeaturesMap().get(desiredSide).setSessionId(request.getSession().getId());
+        return gameRepository.save(game);
     }
 
     @PostMapping("/{gameId}/mode")
@@ -133,7 +140,7 @@ public class InitController {
         ArrangementDTO result = gameService.createArrangementByGame(game, position);
 
         if (game.getMode() == GameMode.AI && game.getPlayerSide() == Side.BLACK) {
-            botService.applyBotMove(game);
+            botService.applyBotMove(game, null);
         }
         return result;
     }

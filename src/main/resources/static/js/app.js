@@ -1,4 +1,4 @@
-var app = angular.module("app", ["ui.bootstrap", "dialogs.main"]);
+const app = angular.module("app", ["ui.bootstrap", "dialogs.main"]);
 
 const GAME_PREFIX = "/game/";
 const POSITION_PREFIX = "/position/";
@@ -31,7 +31,8 @@ app.run(['$rootScope', function ($rootScope) {
             id: null,
             position: null,
             underCheckSide: null
-        }
+        },
+        isDebug: false
     };
 
     $rootScope.MODE_UNSELECTED = MODE_UNSELECTED;
@@ -54,7 +55,7 @@ app.config(["$locationProvider", function ($locationProvider) {
 
 app.filter("chessboardReverse", function () {
     return function (items, side) {
-        if (side == SIDE_BLACK) {
+        if (side === SIDE_BLACK) {
             return items;
         }
 
