@@ -134,17 +134,17 @@ public abstract class AbstractBotService implements BotService {
     private GameContext findBestExtendedMove(RootGameContext rootGameContext) {
         List<GameContext> rootChildren = rootGameContext.childrenStream()
                 //FIXME: надо учитывать тоталы и более глубоких ходов
-                .sorted(Comparator.comparing(GameContext::getTotal))
+                .sorted(Comparator.comparing(GameContext::getContextTotal))
                 .collect(Collectors.toList());
 
         int max = rootChildren
                 .stream()
-                .mapToInt(GameContext::getTotal)
+                .mapToInt(GameContext::getContextTotal)
                 .max().orElseThrow(UnsupportedOperationException::new);
 
         List<GameContext> topContextList = rootChildren
                 .stream()
-                .filter(context -> context.getTotal() == max)
+                .filter(context -> context.getContextTotal() == max)
                 .collect(Collectors.toList());
 
         return getRandomContext(topContextList);

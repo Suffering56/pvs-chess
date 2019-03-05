@@ -31,11 +31,11 @@ public class BotServiceImplMedium extends AbstractBotService {
         Rating invertedMaterialRating = getInvertedMaterialRating(gameContext);
         analyzedMove.updateRating(invertedMaterialRating);
 
-//        Rating checkRating = getCheckRating(gameContext);
-//        analyzedMove.updateRating(checkRating);
-//
-//        Rating movesCountRating = getMovesCountRating(gameContext, false);
-//        analyzedMove.updateRating(movesCountRating);
+        Rating checkRating = getCheckRating(gameContext);
+        analyzedMove.updateRating(checkRating);
+
+        Rating movesCountRating = getMovesCountRating(gameContext, false);
+        analyzedMove.updateRating(movesCountRating);
 
 //        if (gameContext.getDeep() == maxDeep) {
             //нет смысла считать инвертированный рейтинг т.к. он подсчитывается в более глубоких контекстах

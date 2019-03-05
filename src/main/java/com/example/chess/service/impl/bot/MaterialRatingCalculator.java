@@ -30,8 +30,14 @@ public class MaterialRatingCalculator {
                 .var("exchangeDeep", exchangeDeep);
 
         if (exchangeDeep <= 2) {
+            //TODO: вообще есть идея - убрать этот deepExchange. по сути новый алгоритм так же ходит по minP и maxB.
+            // PS: а нет он ходит по maxP и minP. учти это.
+            // ну то есть можно просто посчитать вглубь все эти размены, тоталы не считать, а если происходит кто-то кого-то срубил, не сложно подсчитать материальную разницу
+            //FIXME: если exchangeDeep == 2, то там тоже суммы наслаиваются, что не есть гуд
             return getMaterialRatingForSimpleMoves(builder, exchangeValues);
         } else {
+
+            //FIXME:
 //            if (gameContext.getParent().getPointTo().equals(gameContext.getPointTo())) {
 //                return Rating.builder()
 //                        .var("targetPoint", gameContext.getPointTo())

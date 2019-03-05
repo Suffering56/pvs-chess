@@ -26,6 +26,15 @@ import static com.example.chess.service.impl.bot.AbstractBotService.MAX_DEEP;
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * Основные концепции:
+ * - незавимимо кто кому принадлежит lastMove - рейтинг должен считаться так словно это ход бота,
+ *      а значит если playerMove.total == 300, то по сути для игрока это -300 - значит он где то фидит фигуры.
+ *      PS: после переработки MaterialRatingCalculator в этой логике вообще не должно быть отрицательных значений
+ *      так как невозможно самому срубить свою фигуру, а думаем мы на глубину 1
+ * - ЛИБО рейтинг должен считаться на основе lastMoveSide
+ * В каких то местах работает одно правило, в каких-то другое. разберись с этим
+ */
 public class GameContext {
 
     final RootGameContext root;
@@ -154,46 +163,56 @@ public class GameContext {
         return children != null;
     }
 
-
-    //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
-    //TODO: deeper moves ratio? (without checkmate)
-    public int getTotal() {
-        int total = lastMove.getTotal();
-
-        if (getDeep() <= MAX_DEEP) {
-
-            return total + findMaxChildrenByContextTotal().getTotal();
-        }
-
-//        return getTotal() +
-
-//        if (getDeep() <= MAX_DEEP) {
-//            GameContext maxDeeperContext = findMaxChildrenByContextTotal();
-//
-//            while (maxDeeperContext != null) {
-//                //TODO!!!! gameContext.getLastMove.getTotal
-        //проблема в том, что maxMove может быть далеко не один. т.е. могут быть 10 ходов с рейтингом 0.
-        //но не все последующие ходы идущие по дереву от первых десяти равнозначны. это нужно учитывать
-        //так же нужно учесть, что добавятся менее значимые рейтинги и просто собирать набор лучших ходов не получится.
-
-//                total += maxDeeperContext.getLastMove().getTotal();
-//                maxDeeperContext = maxDeeperContext.findMaxChildrenByContextTotal();
-//            }
-//        }
-        return total;
+    private int getMoveTotal() {
+        return lastMove.getTotal();
     }
 
-    private GameContext findMaxChildrenByContextTotal() {
-        if (hasChildren()) {
-            //TODO!!!! gameContext.getTotal
-            return childrenStream().reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getTotal)))).orElseThrow(() -> new CheckmateException(this));
+
+    /**
+     * В общем не знаю почему я так долго шел именно к вот такой реализации подсчета тотала,
+     * но мне кажется она единственно верной.
+     * На данный момент работает криво из-за некорректной реализации подсчета материального рейтинга
+     * (даже MATERIAL_SIMPLE_FREEBIE - это по сути решение основанное на глубине = 2,
+     * а калькулятор рейтинга должен анализировать только ТЕКУЩУЮ ситуацию на доске в глубину 1!
+     *
+     * PS: так же с movesCount rating-ом возможно присутствует такая же проблема
+     * по сути цепочка, на основе которой будет выбран analyzedMove такая
+     * root -> maxB(analyzed) -> minP -> maxB -> minP -> maxB -> ...
+     *
+     * Т.е. если это ход бота (botLast() == true) - то нас интересует ход бота с наибольшим рейтингом (maxB),
+     * но так же стоит учитывать ответ игрока, который тоже не дурак, а по сему ищем children.find(minP),
+     * который в свою очередь должен учитывать ответ бота, который тоже в свою очередь не дурак: children.find(maxB)
+     */
+    public int getContextTotal() {
+        if (hasChildren() && getDeep() <= MAX_DEEP) {
+            return getMoveTotal() + getMostPossibleChildContextTotal();
         }
-        return null;
+        return getMoveTotal();
+
+        //TODO: check by checkmate   -> context.isCheckmate() -> isCheckmateByBot/Player
+        //TODO: deeper moves ratio? (without checkmate)
+    }
+
+    private int getMostPossibleChildContextTotal() {
+        if (botLast()) {
+            return getMinChildContextTotal();
+        }
+        else {
+            return getMaxChildContextTotal();
+        }
+    }
+
+    private int getMaxChildContextTotal() {
+        return childrenStream().mapToInt(GameContext::getContextTotal).max().orElseThrow(() -> new CheckmateException(this));
+    }
+
+    private int getMinChildContextTotal() {
+        return childrenStream().mapToInt(GameContext::getContextTotal).min().orElseThrow(() -> new CheckmateException(this));
     }
 
     public void print(int tabsCount, String prefix) {
         printMove(tabsCount, prefix);
-        System.out.println("resultMove.context.total = " + getTotal());
+        System.out.println("resultMove.context.total = " + getContextTotal());
 
         if (tabsCount == 0) {
 //            getLastMove().printRating(tabsCount + 1);
@@ -206,14 +225,14 @@ public class GameContext {
     private void printMinMax(int tabsCount) {
         if (hasChildren()) {
             childrenStream()
-                    .reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getTotal))))
+                    .reduce((BinaryOperator.maxBy(Comparator.comparing(GameContext::getContextTotal))))
                     .ifPresent(maxContext -> {
                         maxContext.printMove(tabsCount, maxContext.getPrefix("max"), maxContext.getContextPostfix());
                         maxContext.printMinMax(tabsCount + 1);
                     });
 
             childrenStream()
-                    .reduce((BinaryOperator.minBy(Comparator.comparing(GameContext::getTotal))))
+                    .reduce((BinaryOperator.minBy(Comparator.comparing(GameContext::getContextTotal))))
                     .ifPresent(minContext -> {
                         minContext.printMove(tabsCount, minContext.getPrefix("min"), minContext.getContextPostfix());
                         minContext.printMinMax(tabsCount + 1);
@@ -226,8 +245,8 @@ public class GameContext {
     }
 
     private void printMove(int tabsCount, String prefix, String postfix) {
-        System.out.println(tabs(tabsCount) + prefix + "[" + getLastMove() + "].total = " + getLastMove().getTotal() + postfix);
-        getLastMove().printRating(tabsCount + 1);
+        System.out.println(tabs(tabsCount) + prefix + "[" + lastMove + "][" + getDeep() + "].moveTotal = " + lastMove.getTotal() + ", ctxTotal = " + getContextTotal() + postfix);
+        lastMove.printRating(tabsCount + 1);
     }
 
     private String getPrefix(String prefix) {
@@ -242,9 +261,5 @@ public class GameContext {
             return " [-]";
         }
         return "";
-    }
-
-    public PointDTO getPointTo() {
-        return getLastMove().getPointTo();
     }
 }
