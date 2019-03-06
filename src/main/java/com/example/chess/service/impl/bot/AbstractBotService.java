@@ -22,9 +22,11 @@ import org.springframework.beans.factory.annotation.Value;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 
@@ -66,7 +68,6 @@ public abstract class AbstractBotService implements BotService {
         });
     }
 
-
     private MoveDTO findBestMove(RootGameContext rootContext) {
         Debug.resetCounters();
         long start = System.currentTimeMillis();
@@ -97,13 +98,38 @@ public abstract class AbstractBotService implements BotService {
         ExtendedMove resultMove = resultContext.getLastMove();
         PieceType pieceFromPawn = resultMove.isPawnTransformation() ? resultMove.getPieceFromPawn() : null;
 
-
         Debug.printCounters();
         System.out.println("\r\nResultMove[original_pos = " + rootContext.getMatrix().getPosition() + "]: " + resultMove);
         resultContext.print(0, "ResultMove");
-        System.out.println("\r\nfindBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
 
+//        printMinMove(rootContext);
+//        printSelectedMove(rootContext, "g4");
+
+        System.out.println("\r\nfindBestMove executed in : " + (System.currentTimeMillis() - start) + "ms");
         return MoveDTO.valueOf(resultMove.getPointFrom(), resultMove.getPointTo(), pieceFromPawn);
+    }
+
+    private static void printSelectedMove(RootGameContext rootContext, String pointToStr) {
+        System.out.println();
+        System.out.println();
+        System.out.println();
+
+        rootContext
+                .childrenStream()
+                .filter(gameContext -> gameContext.getLastMove().getPointTo().toString().equals(pointToStr))
+                .findAny()
+                .ifPresent(gameContext -> gameContext.print(0, "to_" + pointToStr));
+    }
+
+    private static void printMinMove(RootGameContext rootContext) {
+        System.out.println();
+        System.out.println();
+        System.out.println();
+
+        rootContext
+                .childrenStream()
+                .reduce(BinaryOperator.minBy(Comparator.comparing(GameContext::getContextTotal)))
+                .ifPresent(gameContext -> gameContext.print(0, "minContext"));
     }
 
     private void calculateRatingRecursive(GameContext context) throws CheckmateException {

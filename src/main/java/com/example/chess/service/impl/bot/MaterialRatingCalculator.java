@@ -20,25 +20,11 @@ public class MaterialRatingCalculator {
 
     private static final int MAX_MATERIAL_DEEP = -1;
 
-    public static Rating getMaterialRatingV2(GameContext gameContext, boolean isInverted) throws CheckmateException {
-        //TODO: if context.getDeep == MAX => getMaterialRating + getInvertedMaterialRating (OR fillDeeperHarmfulContexts)
-        //else:
-
-        List<Integer> exchangeValues = generateExchangeValuesList(gameContext, isInverted);
-
-        int exchangeDeep = exchangeValues.size();
-        Rating.Builder builder = Rating.builder()
-                .var("exchangeDeep", exchangeDeep);
-
-        if (exchangeDeep <= 2) {
-            return getMaterialRatingForSimpleMoves(builder, exchangeValues);
-        } else {
-            return getMaterialRatingForDeepExchange(builder, exchangeValues);
-        }
+    public static Rating getMaterialRating(GameContext gameContext) throws CheckmateException {
+        return getMaterialRating(gameContext, false);
     }
 
-
-    public static Rating getMaterialRating(GameContext gameContext, boolean isInverted) throws CheckmateException {
+    private static Rating getMaterialRating(GameContext gameContext, boolean isInverted) throws CheckmateException {
 
         List<Integer> exchangeValues = generateExchangeValuesList(gameContext, isInverted);
 
@@ -51,18 +37,10 @@ public class MaterialRatingCalculator {
             //TODO: вообще есть идея - убрать этот deepExchange. по сути новый алгоритм так же ходит по minP и maxB.
             // PS: а нет он ходит по maxP и minP. учти это.
             // ну то есть можно просто посчитать вглубь все эти размены, тоталы не считать, а если происходит кто-то кого-то срубил, не сложно подсчитать материальную разницу
-            //FIXME: если exchangeDeep == 2, то там тоже суммы наслаиваются, что не есть гуд
+            //+FIXME: если exchangeDeep == 2, то там тоже суммы наслаиваются, что не есть гуд
             return getMaterialRatingForSimpleMoves(builder, exchangeValues);
         }
         else {
-
-            //FIXME:
-//            if (gameContext.getParent().getPointTo().equals(gameContext.getPointTo())) {
-//                return Rating.builder()
-//                        .var("targetPoint", gameContext.getPointTo())
-//                        .build(RatingParam.DEEP_EXCHANGE_ALREADY_CALCULATED);
-//            }
-
             return getMaterialRatingForDeepExchange(builder, exchangeValues);
         }
     }
@@ -108,39 +86,30 @@ public class MaterialRatingCalculator {
         int exchangeValue = 0;
         GameContext deepContext = gameContext;
 
-        /*
-         * inverted=false botLast=true          +
-         * inverted=false botLast=false         -
-         * inverted=false botLast=true          +
-         * inverted=false botLast=false         -
-
-         * inverted=true botLast=false          +
-         * inverted=true botLast=true           -
-         * inverted=true botLast=false          +
-         * inverted=true botLast=true           -
-         *
-         * В общем исходя из этих данных вытекает это выражение: isInverted != deepContext.botLast()
-         */
-
         //noinspection ConstantConditions
         do {
-//            deepContext.setDeepExchangeAlreadyCalculated(true);
             ExtendedMove lastMove = deepContext.getLastMove();
 
+            /*
+             * inverted=false botLast=true          +
+             * inverted=false botLast=false         -
+             * inverted=false botLast=true          +
+             * inverted=false botLast=false         -
+
+             * inverted=true botLast=false          +
+             * inverted=true botLast=true           -
+             * inverted=true botLast=false          +
+             * inverted=true botLast=true           -
+             *
+             * В общем исходя из этих данных вытекает это выражение: isInverted != deepContext.botLast()
+             */
             if (isInverted != deepContext.botLast()) {
                 exchangeValue += lastMove.getValueTo(0);
             } else {
                 exchangeValue -= lastMove.getValueTo(0);
             }
 
-//            if (lastMove.getSide() == initialSide) {
-//                exchangeValue += lastMove.getValueTo(0);
-//            } else {
-//                exchangeValue -= lastMove.getValueTo(0);
-//            }
-
             exchangeValuesResult.add(exchangeValue);
-
             deepContext = findDeeperCheapestContext(deepContext, targetPoint);
         }
         while (deepContext != null && exchangeValuesResult.size() != MAX_MATERIAL_DEEP);
@@ -175,10 +144,10 @@ public class MaterialRatingCalculator {
         if (exchangeDeep == 1) {  //1) bot -> X
             if (exchangeValues.get(0) == 0) {
                 //бот шагнул на незащищенную (ботом), но безопасную (не находящуюся под атакой игрока) клетку = сделал самый обычный ход
-                return builder.build(RatingParam.MATERIAL_SIMPLE_MOVE, exchangeValues.get(0));
+                return builder.build(RatingParam.MATERIAL_SIMPLE_MOVE, 0);
             } else {
                 //бот срубил незащищенную фигуру игрока
-                return builder.build(RatingParam.MATERIAL_SIMPLE_FREEBIE, exchangeValues.get(0));
+                return builder.build(RatingParam.MATERIAL_SIMPLE_ATTACK, exchangeValues.get(0));
             }
         }
         if (exchangeDeep == 2) {  //1) bot -> X 2) player -> X

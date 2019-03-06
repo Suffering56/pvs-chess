@@ -6,9 +6,11 @@ import lombok.Getter;
 @Getter
 public enum RatingParam {
     MATERIAL_SIMPLE_MOVE(RatingParam.MATERIAL_FACTOR),      //обычный ход
-    MATERIAL_SIMPLE_FREEBIE(RatingParam.MATERIAL_FACTOR),   //бот рубит фигуру нахаляву
+    MATERIAL_SIMPLE_ATTACK(RatingParam.MATERIAL_FACTOR),   //бот рубит фигуру нахаляву
     MATERIAL_SIMPLE_FEED(RatingParam.MATERIAL_FACTOR),      //бот отдает фигуру просто так
     MATERIAL_SIMPLE_EXCHANGE(RatingParam.MATERIAL_FACTOR),  //бот рубит фигуру, игрок рубит в ответ.
+
+    MATERIAL_DIFF(RatingParam.MATERIAL_FACTOR),             //pieceTo.value - pieceFrom.value OR zero if pointFrom is empty. по идее не может быть отрицательным
 
     MATERIAL_DEEP_EXCHANGE(RatingParam.MATERIAL_FACTOR),    //если рубиться до конца
     /**

@@ -24,28 +24,26 @@ public class BotServiceImplMedium extends AbstractBotService {
         Preconditions.checkState(!gameContext.isRoot());
         Preconditions.checkState(gameContext.getDeep() <= App.MAX_DEEP);
 
-        Rating materialRating = getMaterialRating(gameContext, false);
-        Rating invertedMaterialRating = getInvertedMaterialRating(gameContext);
-        Rating checkRating = getCheckRating(gameContext);
-        Rating movesCountRating = getMovesCountRating(gameContext, false);
-
         ExtendedMove analyzedMove = gameContext.getLastMove();
 
-        analyzedMove.updateRating(materialRating)
-                .updateRating(movesCountRating)
-                .updateRating(checkRating);
-//                .updateRating(invertedMaterialRating)
+        if (gameContext.getDeep() == App.MAX_DEEP) {
+            analyzedMove.updateRating(getMaterialRating(gameContext));
+            analyzedMove.updateRating(getInvertedMaterialRating(gameContext));
+        }
+        else {
+            //вот это тоже оч важная вещь, только от k нужно будет избавиться
+            int k = gameContext.botLast() ? 1 : -1;
+            analyzedMove.updateRating(
+                    Rating.builder().build(RatingParam.MATERIAL_DIFF,
+                            k * gameContext.getLastMove().getValueTo(0))
+            );
+        }
 
 
-//        if (gameContext.getDeep() == maxDeep) {
-            //нет смысла считать инвертированный рейтинг т.к. он подсчитывается в более глубоких контекстах
-            //но если мы знаем что достигли максимальной глубины - то подсчет необходим
-//            Rating invertedMaterialRating = getInvertedMaterialRating(gameContext);
-//            analyzedMove.updateRating(invertedMaterialRating);
 
-//            Rating invertedMovesCountRating = getMovesCountRating(gameContext, true);
-//            analyzedMove.updateRating(invertedMovesCountRating);
-//        }
+//        analyzedMove
+//                .updateRating(getCheckRating(gameContext))
+//                .updateRating(getMovesCountRating(gameContext, false));
     }
 
     private Rating getCheckRating(GameContext gameContext) {

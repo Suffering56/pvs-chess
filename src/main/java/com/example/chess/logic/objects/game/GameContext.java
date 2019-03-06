@@ -28,12 +28,26 @@ import static com.example.chess.logic.utils.CommonUtils.tabs;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 /**
  * Основные концепции:
- * - незавимимо кто кому принадлежит lastMove - рейтинг должен считаться так словно это ход бота,
+ * - рейтинг должен учитывать lastMoveSide но плюсовые значения - это те ходы которые выгодны боту
  *      а значит если playerMove.total == 300, то по сути для игрока это -300 - значит он где то фидит фигуры.
  *      PS: после переработки MaterialRatingCalculator в этой логике вообще не должно быть отрицательных значений
  *      так как невозможно самому срубить свою фигуру, а думаем мы на глубину 1
- * - ЛИБО рейтинг должен считаться на основе lastMoveSide
+ * - ЛИБО при подсчетах рейтинга вообще не должен учитываться side:
+ *      то есть если playerMove = +300, то это -300 для бота.
+ *      так интуитивно понятнее и логичнее и не нужны все эти inverted флаги и коэффициенты
+ *      А еще в будущем подобный подход будет легко использовать при анализе ходов игрока, а вот с предыдущим подходом
+ *      реализация такой хотелки принесет много страданий
+ *
  * В каких то местах работает одно правило, в каких-то другое. разберись с этим
+ * Решено:
+ * - используем правило #2:
+ * а) стараемя полностью уйти от использования botLast/playerLast
+ * b) переписываем deepExchange:
+ *      - добавляем в контекст флаг: boolean exchangeStopped (включительно или нет надо думать)
+ *      - метод isExchangeStopped должен всегда возвращать false если getDeep < (или <=) MAX
+ * c) ну и соответственно поменяется реализация getContextTotal
+ * (т.к. для игрока будет искаться теперь max а не min, но в то же время там теперь не всегда будет +=) не забудь учесть это и для тех у кого нет детей
+ * d) INVERTED_MATERIAL_RATING - вот тут пока совсем непонятно, но о нем нельзя забывать, как и о том что там используется отрицательный коэффициент в RatingParam
  */
 public class GameContext {
 
@@ -163,8 +177,13 @@ public class GameContext {
         return children != null;
     }
 
+    private int getMoveTotal(boolean isInverted) {
+        int k = isInverted ? -1 : 1;
+        return lastMove.getTotal() * k;
+    }
+
     private int getMoveTotal() {
-        return lastMove.getTotal();
+        return getMoveTotal(false);
     }
 
 
@@ -172,7 +191,7 @@ public class GameContext {
      * В общем не знаю почему я так долго шел именно к вот такой реализации подсчета тотала,
      * но мне кажется она единственно верной.
      * На данный момент работает криво из-за некорректной реализации подсчета материального рейтинга
-     * (даже MATERIAL_SIMPLE_FREEBIE - это по сути решение основанное на глубине = 2,
+     * (даже MATERIAL_SIMPLE_ATTACK - это по сути решение основанное на глубине = 2,
      * а калькулятор рейтинга должен анализировать только ТЕКУЩУЮ ситуацию на доске в глубину 1!
      *
      * PS: так же с movesCount rating-ом возможно присутствует такая же проблема
@@ -184,8 +203,13 @@ public class GameContext {
      * который в свою очередь должен учитывать ответ бота, который тоже в свою очередь не дурак: children.find(maxB)
      */
     public int getContextTotal() {
-        if (hasChildren() && getDeep() <= App.MAX_DEEP) {
+        if (getDeep() > App.MAX_DEEP) {
+            return 0;
+        }
+
+        if (hasChildren()) {
             return getMoveTotal() + getMostPossibleChildContextTotal();
+//            return getMoveTotal(!botLast()) + getMostPossibleChildContextTotal();
         }
         return getMoveTotal();
 
