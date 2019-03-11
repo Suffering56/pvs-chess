@@ -28,7 +28,24 @@ public class BotServiceImplMedium extends AbstractBotService {
         if (analyzedContext.getDeep() == App.MAX_DEEP) {
             if (analyzedMove.isHarmful()) {
                 analyzedContext.fillForExchange(analyzedMove.getPointTo());
-                analyzedContext.updateMaterialRatingRecursive(this::getSimpleMaterialDiffRating);
+                analyzedContext.consumeLeafs(deepestContext -> {
+                    //идем вврх пока не доберемся до analyzedContext
+                });
+
+
+                //вот уже здесь мы считаем что все возможные варианты разменов есть в children
+
+//                int initialTotal = analyzedContext.getTotalOfChain();
+
+//                if (analyzedContext.hasChildren()) {
+                //раз мы здесь, значит оппонент может срубить context.lastMove().getPieceFrom();
+//                    analyzedContext.childrenStream()
+//                            .forEach(context -> {   //context = playerContext
+//                                context.markStopped(initialTotal);
+//                            });
+//                }
+
+//                analyzedContext.updateMaterialRatingRecursive(this::getSimpleMaterialDiffRating);
             }
         }
 
@@ -40,6 +57,7 @@ public class BotServiceImplMedium extends AbstractBotService {
 
     //вот это тоже оч важная вещь, только от k нужно будет избавиться (upd: избавился)
     private Rating getSimpleMaterialDiffRating(GameContext gameContext) {
+        //TODO: возможно не понадобится
         return Rating.builder()
                 .build(RatingParam.MATERIAL_DIFF, gameContext.getLastMove().getValueTo(0));
     }

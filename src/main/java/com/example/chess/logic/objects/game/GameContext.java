@@ -9,6 +9,7 @@ import com.example.chess.logic.MoveHelper;
 import com.example.chess.logic.objects.CellsMatrix;
 import com.example.chess.logic.objects.Rating;
 import com.example.chess.logic.objects.move.ExtendedMove;
+import com.google.common.base.Preconditions;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +17,12 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.log4j.Log4j2;
 
-import java.util.*;
+import javax.annotation.Nonnull;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -61,7 +66,8 @@ public class GameContext {
     final ExtendedMove lastMove;
 
     //key = pointTo
-    Map<PointDTO, List<GameContext>> children;  //возможно стоит поменять на array[][][]
+//    Map<PointDTO, List<GameContext>> children;  //возможно стоит поменять на array[][][]
+    Set<GameContext> children;
 
     @Setter boolean isCheckmate;
 
@@ -69,8 +75,24 @@ public class GameContext {
         fill(maxDeep, move -> true);
     }
 
-    public void fillForExchange(PointDTO pointTo) {
-        fill(Integer.MAX_VALUE, childMove -> childMove.hasSamePointTo(pointTo));
+    /**
+     * Заполняет детей по targetPoint-у.
+     * Представим ситуацию что Kf3 (sourcePoint) срубил пешку на e5 (targetPoint)
+     * В таком случае нужно проверить - а не рубит ли никто нашего коня, который теперь на e5.
+     * Если рубит - то надо так же проверить - а не можем ли мы отомстить за нашего коня (ищем фигуры которые могут атаковать e5)
+     * В общем - по сути метод ищет все фигуры которые атакуют e5 и заполняет их в children
+     *
+     * Как эффект у данного контекста будет несколько вариантов развития событий (чем больше фигур могут рубить тем больше вариантов):
+     * WF1 - белая фигура #1, которая может рубить на e5
+     * WF2 - белая фигура #2 которая так же атакует e5
+     * BF0 - черная фигура которую неизбежно срубят, т.к. она уже стоит на клетке,
+     * BF1 - черная фигура, которая защищает фигуру BF0 на e5 и может отомстить белым, срубив фигуру срубившую BF0.
+     *
+     * 1) 1: WF1-x-e5(BF0); 2: BF1-x-e5(WF1); 3: WF2-x-e5(BF1)
+     * 2) 1: WF2-x-e5(BF0); 2: BF1-x-e5(WF2); 3: WF1-x-e5(BF1)
+     */
+    public void fillForExchange(PointDTO targetPoint) {
+        fill(Integer.MAX_VALUE, childMove -> childMove.hasSamePointTo(targetPoint));
     }
 
     private void fill(int deep, Predicate<ExtendedMove> movesFilter) {
@@ -97,13 +119,11 @@ public class GameContext {
     }
 
     private void addChild(GameContext childNode) {
+        //TODO: Perhaps, it need to sync
         if (children == null) {
-            children = new HashMap<>();
+            children = new HashSet<>();
         }
-        ExtendedMove childMove = childNode.getLastMove();
-
-        List<GameContext> internalList = children.computeIfAbsent(childMove.getPointTo(), key -> new ArrayList<>());
-        internalList.add(childNode);
+        children.add(childNode);
     }
 
     public int getPosition() {
@@ -122,12 +142,54 @@ public class GameContext {
         return lastMove.getSide();
     }
 
-    private boolean playerLast() {
+    private boolean botLast() {
+        return root == null || root.getBotSide() == lastMoveSide();
+    }
+
+    private boolean isPositiveMove() {
+        return botLast();
+    }
+
+    private boolean isNegativeMove() {
         return !botLast();
     }
 
-    private boolean botLast() {
-        return root == null || root.getBotSide() == lastMoveSide();
+    private int getMoveSignum() {
+        return isPositiveMove() ? 1 : -1;
+    }
+
+    //TODO: private int chainTotal;
+
+    /**
+     * Допустим есть цепочка таких ходов (все ходы имеют один и тот же targetPoint)
+     * 1) Ход бота:     черный слон рубит белого коня (+300)
+     * 2) Ход игрока:   белая ладья рубит черного слона (+300)
+     * 3) Ход бота:     черная пешка рубит белую ладью (+500)
+     * 4) Ход игрока:   белая любая фигура рубит черную пешку (+100)
+     *
+     * origin(0) -> +300 -> +300 -> +500 -> +100
+     *
+     * Для нее функция вернет такой результат: 0 + 300 - 300 + 500 - 100 =  +400
+     *
+     * Это значение показывает выгодность данного хода для того, чей ход идет сразу же после RootMatrix
+     * (по сути это выгода для бота. но если введу анализ ходов игрока, то все инвертируется)
+     *
+     * Ну и да - отрицательное значение покажет что данная цепочка ходов ни к чему хорошему не приведет
+     *
+     * PS: ответ на вопрос - включительно или нет? Да включительно! Т.е. тотал lastMove текущего контекста учтен
+     */
+    public int getTotalOfChain() {
+        Preconditions.checkState(getDeep() >= App.MAX_DEEP);
+
+        int result = 0;
+        GameContext context = this;
+
+        while (!context.isRoot()) {
+            result += context.getMoveSignum() * context.getLastMove().getValueTo(0);
+            context = context.getParent();
+        }
+
+        return result;
     }
 
     public boolean isRoot() {
@@ -144,28 +206,27 @@ public class GameContext {
                 .sum() + 1;
     }
 
+    @Nonnull
     public Stream<GameContext> childrenStream() {
-        return children.values()
-                .stream()
-                .flatMap(Collection::stream);
+        Preconditions.checkNotNull(children);
+        return children.stream();
     }
 
-    public Stream<GameContext> childrenStream(PointDTO targetPoint) {
-        List<GameContext> internalList = children.get(targetPoint);
-        if (internalList == null) {
-            return Stream.empty();
-        }
-        return internalList.stream();
+    public Stream<GameContext> childrenStream(@Nonnull PointDTO targetPoint) {
+        Preconditions.checkNotNull(targetPoint);
+
+        return childrenStream()
+                .filter(context -> targetPoint.equals(context.getLastMove().getPointTo()));
     }
 
     public Stream<GameContext> neighboursStream() {
-        if (parent != null) {
-            return parent.childrenStream()
-                    .filter(context -> context != this);
-        }
-        return Stream.empty();
+        Preconditions.checkNotNull(parent);
+
+        return parent.childrenStream()
+                .filter(context -> context != this);
     }
 
+    //TODO: private final int deep;
     public int getDeep() {
         int deep = 0;
         GameContext parent = this.getParent();
@@ -293,6 +354,49 @@ public class GameContext {
                         childContext.getLastMove().updateRating(getRatingFunction.apply(childContext));
                         childContext.updateMaterialRatingRecursive(getRatingFunction);
                     });
+        }
+    }
+
+    boolean stopped;
+
+    public void markStopped() {
+        //TODO: нужно разделить на паблик и приватный, в котором уже будет не ==, а getDeep() > MAX_DEEP
+        Preconditions.checkState(getDeep() == App.MAX_DEEP);
+
+        int initialTotal = getTotalOfChain();
+
+        if (hasChildren()) {
+            //раз мы здесь, значит оппонент может срубить context.lastMove().getPieceFrom();
+
+//            childrenStream()
+//                    .forEach(context -> {   //context = playerContext
+//
+//                        int currentTotal = context.getTotalOfChain();
+//                        int prevTotal = context.getParent().getTotalOfChain();
+//
+//                        context.markStopped();
+//                    });
+        }
+    }
+
+//    private Stream<GameContext> deepestChildren() {
+//        //по сути это обход дерева в ширину
+//        if (!hasChildren()) {
+//            return parent.childrenStream();
+//        }
+//
+//
+//
+//        throw new UnsupportedOperationException();
+//    }
+
+    public void consumeLeafs(Consumer<GameContext> consumer) {
+        if (!hasChildren()) {
+            consumer.accept(this);
+        }
+        else {
+            childrenStream()
+                    .forEach(context -> context.consumeLeafs(consumer));
         }
     }
 }
