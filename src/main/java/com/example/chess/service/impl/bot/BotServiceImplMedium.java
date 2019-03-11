@@ -11,40 +11,39 @@ import com.google.common.base.Preconditions;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import static com.example.chess.service.impl.bot.MaterialRatingCalculator.getInvertedMaterialRating;
-import static com.example.chess.service.impl.bot.MaterialRatingCalculator.getMaterialRating;
-
 
 @Service
 @Log4j2
 public class BotServiceImplMedium extends AbstractBotService {
 
     @Override
-    protected void calculateRating(GameContext gameContext) throws CheckmateException {
-        Preconditions.checkState(!gameContext.isRoot());
-        Preconditions.checkState(gameContext.getDeep() <= App.MAX_DEEP);
+    protected void calculateRating(GameContext analyzedContext) throws CheckmateException {
+        Preconditions.checkState(!analyzedContext.isRoot());
+        Preconditions.checkState(analyzedContext.getDeep() <= App.MAX_DEEP);
 
-        ExtendedMove analyzedMove = gameContext.getLastMove();
+        ExtendedMove analyzedMove = analyzedContext.getLastMove();
 
-        if (gameContext.getDeep() == App.MAX_DEEP) {
-            analyzedMove.updateRating(getMaterialRating(gameContext));
-            analyzedMove.updateRating(getInvertedMaterialRating(gameContext));
-        }
-        else {
-            //вот это тоже оч важная вещь, только от k нужно будет избавиться
-            int k = gameContext.botLast() ? 1 : -1;
-            analyzedMove.updateRating(
-                    Rating.builder().build(RatingParam.MATERIAL_DIFF,
-                            k * gameContext.getLastMove().getValueTo(0))
-            );
+        analyzedMove.updateRating(getSimpleMaterialDiffRating(analyzedContext));
+
+        if (analyzedContext.getDeep() == App.MAX_DEEP) {
+            if (analyzedMove.isHarmful()) {
+                analyzedContext.fillForExchange(analyzedMove.getPointTo());
+                analyzedContext.updateMaterialRatingRecursive(this::getSimpleMaterialDiffRating);
+            }
         }
 
-
-
-//        analyzedMove
-//                .updateRating(getCheckRating(gameContext))
-//                .updateRating(getMovesCountRating(gameContext, false));
+//            analyzedMove.updateRating(getMaterialRating(gameContext));
+//            analyzedMove.updateRating(getInvertedMaterialRating(gameContext));
+//            analyzedMove.updateRating(getCheckRating(gameContext))
+//            analyzedMove.updateRating(getMovesCountRating(gameContext, false));
     }
+
+    //вот это тоже оч важная вещь, только от k нужно будет избавиться (upd: избавился)
+    private Rating getSimpleMaterialDiffRating(GameContext gameContext) {
+        return Rating.builder()
+                .build(RatingParam.MATERIAL_DIFF, gameContext.getLastMove().getValueTo(0));
+    }
+
 
     private Rating getCheckRating(GameContext gameContext) {
         if (gameContext.hasChildren()) {

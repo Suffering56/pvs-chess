@@ -86,20 +86,12 @@ public class ExtendedMove implements Move {
         return to.getPieceType();
     }
 
-    public boolean isEmptyFrom() {
-        return from.isEmpty();
-    }
-
     public boolean isEmptyTo() {
         return to.isEmpty();
     }
 
     public boolean isHarmful() {
         return !isEmptyTo();
-    }
-
-    public boolean isHarmless() {
-        return isEmptyTo();
     }
 
     public int getValueFrom() {
@@ -117,12 +109,11 @@ public class ExtendedMove implements Move {
         return getValueTo();
     }
 
-    public ExtendedMove updateRating(Rating rating) {
+    public void updateRating(Rating rating) {
         ratingMap.computeIfAbsent(rating.getParam(), key -> {
             total += rating.getValue() * rating.getParam().getFactor();
             return rating;
         });
-        return this;
     }
 
     public boolean hasDifferentPointTo(ExtendedMove otherMove) {
@@ -131,6 +122,10 @@ public class ExtendedMove implements Move {
 
     public boolean hasSamePointTo(PointDTO pointTo) {
         return this.getPointTo().equals(pointTo);
+    }
+
+    public boolean hasSamePointTo(ExtendedMove move) {
+        return this.getPointTo().equals(move.getPointTo());
     }
 
     public Side getSide() {

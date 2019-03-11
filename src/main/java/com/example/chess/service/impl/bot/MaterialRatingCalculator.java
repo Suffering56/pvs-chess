@@ -103,11 +103,13 @@ public class MaterialRatingCalculator {
              *
              * В общем исходя из этих данных вытекает это выражение: isInverted != deepContext.botLast()
              */
-            if (isInverted != deepContext.botLast()) {
-                exchangeValue += lastMove.getValueTo(0);
-            } else {
-                exchangeValue -= lastMove.getValueTo(0);
-            }
+
+            //TODO: закомментировал потому что больше botLast() теперь private
+//            if (isInverted != deepContext.botLast()) {
+//                exchangeValue += lastMove.getValueTo(0);
+//            } else {
+//                exchangeValue -= lastMove.getValueTo(0);
+//            }
 
             exchangeValuesResult.add(exchangeValue);
             deepContext = findDeeperCheapestContext(deepContext, targetPoint);
@@ -119,7 +121,7 @@ public class MaterialRatingCalculator {
 
     private static GameContext findDeeperCheapestContext(GameContext context, PointDTO targetPoint) throws CheckmateException {
         if (!context.hasChildren()) {
-            context.fill(1, childMove -> childMove.getPointTo().equals(targetPoint));
+            context.fillForExchange(targetPoint);
         }
 
         if (!context.hasChildren()) {

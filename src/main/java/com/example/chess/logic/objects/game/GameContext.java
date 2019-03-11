@@ -7,6 +7,7 @@ import com.example.chess.enums.Side;
 import com.example.chess.exceptions.CheckmateException;
 import com.example.chess.logic.MoveHelper;
 import com.example.chess.logic.objects.CellsMatrix;
+import com.example.chess.logic.objects.Rating;
 import com.example.chess.logic.objects.move.ExtendedMove;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,6 +18,7 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -60,23 +62,25 @@ public class GameContext {
 
     //key = pointTo
     Map<PointDTO, List<GameContext>> children;  //возможно стоит поменять на array[][][]
-    Set<PointDTO> deepExchangePoints;
 
     @Setter boolean isCheckmate;
-    @Setter boolean isDeepExchangeAlreadyCalculated = false;
 
     public void fill(int maxDeep) {
         fill(maxDeep, move -> true);
     }
 
-    public void fill(int deep, Predicate<ExtendedMove> movesFilter) {
+    public void fillForExchange(PointDTO pointTo) {
+        fill(Integer.MAX_VALUE, childMove -> childMove.hasSamePointTo(pointTo));
+    }
+
+    private void fill(int deep, Predicate<ExtendedMove> movesFilter) {
         MoveHelper.valueOf(this)
                 .getStandardMovesStream(nextTurnSide())
                 .filter(movesFilter)
                 .sorted(Comparator.comparing(ExtendedMove::getValueFrom))
                 .map(this::executeMove)
                 .filter(childContext -> deep > 1)
-                .forEach(childContext -> childContext.fill(deep - 1));
+                .forEach(childContext -> childContext.fill(deep - 1, movesFilter));
     }
 
     private GameContext executeMove(ExtendedMove nextMove) {
@@ -118,11 +122,11 @@ public class GameContext {
         return lastMove.getSide();
     }
 
-    public boolean botNext() {
-        return root == null || root.getBotSide() == nextTurnSide();
+    private boolean playerLast() {
+        return !botLast();
     }
 
-    public boolean botLast() {
+    private boolean botLast() {
         return root == null || root.getBotSide() == lastMoveSide();
     }
 
@@ -177,13 +181,8 @@ public class GameContext {
         return children != null;
     }
 
-    private int getMoveTotal(boolean isInverted) {
-        int k = isInverted ? -1 : 1;
-        return lastMove.getTotal() * k;
-    }
-
     private int getMoveTotal() {
-        return getMoveTotal(false);
+        return lastMove.getTotal();
     }
 
 
@@ -285,5 +284,15 @@ public class GameContext {
             return " [-]";
         }
         return "";
+    }
+
+    public void updateMaterialRatingRecursive(Function<GameContext, Rating> getRatingFunction) {
+        if (hasChildren()) {
+            childrenStream()
+                    .forEach(childContext -> {
+                        childContext.getLastMove().updateRating(getRatingFunction.apply(childContext));
+                        childContext.updateMaterialRatingRecursive(getRatingFunction);
+                    });
+        }
     }
 }
