@@ -30,6 +30,30 @@ public class BotServiceImplMedium extends AbstractBotService {
                 analyzedContext.fillForExchange(analyzedMove.getPointTo());
                 analyzedContext.consumeLeafs(deepestContext -> {
                     //идем вврх пока не доберемся до analyzedContext
+
+
+                    /**
+                     * leaf не может быть unprofitable, потому что никто не может отомстить
+                     *
+                     */
+
+//                    GameContext parent = deepestContext.getParent();
+//                    parent.markAsUnprofitableAsNeeded();
+
+//                    deepestContext.markAsUnprofitableAsNeeded();
+
+
+//                    if (distantTotal > parentTotal) {
+//                        deepestContext.getParent().markAsUnprofitable();
+//                    }
+
+                    GameContext possibleUnprofitableContext = deepestContext.getParent(2);
+                    GameContext comparedEnemyContext = deepestContext.getParent(3);
+
+                    if (deepestContext.getTotalOfChain() < comparedEnemyContext.getTotalOfChain()) {
+                        possibleUnprofitableContext.markUnprofitable();
+                    }
+
                 });
 
 
@@ -41,7 +65,7 @@ public class BotServiceImplMedium extends AbstractBotService {
                 //раз мы здесь, значит оппонент может срубить context.lastMove().getPieceFrom();
 //                    analyzedContext.childrenStream()
 //                            .forEach(context -> {   //context = playerContext
-//                                context.markStopped(initialTotal);
+//                                context.markUnprofitable(initialTotal);
 //                            });
 //                }
 

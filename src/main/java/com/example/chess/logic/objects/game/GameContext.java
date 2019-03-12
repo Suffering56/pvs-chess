@@ -359,7 +359,7 @@ public class GameContext {
 
     boolean stopped;
 
-    public void markStopped() {
+    public void markUnprofitable() {
         //TODO: нужно разделить на паблик и приватный, в котором уже будет не ==, а getDeep() > MAX_DEEP
         Preconditions.checkState(getDeep() == App.MAX_DEEP);
 
@@ -374,7 +374,7 @@ public class GameContext {
 //                        int currentTotal = context.getTotalOfChain();
 //                        int prevTotal = context.getParent().getTotalOfChain();
 //
-//                        context.markStopped();
+//                        context.markUnprofitable();
 //                    });
         }
     }
@@ -398,5 +398,15 @@ public class GameContext {
             childrenStream()
                     .forEach(context -> context.consumeLeafs(consumer));
         }
+    }
+
+    public GameContext getParent(int stepsCount) {
+        Preconditions.checkArgument(stepsCount >= 0);
+
+        GameContext result = this;
+        while (stepsCount-- > 0) {
+            result = result.getParent();
+        }
+        return result;
     }
 }
