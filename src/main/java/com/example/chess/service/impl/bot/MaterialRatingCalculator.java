@@ -18,9 +18,60 @@ import java.util.List;
 @UtilityClass
 public class MaterialRatingCalculator {
 
+    /**
+     * Итак что мы имеем.
+     * Мы имеем дерево ходов: //TODO: HUSTON#1 как оказалось мы ДОЛЖНЫ иметь такое дерево, но пока оно у нас не полное (см п.4)
+     *  0) deep = 0 это root context
+     *  1) deep = 1 это analyzed context
+     *  2) deep = 2 to MAX_DEEP-1 - это контексты со всеми доступными ходами.
+     *  3) deep = MAX_DEEP это контексты у которых могут быть в children-ах только harmful ходы стороны,
+     *      чей ход будет следующим (MAX_DEEP + 1) - чтобы оценить возможные отдачи или размены
+     *      PS: данная категория ходов будет включать и ходы необходимые для расчета deep exchange.
+     *  4) deep = MAX_DEEP + 1  собственно те самые ходы что описаны выше.
+     *  5) deep > MAX_DEEP + 1  это deep exchange ходы, чей targetPoint равен targetPoint-у родителя
+     *
+     * Далее в первую очередь необходимо посчитать материальный рейтинг ходов
+     *  - идем от rootContext-а в самую глубину
+     *  - далее будем оперировать понятием "невыгодный ход" - ход который для стороны <A> в случае хороший игры
+     *      противника <B> НЕИЗБЕЖНО приводит к плохому материальному размену для стороны <A>.
+     *      PS: невыгодный ход может оказаться "жертвой" и не смотря на кажущуюся невыгодность привести к 100%-му мату (TODO: just do it later)
+     *  - собственно теперь стрижем дерево отсекая невыгодные ходы:
+     *      GameContext bestChild = context.bestChild;
+     *      int childTotalDiff = bestChild.getTotalDiff;
+     *      if (bestChild.hasChildren() && !bestChild.bestChild.hasChildren() {
+     *          childTotalDiff = bestChild.bestChild.getTotalDiff;
+     *      }
+     *
+     *      TODO: HUSTON#2 при таком подходе у нас к сожалению нет никакой гарантии что дальше точно не станет лучше
+     *          гарантия будет только если deepExchange контексты будут располагаться в порядке убывания рубящих фигур
+     *          (т.е. выбирая фигуру которой будем рубить используем приоритет пешка->конь/слон->ладья->ферзь->король(если может))
+     *          Решение:
+     *          - гарантируем порядок
+     *          - придумываем другой алгоритм(было бы идеально)
+     *      if (context.parent.getTotalDiff < childTotalDiff) {
+     *          context.setUnprofitable(true);
+     *          ||
+     *          context.setUnprofitableCost(childTotalDiff - parentTotalDiff);
+     *      }
+     *  - инфо: если context.isUnprofitable() - значит этот context не должен быть выполнен
+     *  - тут разветвление: у unprofitable контекста может не оказаться неневыгодных соседей, ну либо else
+     *
+     *  Дальнейшие действия основываются на следующих фактах:
+     *  1) unprofitable ходы расчитаны корректно не смотря на HUSTON#2
+     *  2) у unprofitable ходов есть profitable соседи
+     *
+     *  Итого:
+     *  Теперь мы имеем стриженое дерево, которое нам гарантирует что для всех разменов было выполнено ровно столько ходов,
+     *  сколько нужно и ни один из участников партии не рубился до победного даже если дальнейший размен был не выгоден.
+     *  А значит все листья - это либо обычные мирные ходы, либо ходы сторон за которыми в размене последнее слово.
+     *
+     */
+
+
     private static final int MAX_MATERIAL_DEEP = -1;
 
     public static Rating getMaterialRating(GameContext gameContext) throws CheckmateException {
+        Preconditions.checkArgument(gameContext.getDeep() > 1);
         return getMaterialRating(gameContext, false);
     }
 
